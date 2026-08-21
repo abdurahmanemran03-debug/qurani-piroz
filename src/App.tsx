@@ -153,50 +153,46 @@ export default function App() {
   const formatPageNum = (n: number) => String(n).padStart(3, '0');
 
   return (
-    <div className="min-h-screen bg-[#f8f9fa] text-slate-800 font-sans selection:bg-amber-100" dir="rtl">
+    <div className="min-h-screen bg-white text-slate-800 font-sans selection:bg-slate-200" dir="rtl">
       
-      {/* ========================================================================= */}
-      {/* ١. پێڕستی سوورەتەکان بە باکگراوندی سپی و زۆر پاک */}
-      {/* ========================================================================= */}
+      {/* ١. پێڕستی سوورەتەکان بە سپیی زۆر خاوێن */}
       {view === 'index' && (
         <div className="max-w-xl mx-auto p-4 space-y-4">
           
-          {/* سەرپەڕە */}
           <div className="text-center py-4 space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-[#854d0e] font-serif tracking-wide">
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-serif tracking-wide">
               القرآن الكريم
             </h1>
             <p className="text-xs text-slate-500 font-medium">موسحەفی فەرمیی مەدینەی منەوەرە</p>
           </div>
 
-          {/* شریتی سێرچی سپیی خاوێن */}
+          {/* شریتی سێرچی سپیی بێ زەردی */}
           <div className="relative">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="گەڕان لە ناوی سوورەت یان ژمارە (بۆ نموونە: یوسف، ٦٧، الملك)..."
-              className="w-full bg-white text-slate-800 placeholder-slate-400 text-xs px-4 py-3.5 pr-10 rounded-2xl border border-slate-200 focus:outline-none focus:border-amber-600 shadow-xs"
+              className="w-full bg-slate-50 text-slate-800 placeholder-slate-400 text-xs px-4 py-3.5 pr-10 rounded-2xl border border-slate-200 focus:outline-none focus:border-slate-400 shadow-xs"
             />
             <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
           </div>
 
-          {/* پێڕستی سوورەتەکان بە کارتی سپیی شاهانە */}
+          {/* کارتەکان */}
           <div className="space-y-2 pt-1">
             {filteredSurahs.map((surah) => (
               <div
                 key={surah.number}
                 onClick={() => openSurahPage(surah.startPage)}
-                className="p-3.5 rounded-2xl bg-white hover:bg-amber-50/40 border border-slate-200/90 hover:border-amber-400/80 cursor-pointer flex items-center justify-between transition-all active:scale-[0.99] group shadow-xs"
+                className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 cursor-pointer flex items-center justify-between transition-all active:scale-[0.99] group shadow-xs"
               >
                 <div className="flex items-center gap-3">
-                  {/* ژمارەی سوورەت بە بازنەی زێڕینی نەرم */}
-                  <div className="w-9 h-9 rounded-xl bg-amber-100/80 border border-amber-300/80 text-amber-900 font-bold text-xs flex items-center justify-center">
+                  <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
                     {surah.number}
                   </div>
 
                   <div>
-                    <h3 className="font-bold text-sm text-slate-900 group-hover:text-amber-800 transition-colors">
+                    <h3 className="font-bold text-sm text-slate-900 group-hover:text-slate-700 transition-colors">
                       سورة {surah.nameAr}
                     </h3>
                     <p className="text-[11px] text-slate-500">
@@ -205,7 +201,7 @@ export default function App() {
                   </div>
                 </div>
 
-                <div className="text-left text-[11px] text-amber-800 font-bold bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
+                <div className="text-left text-[11px] text-slate-600 font-bold bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
                   لاپەڕەی {surah.startPage}
                 </div>
               </div>
@@ -214,34 +210,31 @@ export default function App() {
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* ٢. پەڕەی موسحەفی ڕاستەقینەی مەدینەی منەوەرە (HD) */}
-      {/* ========================================================================= */}
+      {/* ٢. پەڕەی موسحەف بە سپیی خاوێن (Pure White Mushaf) */}
       {view === 'mushaf' && (
         <div className="max-w-lg mx-auto p-2 sm:p-4 space-y-3">
           
-          {/* شریتی سەرەوەی گەڕانەوە */}
           <div className="flex items-center justify-between bg-white border border-slate-200 p-2 rounded-2xl shadow-xs">
             <button
               onClick={() => setView('index')}
-              className="px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-900 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-amber-200"
+              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200"
             >
               <ArrowRight className="w-4 h-4" />
               <span>پێڕستی سوورەتەکان</span>
             </button>
 
-            <span className="text-xs text-amber-900 font-bold">
+            <span className="text-xs text-slate-700 font-bold">
               لاپەڕەی {currentPage} لە ٦٠٤
             </span>
           </div>
 
-          {/* چوارچێوەی لاپەڕەی مەدینە */}
-          <div className="relative rounded-3xl bg-[#f7f2e5] border-4 border-[#c8a96e] shadow-xl p-2 sm:p-3 overflow-hidden min-h-[550px] flex flex-col items-center justify-center">
+          {/* چوارچێوەی سپیی بەفریی لاپەڕەی مەدینە */}
+          <div className="relative rounded-3xl bg-white border-2 border-slate-200 shadow-md p-2 sm:p-3 overflow-hidden min-h-[550px] flex flex-col items-center justify-center">
             
             {loadingPage && (
-              <div className="absolute inset-0 bg-[#f7f2e5]/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
-                <Loader2 className="w-8 h-8 text-[#8c6b2d] animate-spin" />
-                <span className="text-xs text-[#5c441b] font-bold">لاپەڕەی {currentPage} باردەکرێت...</span>
+              <div className="absolute inset-0 bg-white/90 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
+                <Loader2 className="w-8 h-8 text-slate-600 animate-spin" />
+                <span className="text-xs text-slate-700 font-bold">لاپەڕەی {currentPage} باردەکرێت...</span>
               </div>
             )}
 
@@ -252,9 +245,9 @@ export default function App() {
               className="w-full h-auto max-h-[80vh] object-contain rounded-xl select-none pointer-events-none"
             />
 
-            <div className="w-full text-center pt-2 border-t border-[#dfcfb0]/60 mt-1 flex items-center justify-between text-[11px] text-[#785b24] font-bold px-3">
+            <div className="w-full text-center pt-2 border-t border-slate-100 mt-1 flex items-center justify-between text-[11px] text-slate-600 font-bold px-3">
               <span>جوزء {Math.ceil(currentPage / 20)}</span>
-              <span className="bg-[#ebdcb9] px-3 py-0.5 rounded-full border border-[#c4a66e]/40">
+              <span className="bg-slate-100 px-3 py-0.5 rounded-full border border-slate-200">
                 {currentPage}
               </span>
               <span>حیزب {Math.ceil(currentPage / 10)}</span>
@@ -266,7 +259,7 @@ export default function App() {
             <button
               onClick={nextPage}
               disabled={currentPage >= 604}
-              className="flex-1 py-3 bg-white hover:bg-slate-50 disabled:opacity-40 border border-slate-200 text-amber-900 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95"
+              className="flex-1 py-3 bg-white hover:bg-slate-50 disabled:opacity-40 border border-slate-200 text-slate-800 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95"
             >
               <ChevronRight className="w-4 h-4" />
               <span>لاپەڕەی دواتر ({currentPage + 1})</span>
@@ -275,7 +268,7 @@ export default function App() {
             <button
               onClick={prevPage}
               disabled={currentPage <= 1}
-              className="flex-1 py-3 bg-white hover:bg-slate-50 disabled:opacity-40 border border-slate-200 text-amber-900 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95"
+              className="flex-1 py-3 bg-white hover:bg-slate-50 disabled:opacity-40 border border-slate-200 text-slate-800 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95"
             >
               <span>لاپەڕەی پێشوو ({currentPage - 1})</span>
               <ChevronLeft className="w-4 h-4" />
