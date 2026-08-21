@@ -1,132 +1,149 @@
 import React, { useState } from 'react';
-import { Search, ChevronRight, ChevronLeft, ArrowRight, Loader2 } from 'lucide-react';
+import { 
+  Search, ArrowRight, Loader2, Settings as SettingsIcon, 
+  Palette, Globe, Eye, Moon, Sun, BookOpen, Check, Sliders
+} from 'lucide-react';
 
 const SURAHS_INDEX = [
-  { number: 1, nameAr: "الفاتحة", nameKu: "فاتحة", type: "مەککەیی", ayahs: 7, startPage: 1 },
-  { number: 2, nameAr: "البقرة", nameKu: "بەقەڕە", type: "مەدینەیی", ayahs: 286, startPage: 2 },
-  { number: 3, nameAr: "آل عمران", nameKu: "ئالی عیمران", type: "مەدینەیی", ayahs: 200, startPage: 50 },
-  { number: 4, nameAr: "النساء", nameKu: "نیساء", type: "مەدینەیی", ayahs: 176, startPage: 77 },
-  { number: 5, nameAr: "المائدة", nameKu: "مائیدە", type: "مەدینەیی", ayahs: 120, startPage: 106 },
-  { number: 6, nameAr: "الأنعام", nameKu: "ئەنعام", type: "مەککەیی", ayahs: 165, startPage: 128 },
-  { number: 7, nameAr: "الأعراف", nameKu: "ئەعراف", type: "مەککەیی", ayahs: 206, startPage: 151 },
-  { number: 8, nameAr: "الأنفال", nameKu: "ئەنفال", type: "مەدینەیی", ayahs: 75, startPage: 177 },
-  { number: 9, nameAr: "التوبة", nameKu: "تەوبە", type: "مەدینەیی", ayahs: 129, startPage: 187 },
-  { number: 10, nameAr: "يونس", nameKu: "یوونس", type: "مەککەیی", ayahs: 109, startPage: 208 },
-  { number: 11, nameAr: "هود", nameKu: "هوود", type: "مەککەیی", ayahs: 123, startPage: 221 },
-  { number: 12, nameAr: "يوسف", nameKu: "یووسف", type: "مەککەیی", ayahs: 111, startPage: 235 },
-  { number: 13, nameAr: "الرعد", nameKu: "ڕەعد", type: "مەدینەیی", ayahs: 43, startPage: 249 },
-  { number: 14, nameAr: "إبراهيم", nameKu: "ئیبراهیم", type: "مەککەیی", ayahs: 52, startPage: 255 },
-  { number: 15, nameAr: "الحجر", nameKu: "حیجر", type: "مەککەیی", ayahs: 99, startPage: 262 },
-  { number: 16, nameAr: "النحل", nameKu: "نەحل", type: "مەککەیی", ayahs: 128, startPage: 267 },
-  { number: 17, nameAr: "الإسراء", nameKu: "ئیسراء", type: "مەککەیی", ayahs: 111, startPage: 282 },
-  { number: 18, nameAr: "الكهف", nameKu: "کەهف", type: "مەککەیی", ayahs: 110, startPage: 293 },
-  { number: 19, nameAr: "مريم", nameKu: "مەریەم", type: "مەککەیی", ayahs: 98, startPage: 305 },
-  { number: 20, nameAr: "طه", nameKu: "تاها", type: "مەککەیی", ayahs: 135, startPage: 312 },
-  { number: 21, nameAr: "الأنبياء", nameKu: "ئەنبیاء", type: "مەککەیی", ayahs: 112, startPage: 322 },
-  { number: 22, nameAr: "الحج", nameKu: "حەج", type: "مەدینەیی", ayahs: 78, startPage: 332 },
-  { number: 23, nameAr: "المؤمنون", nameKu: "مومنون", type: "مەککەیی", ayahs: 118, startPage: 342 },
-  { number: 24, nameAr: "النور", nameKu: "نوور", type: "مەدینەیی", ayahs: 64, startPage: 350 },
-  { number: 25, nameAr: "الفرقان", nameKu: "فورقان", type: "مەککەیی", ayahs: 77, startPage: 359 },
-  { number: 26, nameAr: "الشعراء", nameKu: "شوعەراء", type: "مەککەیی", ayahs: 227, startPage: 367 },
-  { number: 27, nameAr: "النمل", nameKu: "نەمل", type: "مەککەیی", ayahs: 93, startPage: 377 },
-  { number: 28, nameAr: "القصص", nameKu: "قەسەس", type: "مەککەیی", ayahs: 88, startPage: 385 },
-  { number: 29, nameAr: "العنكبوت", nameKu: "عەنکەبووت", type: "مەککەیی", ayahs: 69, startPage: 396 },
-  { number: 30, nameAr: "الروم", nameKu: "ڕووم", type: "مەککەیی", ayahs: 60, startPage: 404 },
-  { number: 31, nameAr: "لقمان", nameKu: "لوقمان", type: "مەککەیی", ayahs: 34, startPage: 411 },
-  { number: 32, nameAr: "السجدة", nameKu: "سەجدە", type: "مەککەیی", ayahs: 30, startPage: 415 },
-  { number: 33, nameAr: "الأحزاب", nameKu: "ئەحزاب", type: "مەدینەیی", ayahs: 73, startPage: 418 },
-  { number: 34, nameAr: "سبإ", nameKu: "سەبەء", type: "مەککەیی", ayahs: 54, startPage: 428 },
-  { number: 35, nameAr: "فاطر", nameKu: "فاتر", type: "مەککەیی", ayahs: 45, startPage: 434 },
-  { number: 36, nameAr: "يس", nameKu: "یاسین", type: "مەککەیی", ayahs: 83, startPage: 440 },
-  { number: 37, nameAr: "الصافات", nameKu: "سافات", type: "مەککەیی", ayahs: 182, startPage: 446 },
-  { number: 38, nameAr: "ص", nameKu: "ساد", type: "مەککەیی", ayahs: 88, startPage: 453 },
-  { number: 39, nameAr: "الزمر", nameKu: "زومەر", type: "مەککەیی", ayahs: 75, startPage: 458 },
-  { number: 40, nameAr: "غافر", nameKu: "غافیر", type: "مەککەیی", ayahs: 85, startPage: 467 },
-  { number: 41, nameAr: "فصلت", nameKu: "فوسیلەت", type: "مەککەیی", ayahs: 54, startPage: 477 },
-  { number: 42, nameAr: "الشورى", nameKu: "شوورا", type: "مەککەیی", ayahs: 53, startPage: 483 },
-  { number: 43, nameAr: "الزخرف", nameKu: "زوخروف", type: "مەککەیی", ayahs: 89, startPage: 489 },
-  { number: 44, nameAr: "الدخان", nameKu: "دوخان", type: "مەککەیی", ayahs: 59, startPage: 496 },
-  { number: 45, nameAr: "الجاثية", nameKu: "جاسیە", type: "مەککەیی", ayahs: 37, startPage: 499 },
-  { number: 46, nameAr: "الأحقاف", nameKu: "ئەحقاف", type: "مەککەیی", ayahs: 35, startPage: 502 },
-  { number: 47, nameAr: "محمد", nameKu: "موحەممەد", type: "مەدینەیی", ayahs: 38, startPage: 507 },
-  { number: 48, nameAr: "الفتح", nameKu: "فەتح", type: "مەدینەیی", ayahs: 29, startPage: 511 },
-  { number: 49, nameAr: "الحجرات", nameKu: "حوجورات", type: "مەدینەیی", ayahs: 18, startPage: 515 },
-  { number: 50, nameAr: "ق", nameKu: "قاف", type: "مەککەیی", ayahs: 45, startPage: 518 },
-  { number: 51, nameAr: "الذاريات", nameKu: "زاریات", type: "مەککەیی", ayahs: 60, startPage: 520 },
-  { number: 52, nameAr: "الطور", nameKu: "توور", type: "مەککەیی", ayahs: 49, startPage: 523 },
-  { number: 53, nameAr: "النجم", nameKu: "نەجم", type: "مەککەیی", ayahs: 62, startPage: 526 },
-  { number: 54, nameAr: "القمر", nameKu: "قەمەر", type: "مەککەیی", ayahs: 55, startPage: 528 },
-  { number: 55, nameAr: "الرحمن", nameKu: "ڕەحمان", type: "مەدینەیی", ayahs: 78, startPage: 531 },
-  { number: 56, nameAr: "الواقعة", nameKu: "واقیعە", type: "مەککەیی", ayahs: 96, startPage: 534 },
-  { number: 57, nameAr: "الحديد", nameKu: "حەدید", type: "مەدینەیی", ayahs: 29, startPage: 537 },
-  { number: 58, nameAr: "المجادلة", nameKu: "موجادەلە", type: "مەدینەیی", ayahs: 22, startPage: 542 },
-  { number: 59, nameAr: "الحشر", nameKu: "حەشر", type: "مەدینەیی", ayahs: 24, startPage: 545 },
-  { number: 60, nameAr: "الممتحنة", nameKu: "مومتەحەنە", type: "مەدینەیی", ayahs: 13, startPage: 549 },
-  { number: 61, nameAr: "الصف", nameKu: "سەف", type: "مەدینەیی", ayahs: 14, startPage: 551 },
-  { number: 62, nameAr: "الجمعة", nameKu: "جومعە", type: "مەدینەیی", ayahs: 11, startPage: 553 },
-  { number: 63, nameAr: "المنافقون", nameKu: "مونافیقوون", type: "مەدینەیی", ayahs: 11, startPage: 554 },
-  { number: 64, nameAr: "التغابن", nameKu: "تەغابون", type: "مەدینەیی", ayahs: 18, startPage: 556 },
-  { number: 65, nameAr: "الطلاق", nameKu: "تەڵاق", type: "مەدینەیی", ayahs: 12, startPage: 558 },
-  { number: 66, nameAr: "التحريم", nameKu: "تەحریم", type: "مەدینەیی", ayahs: 12, startPage: 560 },
-  { number: 67, nameAr: "الملك", nameKu: "مولک", type: "مەککەیی", ayahs: 30, startPage: 562 },
-  { number: 68, nameAr: "القلم", nameKu: "قەلەم", type: "مەککەیی", ayahs: 52, startPage: 564 },
-  { number: 69, nameAr: "الحاقة", nameKu: "حاقە", type: "مەککەیی", ayahs: 52, startPage: 566 },
-  { number: 70, nameAr: "المعارج", nameKu: "مەعاریج", type: "مەککەیی", ayahs: 44, startPage: 568 },
-  { number: 71, nameAr: "نوح", nameKu: "نووح", type: "مەککەیی", ayahs: 28, startPage: 570 },
-  { number: 72, nameAr: "الجن", nameKu: "جن", type: "مەککەیی", ayahs: 28, startPage: 572 },
-  { number: 73, nameAr: "المزمل", nameKu: "موزەممیل", type: "مەککەیی", ayahs: 20, startPage: 574 },
-  { number: 74, nameAr: "المدثر", nameKu: "مودەسیر", type: "مەککەیی", ayahs: 56, startPage: 575 },
-  { number: 75, nameAr: "القيامة", nameKu: "قیامەت", type: "مەککەیی", ayahs: 40, startPage: 577 },
-  { number: 76, nameAr: "الإنسان", nameKu: "ئینسان", type: "مەدینەیی", ayahs: 31, startPage: 578 },
-  { number: 77, nameAr: "المرسلات", nameKu: "مورسەلات", type: "مەککەیی", ayahs: 50, startPage: 580 },
-  { number: 78, nameAr: "النبإ", nameKu: "نەبەء", type: "مەککەیی", ayahs: 40, startPage: 582 },
-  { number: 79, nameAr: "النازعات", nameKu: "نازیعات", type: "مەککەیی", ayahs: 46, startPage: 583 },
-  { number: 80, nameAr: "عبس", nameKu: "عەبەس", type: "مەککەیی", ayahs: 42, startPage: 585 },
-  { number: 81, nameAr: "التكوير", nameKu: "تەکویر", type: "مەککەیی", ayahs: 29, startPage: 586 },
-  { number: 82, nameAr: "الانفطار", nameKu: "ئینفیتار", type: "مەککەیی", ayahs: 19, startPage: 587 },
-  { number: 83, nameAr: "المطففين", nameKu: "موتەفیفین", type: "مەککەیی", ayahs: 36, startPage: 587 },
-  { number: 84, nameAr: "الانشقاق", nameKu: "ئینشيقاق", type: "مەککەیی", ayahs: 25, startPage: 589 },
-  { number: 85, nameAr: "البروج", nameKu: "بورووج", type: "مەککەیی", ayahs: 22, startPage: 590 },
-  { number: 86, nameAr: "الطارق", nameKu: "تاریق", type: "مەککەیی", ayahs: 17, startPage: 591 },
-  { number: 87, nameAr: "الأعلى", nameKu: "ئەعلا", type: "مەککەیی", ayahs: 19, startPage: 591 },
-  { number: 88, nameAr: "الغاشية", nameKu: "غاشیە", type: "مەککەیی", ayahs: 26, startPage: 592 },
-  { number: 89, nameAr: "الفجر", nameKu: "فەجر", type: "مەککەیی", ayahs: 30, startPage: 593 },
-  { number: 90, nameAr: "البلد", nameKu: "بەلەد", type: "مەککەیی", ayahs: 20, startPage: 594 },
-  { number: 91, nameAr: "الشمس", nameKu: "شەمس", type: "مەککەیی", ayahs: 15, startPage: 595 },
-  { number: 92, nameAr: "الليل", nameKu: "لەیل", type: "مەککەیی", ayahs: 21, startPage: 595 },
-  { number: 93, nameAr: "الضحى", nameKu: "زوحا", type: "مەککەیی", ayahs: 11, startPage: 596 },
-  { number: 94, nameAr: "الشرح", nameKu: "شەرح", type: "مەککەیی", ayahs: 8, startPage: 596 },
-  { number: 95, nameAr: "التين", nameKu: "تین", type: "مەککەیی", ayahs: 8, startPage: 597 },
-  { number: 96, nameAr: "العلق", nameKu: "عەلەق", type: "مەککەیی", ayahs: 19, startPage: 597 },
-  { number: 97, nameAr: "القدر", nameKu: "قەدر", type: "مەککەیی", ayahs: 5, startPage: 598 },
-  { number: 98, nameAr: "البينة", nameKu: "بەینە", type: "مەدینەیی", ayahs: 8, startPage: 598 },
-  { number: 99, nameAr: "الزلزلة", nameKu: "زەلزەلە", type: "مەدینەیی", ayahs: 8, startPage: 599 },
-  { number: 100, nameAr: "العاديات", nameKu: "عادیات", type: "مەککەیی", ayahs: 11, startPage: 599 },
-  { number: 101, nameAr: "القارعة", nameKu: "قاریعە", type: "مەککەیی", ayahs: 11, startPage: 600 },
-  { number: 102, nameAr: "التكاثر", nameKu: "تەکاسور", type: "مەککەیی", ayahs: 8, startPage: 600 },
-  { number: 103, nameAr: "العصر", nameKu: "عەسر", type: "مەککەیی", ayahs: 3, startPage: 601 },
-  { number: 104, nameAr: "الهمزة", nameKu: "هومەزە", type: "مەککەیی", ayahs: 9, startPage: 601 },
-  { number: 105, nameAr: "الفيل", nameKu: "فیل", type: "مەککەیی", ayahs: 5, startPage: 601 },
-  { number: 106, nameAr: "قريش", nameKu: "قورەیش", type: "مەککەیی", ayahs: 4, startPage: 602 },
-  { number: 107, nameAr: "الماعون", nameKu: "ماعوون", type: "مەککەیی", ayahs: 7, startPage: 602 },
-  { number: 108, nameAr: "الكوثر", nameKu: "کەوسەر", type: "مەککەیی", ayahs: 3, startPage: 602 },
-  { number: 109, nameAr: "الكافرون", nameKu: "کافیروون", type: "مەککەیی", ayahs: 6, startPage: 603 },
-  { number: 110, nameAr: "النصر", nameKu: "نەسر", type: "مەدینەیی", ayahs: 3, startPage: 603 },
-  { number: 111, nameAr: "المسد", nameKu: "مەسەد", type: "مەککەیی", ayahs: 5, startPage: 603 },
-  { number: 112, nameAr: "الإخلاص", nameKu: "ئیخلاس", type: "مەککەیی", ayahs: 4, startPage: 604 },
-  { number: 113, nameAr: "الفلق", nameKu: "فەلەق", type: "مەککەیی", ayahs: 5, startPage: 604 },
-  { number: 114, nameAr: "الناس", nameKu: "ناس", type: "مەککەیی", ayahs: 6, startPage: 604 }
+  { number: 1, nameAr: "الفاتحة", nameKu: "فاتحة", nameEn: "Al-Fatihah", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 7, startPage: 1 },
+  { number: 2, nameAr: "البقرة", nameKu: "بەقەڕە", nameEn: "Al-Baqarah", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 286, startPage: 2 },
+  { number: 3, nameAr: "آل عمران", nameKu: "ئالی عیمران", nameEn: "Ali 'Imran", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 200, startPage: 50 },
+  { number: 4, nameAr: "النساء", nameKu: "نیساء", nameEn: "An-Nisa", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 176, startPage: 77 },
+  { number: 5, nameAr: "المائدة", nameKu: "مائیدە", nameEn: "Al-Ma'idah", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 120, startPage: 106 },
+  { number: 6, nameAr: "الأنعام", nameKu: "ئەنعام", nameEn: "Al-An'am", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 165, startPage: 128 },
+  { number: 7, nameAr: "الأعراف", nameKu: "ئەعراف", nameEn: "Al-A'raf", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 206, startPage: 151 },
+  { number: 8, nameAr: "الأنفال", nameKu: "ئەنفال", nameEn: "Al-Anfal", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 75, startPage: 177 },
+  { number: 9, nameAr: "التوبة", nameKu: "تەوبە", nameEn: "At-Tawbah", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 129, startPage: 187 },
+  { number: 10, nameAr: "يونس", nameKu: "یوونس", nameEn: "Yunus", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 109, startPage: 208 },
+  { number: 11, nameAr: "هود", nameKu: "هوود", nameEn: "Hud", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 123, startPage: 221 },
+  { number: 12, nameAr: "يوسف", nameKu: "یووسف", nameEn: "Yusuf", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 111, startPage: 235 },
+  { number: 13, nameAr: "الرعد", nameKu: "ڕەعد", nameEn: "Ar-Ra'd", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 43, startPage: 249 },
+  { number: 14, nameAr: "إبراهيم", nameKu: "ئیبراهیم", nameEn: "Ibrahim", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 52, startPage: 255 },
+  { number: 15, nameAr: "الحجر", nameKu: "حیجر", nameEn: "Al-Hijr", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 99, startPage: 262 },
+  { number: 16, nameAr: "النحل", nameKu: "نەحل", nameEn: "An-Nahl", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 128, startPage: 267 },
+  { number: 17, nameAr: "الإسراء", nameKu: "ئیسراء", nameEn: "Al-Isra", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 111, startPage: 282 },
+  { number: 18, nameAr: "الكهف", nameKu: "کەهف", nameEn: "Al-Kahf", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 110, startPage: 293 },
+  { number: 19, nameAr: "مريم", nameKu: "مەریەم", nameEn: "Maryam", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 98, startPage: 305 },
+  { number: 20, nameAr: "طه", nameKu: "تاها", nameEn: "Taha", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 135, startPage: 312 },
+  { number: 21, nameAr: "الأنبياء", nameKu: "ئەنبیاء", nameEn: "Al-Anbiya", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 112, startPage: 322 },
+  { number: 22, nameAr: "الحج", nameKu: "حەج", nameEn: "Al-Hajj", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 78, startPage: 332 },
+  { number: 23, nameAr: "المؤمنون", nameKu: "مومنون", nameEn: "Al-Mu'minun", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 118, startPage: 342 },
+  { number: 24, nameAr: "النور", nameKu: "نوور", nameEn: "An-Nur", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 64, startPage: 350 },
+  { number: 25, nameAr: "الفرقان", nameKu: "فورقان", nameEn: "Al-Furqan", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 77, startPage: 359 },
+  { number: 26, nameAr: "الشعراء", nameKu: "شوعەراء", nameEn: "Ash-Shu'ara", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 227, startPage: 367 },
+  { number: 27, nameAr: "النمل", nameKu: "نەمل", nameEn: "An-Naml", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 93, startPage: 377 },
+  { number: 28, nameAr: "القصص", nameKu: "قەسەس", nameEn: "Al-Qasas", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 88, startPage: 385 },
+  { number: 29, nameAr: "العنكبوت", nameKu: "عەنکەبووت", nameEn: "Al-'Ankabut", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 69, startPage: 396 },
+  { number: 30, nameAr: "الروم", nameKu: "ڕووم", nameEn: "Ar-Rum", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 60, startPage: 404 },
+  { number: 31, nameAr: "لقمان", nameKu: "لوقمان", nameEn: "Luqman", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 34, startPage: 411 },
+  { number: 32, nameAr: "السجدة", nameKu: "سەجدە", nameEn: "As-Sajdah", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 30, startPage: 415 },
+  { number: 33, nameAr: "الأحزاب", nameKu: "ئەحزاب", nameEn: "Al-Ahzab", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 73, startPage: 418 },
+  { number: 34, nameAr: "سبإ", nameKu: "سەبەء", nameEn: "Saba", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 54, startPage: 428 },
+  { number: 35, nameAr: "فاطر", nameKu: "فاتر", nameEn: "Fatir", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 45, startPage: 434 },
+  { number: 36, nameAr: "يس", nameKu: "یاسین", nameEn: "Ya-Sin", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 83, startPage: 440 },
+  { number: 37, nameAr: "الصافات", nameKu: "سافات", nameEn: "As-Saffat", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 182, startPage: 446 },
+  { number: 38, nameAr: "ص", nameKu: "ساد", nameEn: "Sad", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 88, startPage: 453 },
+  { number: 39, nameAr: "الزمر", nameKu: "زومەر", nameEn: "Az-Zumar", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 75, startPage: 458 },
+  { number: 40, nameAr: "غافر", nameKu: "غافیر", nameEn: "Ghafir", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 85, startPage: 467 },
+  { number: 41, nameAr: "فصلت", nameKu: "فوسیلەت", nameEn: "Fussilat", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 54, startPage: 477 },
+  { number: 42, nameAr: "الشورى", nameKu: "شوورا", nameEn: "Ash-Shura", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 53, startPage: 483 },
+  { number: 43, nameAr: "الزخرف", nameKu: "زوخروف", nameEn: "Az-Zukhruf", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 89, startPage: 489 },
+  { number: 44, nameAr: "الدخان", nameKu: "دوخان", nameEn: "Ad-Dukhan", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 59, startPage: 496 },
+  { number: 45, nameAr: "الجاثية", nameKu: "جاسیە", nameEn: "Al-Jathiyah", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 37, startPage: 499 },
+  { number: 46, nameAr: "الأحقاف", nameKu: "ئەحقاف", nameEn: "Al-Ahqaf", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 35, startPage: 502 },
+  { number: 47, nameAr: "محمد", nameKu: "موحەممەد", nameEn: "Muhammad", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 38, startPage: 507 },
+  { number: 48, nameAr: "الفتح", nameKu: "فەتح", nameEn: "Al-Fath", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 29, startPage: 511 },
+  { number: 49, nameAr: "الحجرات", nameKu: "حوجورات", nameEn: "Al-Hujurat", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 18, startPage: 515 },
+  { number: 50, nameAr: "ق", nameKu: "قاف", nameEn: "Qaf", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 45, startPage: 518 },
+  { number: 51, nameAr: "الذاريات", nameKu: "زاریات", nameEn: "Adh-Dhariyat", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 60, startPage: 520 },
+  { number: 52, nameAr: "الطور", nameKu: "توور", nameEn: "At-Tur", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 49, startPage: 523 },
+  { number: 53, nameAr: "النجم", nameKu: "نەجم", nameEn: "An-Najm", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 62, startPage: 526 },
+  { number: 54, nameAr: "القمر", nameKu: "قەمەر", nameEn: "Al-Qamar", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 55, startPage: 528 },
+  { number: 55, nameAr: "الرحمن", nameKu: "ڕەحمان", nameEn: "Ar-Rahman", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 78, startPage: 531 },
+  { number: 56, nameAr: "الواقعة", nameKu: "واقیعە", nameEn: "Al-Waqi'ah", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 96, startPage: 534 },
+  { number: 57, nameAr: "الحديد", nameKu: "حەدید", nameEn: "Al-Hadid", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 29, startPage: 537 },
+  { number: 58, nameAr: "المجادلة", nameKu: "موجادەلە", nameEn: "Al-Mujadila", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 22, startPage: 542 },
+  { number: 59, nameAr: "الحشر", nameKu: "حەشر", nameEn: "Al-Hashr", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 24, startPage: 545 },
+  { number: 60, nameAr: "الممتحنة", nameKu: "مومتەحەنە", nameEn: "Al-Mumtahanah", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 13, startPage: 549 },
+  { number: 61, nameAr: "الصف", nameKu: "سەف", nameEn: "As-Saff", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 14, startPage: 551 },
+  { number: 62, nameAr: "الجمعة", nameKu: "جومعە", nameEn: "Al-Jumu'ah", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 11, startPage: 553 },
+  { number: 63, nameAr: "المنافقون", nameKu: "مونافیقوون", nameEn: "Al-Munafiqun", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 11, startPage: 554 },
+  { number: 64, nameAr: "التغابن", nameKu: "تەغابون", nameEn: "At-Taghabun", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 18, startPage: 556 },
+  { number: 65, nameAr: "الطلاق", nameKu: "تەڵاق", nameEn: "At-Talaq", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 12, startPage: 558 },
+  { number: 66, nameAr: "التحريم", nameKu: "تەحریم", nameEn: "At-Tahrim", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 12, startPage: 560 },
+  { number: 67, nameAr: "الملك", nameKu: "مولک", nameEn: "Al-Mulk", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 30, startPage: 562 },
+  { number: 68, nameAr: "القلم", nameKu: "قەلەم", nameEn: "Al-Qalam", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 52, startPage: 564 },
+  { number: 69, nameAr: "الحاقة", nameKu: "حاقە", nameEn: "Al-Haqqah", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 52, startPage: 566 },
+  { number: 70, nameAr: "المعارج", nameKu: "مەعاریج", nameEn: "Al-Ma'arij", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 44, startPage: 568 },
+  { number: 71, nameAr: "نوح", nameKu: "نووح", nameEn: "Nuh", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 28, startPage: 570 },
+  { number: 72, nameAr: "الجن", nameKu: "جن", nameEn: "Al-Jinn", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 28, startPage: 572 },
+  { number: 73, nameAr: "المزمل", nameKu: "موزەممیل", nameEn: "Al-Muzzammil", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 20, startPage: 574 },
+  { number: 74, nameAr: "المدثر", nameKu: "مودەسیر", nameEn: "Al-Muddaththir", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 56, startPage: 575 },
+  { number: 75, nameAr: "القيامة", nameKu: "قیامەت", nameEn: "Al-Qiyamah", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 40, startPage: 577 },
+  { number: 76, nameAr: "الإنسان", nameKu: "ئینسان", nameEn: "Al-Insan", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 31, startPage: 578 },
+  { number: 77, nameAr: "المرسلات", nameKu: "مورسەلات", nameEn: "Al-Mursalat", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 50, startPage: 580 },
+  { number: 78, nameAr: "النبإ", nameKu: "نەبەء", nameEn: "An-Naba", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 40, startPage: 582 },
+  { number: 79, nameAr: "النازعات", nameKu: "نازیعات", nameEn: "An-Nazi'at", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 46, startPage: 583 },
+  { number: 80, nameAr: "عبس", nameKu: "عەبەس", nameEn: "'Abasa", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 42, startPage: 585 },
+  { number: 81, nameAr: "التكوير", nameKu: "تەکویر", nameEn: "At-Takwir", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 29, startPage: 586 },
+  { number: 82, nameAr: "الانفطار", nameKu: "ئینفیتار", nameEn: "Al-Infitar", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 19, startPage: 587 },
+  { number: 83, nameAr: "المطففين", nameKu: "موتەفیفین", nameEn: "Al-Mutaffifin", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 36, startPage: 587 },
+  { number: 84, nameAr: "الانشقاق", nameKu: "ئینشيقاق", nameEn: "Al-Inshiqaq", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 25, startPage: 589 },
+  { number: 85, nameAr: "البروج", nameKu: "بورووج", nameEn: "Al-Buruj", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 22, startPage: 590 },
+  { number: 86, nameAr: "الطارق", nameKu: "تاریق", nameEn: "At-Tariq", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 17, startPage: 591 },
+  { number: 87, nameAr: "الأعلى", nameKu: "ئەعلا", nameEn: "Al-A'la", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 19, startPage: 591 },
+  { number: 88, nameAr: "الغاشية", nameKu: "غاشیە", nameEn: "Al-Ghashiyah", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 26, startPage: 592 },
+  { number: 89, nameAr: "الفجر", nameKu: "فەجر", nameEn: "Al-Fajr", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 30, startPage: 593 },
+  { number: 90, nameAr: "البلد", nameKu: "بەلەد", nameEn: "Al-Balad", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 20, startPage: 594 },
+  { number: 91, nameAr: "الشمس", nameKu: "شەمس", nameEn: "Ash-Shams", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 15, startPage: 595 },
+  { number: 92, nameAr: "الليل", nameKu: "لەیل", nameEn: "Al-Layl", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 21, startPage: 595 },
+  { number: 93, nameAr: "الضحى", nameKu: "زوحا", nameEn: "Ad-Duha", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 11, startPage: 596 },
+  { number: 94, nameAr: "الشرح", nameKu: "شەرح", nameEn: "Ash-Sharh", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 8, startPage: 596 },
+  { number: 95, nameAr: "التين", nameKu: "تین", nameEn: "At-Tin", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 8, startPage: 597 },
+  { number: 96, nameAr: "العلق", nameKu: "عەلەق", nameEn: "Al-'Alaq", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 19, startPage: 597 },
+  { number: 97, nameAr: "القدر", nameKu: "قەدر", nameEn: "Al-Qadr", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 5, startPage: 598 },
+  { number: 98, nameAr: "البينة", nameKu: "بەینە", nameEn: "Al-Bayyinah", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 8, startPage: 598 },
+  { number: 99, nameAr: "الزلزلة", nameKu: "زەلزەلە", nameEn: "Az-Zalzalah", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 8, startPage: 599 },
+  { number: 100, nameAr: "العاديات", nameKu: "عادیات", nameEn: "Al-'Adiyat", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 11, startPage: 599 },
+  { number: 101, nameAr: "القارعة", nameKu: "قاریعە", nameEn: "Al-Qari'ah", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 11, startPage: 600 },
+  { number: 102, nameAr: "التكاثر", nameKu: "تەکاسور", nameEn: "At-Takathur", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 8, startPage: 600 },
+  { number: 103, nameAr: "العصر", nameKu: "عەسر", nameEn: "Al-'Asr", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 3, startPage: 601 },
+  { number: 104, nameAr: "الهمزة", nameKu: "هومەزە", nameEn: "Al-Humazah", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 9, startPage: 601 },
+  { number: 105, nameAr: "الفيل", nameKu: "فیل", nameEn: "Al-Fil", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 5, startPage: 601 },
+  { number: 106, nameAr: "قريش", nameKu: "قورەیش", nameEn: "Quraysh", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 4, startPage: 602 },
+  { number: 107, nameAr: "الماعون", nameKu: "ماعوون", nameEn: "Al-Ma'un", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 7, startPage: 602 },
+  { number: 108, nameAr: "الكوثر", nameKu: "کەوسەر", nameEn: "Al-Kawthar", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 3, startPage: 602 },
+  { number: 109, nameAr: "الكافرون", nameKu: "کافیروون", nameEn: "Al-Kafirun", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 6, startPage: 603 },
+  { number: 110, nameAr: "النصر", nameKu: "نەسر", nameEn: "An-Nasr", typeKu: "مەدینەیی", typeAr: "مدنية", typeEn: "Medinan", ayahs: 3, startPage: 603 },
+  { number: 111, nameAr: "المسد", nameKu: "مەسەد", nameEn: "Al-Masad", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 5, startPage: 603 },
+  { number: 112, nameAr: "الإخلاص", nameKu: "ئیخلاس", nameEn: "Al-Ikhlas", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 4, startPage: 604 },
+  { number: 113, nameAr: "الفلق", nameKu: "فەلەق", nameEn: "Al-Falaq", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 5, startPage: 604 },
+  { number: 114, nameAr: "الناس", nameKu: "ناس", nameEn: "An-Nas", typeKu: "مەککەیی", typeAr: "مكية", typeEn: "Meccan", ayahs: 6, startPage: 604 }
 ];
 
 export default function App() {
-  const [view, setView] = useState<'index' | 'mushaf'>('index');
+  const [view, setView] = useState<'index' | 'mushaf' | 'settings'>('index');
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loadingPage, setLoadingPage] = useState<boolean>(false);
 
+  // ڕێکخستنەکان (Settings State)
+  const [bgStyle, setBgStyle] = useState<'white' | 'cream' | 'dark'>('white');
+  const [appLang, setAppLang] = useState<'ku' | 'ar' | 'en'>('ku');
+  const [accentColor, setAccentColor] = useState<'gold' | 'emerald' | 'blue'>('gold');
+  const [showKurdishNames, setShowKurdishNames] = useState<boolean>(true);
+  const [showNumbers, setShowNumbers] = useState<boolean>(true);
+
+  // سیستمێ لەمس بۆ پەڕە هەڵدانەوە (Touch Swipe State)
+  const [touchStartX, setTouchStartX] = useState<number | null>(null);
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
+
+  const minSwipeDistance = 45;
+
   const filteredSurahs = SURAHS_INDEX.filter(s => 
-    s.nameKu.includes(searchQuery) || 
+    s.nameKu.toLowerCase().includes(searchQuery.toLowerCase()) || 
     s.nameAr.includes(searchQuery) || 
+    s.nameEn.toLowerCase().includes(searchQuery.toLowerCase()) || 
     String(s.number).includes(searchQuery)
   );
 
@@ -150,138 +167,370 @@ export default function App() {
     }
   };
 
+  // دەستنیشانکردنی لەمس بۆ پەڕەهەڵدانەوە
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEndX(null);
+    setTouchStartX(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEndX(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStartX || !touchEndX) return;
+    const distance = touchStartX - touchEndX;
+    if (distance > minSwipeDistance) {
+      // ڕاکێشان بۆ چەپ -> لاپەڕەی دواتر
+      nextPage();
+    } else if (distance < -minSwipeDistance) {
+      // ڕاکێشان بۆ ڕاست -> لاپەڕەی پێشوو
+      prevPage();
+    }
+  };
+
   const formatPageNum = (n: number) => String(n).padStart(3, '0');
 
+  // ستایلی باکگراوندەکان
+  const getContainerBg = () => {
+    if (bgStyle === 'cream') return 'bg-[#f7f2e5] text-[#3c2d15]';
+    if (bgStyle === 'dark') return 'bg-[#0a0d14] text-slate-100';
+    return 'bg-[#ffffff] text-slate-800'; // سپیی خاوێن
+  };
+
+  const getCardBg = () => {
+    if (bgStyle === 'cream') return 'bg-[#fcfaf5] border-[#ebdcb9] hover:bg-[#f4ebd8]';
+    if (bgStyle === 'dark') return 'bg-[#121722] border-slate-800 hover:bg-[#181f2e] text-slate-100';
+    return 'bg-white border-slate-200/90 hover:bg-slate-50 text-slate-900';
+  };
+
+  const getAccentText = () => {
+    if (accentColor === 'emerald') return 'text-emerald-700';
+    if (accentColor === 'blue') return 'text-blue-700';
+    return 'text-[#854d0e]'; // زێڕین
+  };
+
+  const getAccentBg = () => {
+    if (accentColor === 'emerald') return 'bg-emerald-600 hover:bg-emerald-700 text-white';
+    if (accentColor === 'blue') return 'bg-blue-600 hover:bg-blue-700 text-white';
+    return 'bg-amber-600 hover:bg-amber-700 text-white';
+  };
+
   return (
-    <div className="min-h-screen bg-white text-slate-800 font-sans selection:bg-slate-200" dir="rtl">
+    <div className={`min-h-screen ${getContainerBg()} font-sans selection:bg-slate-200 transition-colors duration-200`} dir={appLang === 'en' ? 'ltr' : 'rtl'}>
       
-      {/* ١. پێڕستی سوورەتەکان بە سپیی زۆر خاوێن */}
+      {/* ========================================================================= */}
+      {/* ١. پێڕستی سەرەکیی سوورەتەکان */}
+      {/* ========================================================================= */}
       {view === 'index' && (
         <div className="max-w-xl mx-auto p-4 space-y-4">
           
-          <div className="text-center py-4 space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-serif tracking-wide">
-              القرآن الكريم
-            </h1>
-            <p className="text-xs text-slate-500 font-medium">موسحەفی فەرمیی مەدینەی منەوەرە</p>
+          {/* سەرپەڕە */}
+          <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center gap-2">
+              <BookOpen className={`w-6 h-6 ${getAccentText()}`} />
+              <h1 className={`text-xl sm:text-2xl font-bold font-serif ${getAccentText()}`}>
+                {appLang === 'ku' && 'قورئانی پیرۆز'}
+                {appLang === 'ar' && 'القرآن الكريم'}
+                {appLang === 'en' && 'The Noble Quran'}
+              </h1>
+            </div>
+
+            {/* دوگمەی ڕێکخستن */}
+            <button
+              onClick={() => setView('settings')}
+              className={`p-2.5 rounded-2xl border transition-all ${
+                bgStyle === 'dark' ? 'bg-slate-900 border-slate-800 text-amber-400' : 'bg-slate-100 border-slate-200 text-slate-700 hover:bg-slate-200'
+              }`}
+              title="ڕێکخستنەکان"
+            >
+              <SettingsIcon className="w-5 h-5" />
+            </button>
           </div>
 
-          {/* شریتی سێرچ */}
+          {/* شریتی سێرچی خاوێن */}
           <div className="relative">
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="گەڕان لە ناوی سوورەت یان ژمارە (بۆ نموونە: یوسف، ٦٧، الملك)..."
-              className="w-full bg-slate-50 text-slate-800 placeholder-slate-400 text-xs px-4 py-3.5 pr-10 rounded-2xl border border-slate-200 focus:outline-none focus:border-slate-400 shadow-xs"
+              placeholder={
+                appLang === 'ku' ? 'گەڕان لە ناوی سوورەت یان ژمارە (بۆ نموونە: یوسف، ٦٧)...' :
+                appLang === 'ar' ? 'بحث عن اسم السورة أو الرقم (مثال: يوسف، ٦٧)...' :
+                'Search surah name or number...'
+              }
+              className={`w-full text-xs px-4 py-3.5 pr-10 rounded-2xl border focus:outline-none transition-all shadow-xs ${
+                bgStyle === 'dark' 
+                  ? 'bg-slate-900 border-slate-800 text-white placeholder-slate-500 focus:border-amber-500' 
+                  : 'bg-slate-50 border-slate-200 text-slate-800 placeholder-slate-400 focus:border-slate-400'
+              }`}
             />
             <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
           </div>
 
-          {/* کارتەکانی سوورەت */}
+          {/* پێڕستی سوورەتەکان */}
           <div className="space-y-2 pt-1">
             {filteredSurahs.map((surah) => (
               <div
                 key={surah.number}
                 onClick={() => openSurahPage(surah.startPage)}
-                className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200/90 hover:border-slate-300 cursor-pointer flex items-center justify-between transition-all active:scale-[0.99] group shadow-xs"
+                className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition-all active:scale-[0.99] group shadow-xs ${getCardBg()}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
-                    {surah.number}
-                  </div>
+                  {/* ژمارەی سوورەت */}
+                  {showNumbers && (
+                    <div className={`w-9 h-9 rounded-xl border text-xs font-bold flex items-center justify-center ${
+                      bgStyle === 'dark' ? 'bg-amber-950/60 border-amber-600/40 text-amber-300' : 'bg-slate-100 border-slate-200 text-slate-700'
+                    }`}>
+                      {surah.number}
+                    </div>
+                  )}
 
                   <div>
-                    <h3 className="font-bold text-sm text-slate-900 group-hover:text-slate-700 transition-colors">
+                    <h3 className="font-bold text-sm">
                       سورة {surah.nameAr}
                     </h3>
-                    <p className="text-[11px] text-slate-500">
-                      سوورەتی {surah.nameKu} • {surah.type} • {surah.ayahs} ئایەت
+                    <p className="text-[11px] opacity-75">
+                      {showKurdishNames && <span>{appLang === 'en' ? surah.nameEn : surah.nameKu} • </span>}
+                      <span>{appLang === 'ar' ? surah.typeAr : (appLang === 'en' ? surah.typeEn : surah.typeKu)} • </span>
+                      <span>{surah.ayahs} {appLang === 'ar' ? 'آيات' : (appLang === 'en' ? 'verses' : 'ئایەت')}</span>
                     </p>
                   </div>
                 </div>
 
-                <div className="text-left text-[11px] text-slate-600 font-bold bg-slate-100 px-2.5 py-1 rounded-xl border border-slate-200">
-                  لاپەڕەی {surah.startPage}
-                </div>
+                {showNumbers && (
+                  <div className={`text-left text-[11px] font-bold px-2.5 py-1 rounded-xl border ${
+                    bgStyle === 'dark' ? 'bg-slate-900 border-slate-800 text-amber-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                  }`}>
+                    {appLang === 'en' ? `Page ${surah.startPage}` : `لاپەڕەی ${surah.startPage}`}
+                  </div>
+                )}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ٢. پەڕەی موسحەف بە سپیی بەفریی تەواو (Pure White) */}
+      {/* ========================================================================= */}
+      {/* ٢. پەڕەی موسحەفی ڕاستەقینەی مەدینە (بە سیستەمی لەمس و پەڕە هەڵدانەوە) */}
+      {/* ========================================================================= */}
       {view === 'mushaf' && (
-        <div className="max-w-lg mx-auto p-2 sm:p-4 space-y-3">
-          
-          <div className="flex items-center justify-between bg-white border border-slate-200 p-2 rounded-2xl shadow-xs">
+        <div 
+          className="max-w-lg mx-auto p-2 sm:p-3 min-h-screen flex flex-col justify-between select-none"
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+        >
+          {/* شریتی سەرەوە */}
+          <div className={`flex items-center justify-between border p-2 rounded-2xl shadow-xs ${
+            bgStyle === 'dark' ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
+          }`}>
             <button
               onClick={() => setView('index')}
-              className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-200"
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border ${
+                bgStyle === 'dark' ? 'bg-slate-800 border-slate-700 text-amber-300' : 'bg-slate-100 border-slate-200 text-slate-800 hover:bg-slate-200'
+              }`}
             >
               <ArrowRight className="w-4 h-4" />
-              <span>پێڕستی سوورەتەکان</span>
+              <span>{appLang === 'ar' ? 'فهرس السور' : (appLang === 'en' ? 'Surah Index' : 'پێڕستی سوورەتەکان')}</span>
             </button>
 
-            <span className="text-xs text-slate-700 font-bold">
-              لاپەڕەی {currentPage} لە ٦٠٤
-            </span>
+            {showNumbers && (
+              <span className={`text-xs font-bold ${getAccentText()}`}>
+                {appLang === 'en' ? `Page ${currentPage} of 604` : `لاپەڕەی ${currentPage} لە ٦٠٤`}
+              </span>
+            )}
           </div>
 
-          {/* چوارچێوەی سپیی بەفری */}
-          <div className="relative rounded-3xl bg-white border-2 border-slate-200 shadow-sm p-2 sm:p-3 overflow-hidden min-h-[550px] flex flex-col items-center justify-center">
+          {/* لاپەڕەی مەدینەی منەوەرە (تەواو بە لەمس) */}
+          <div className="relative my-2 rounded-3xl overflow-hidden flex flex-col items-center justify-center">
             
+            {/* کلیکی سەر شاشە: لای چەپ = دواتر، لای ڕاست = پێشوو */}
+            <div 
+              onClick={nextPage}
+              className="absolute left-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer"
+              title="لاپەڕەی دواتر"
+            />
+            <div 
+              onClick={prevPage}
+              className="absolute right-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer"
+              title="لاپەڕەی پێشوو"
+            />
+
             {loadingPage && (
-              <div className="absolute inset-0 bg-white/95 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
+              <div className="absolute inset-0 bg-white/90 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-30">
                 <Loader2 className="w-8 h-8 text-slate-600 animate-spin" />
                 <span className="text-xs text-slate-700 font-bold">لاپەڕەی {currentPage} باردەکرێت...</span>
               </div>
             )}
 
-            {/* فلتەری لادانی زەردی و سپیکردنەوەی تەواوی وێنەکە */}
+            {/* وێنەی کوالیتی بەرزی لاپەڕە بەپێی باکگراوندی هەڵبژێردراو */}
             <img
               src={`https://android.quran.com/data/width_1260/page${formatPageNum(currentPage)}.png`}
               alt={`لاپەڕەی ${currentPage}`}
               onLoad={() => setLoadingPage(false)}
-              className="w-full h-auto max-h-[80vh] object-contain rounded-xl select-none pointer-events-none"
-              style={{
-                filter: 'grayscale(100%) contrast(115%) brightness(102%)',
-                mixBlendMode: 'multiply'
-              }}
+              className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none transition-all duration-300"
+              style={
+                bgStyle === 'white'
+                  ? { filter: 'grayscale(100%) contrast(115%) brightness(102%)', mixBlendMode: 'multiply' }
+                  : bgStyle === 'dark'
+                  ? { filter: 'invert(1) hue-rotate(180deg) contrast(120%)' }
+                  : undefined // بۆ دۆخی کرێمی شاموا وەک خۆی
+              }
             />
-
-            <div className="w-full text-center pt-2 border-t border-slate-100 mt-1 flex items-center justify-between text-[11px] text-slate-500 font-bold px-3">
-              <span>جوزء {Math.ceil(currentPage / 20)}</span>
-              <span className="bg-slate-100 px-3 py-0.5 rounded-full border border-slate-200 text-slate-700">
-                {currentPage}
-              </span>
-              <span>حیزب {Math.ceil(currentPage / 10)}</span>
-            </div>
           </div>
 
-          {/* دوگمەکانی پەڕەهەڵدانەوە */}
-          <div className="flex items-center justify-between gap-2 pt-1">
-            <button
-              onClick={nextPage}
-              disabled={currentPage >= 604}
-              className="flex-1 py-3 bg-white hover:bg-slate-50 disabled:opacity-40 border border-slate-200 text-slate-800 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95"
-            >
-              <ChevronRight className="w-4 h-4" />
-              <span>لاپەڕەی دواتر ({currentPage + 1})</span>
-            </button>
-
-            <button
-              onClick={prevPage}
-              disabled={currentPage <= 1}
-              className="flex-1 py-3 bg-white hover:bg-slate-50 disabled:opacity-40 border border-slate-200 text-slate-800 font-bold rounded-2xl text-xs flex items-center justify-center gap-1.5 shadow-xs transition-transform active:scale-95"
-            >
-              <span>لاپەڕەی پێشوو ({currentPage - 1})</span>
-              <ChevronLeft className="w-4 h-4" />
-            </button>
+          {/* ڕێنمایی لەمس و ژمارەی لاپەڕە لە خوارەوە */}
+          <div className="text-center py-1 text-[11px] opacity-70">
+            <span>👆 پەنجەت بە ڕاست و چەپدا ڕابکێشە بۆ پەڕەهەڵدانەوە</span>
           </div>
 
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* ٣. بەشی ڕێکخستنە پێشکەوتووەکان (Settings Screen) */}
+      {/* ========================================================================= */}
+      {view === 'settings' && (
+        <div className="max-w-xl mx-auto p-4 space-y-6">
+          
+          {/* سەرپەڕەی ڕێکخستن */}
+          <div className="flex items-center justify-between border-b pb-3">
+            <div className="flex items-center gap-2">
+              <Sliders className={`w-5 h-5 ${getAccentText()}`} />
+              <h2 className="text-lg font-bold">
+                {appLang === 'ar' ? 'الإعدادات' : (appLang === 'en' ? 'Settings' : 'ڕێکخستنەکان')}
+              </h2>
+            </div>
+
+            <button
+              onClick={() => setView('index')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1 border ${
+                bgStyle === 'dark' ? 'bg-slate-800 border-slate-700 text-amber-300' : 'bg-slate-100 border-slate-200 text-slate-800'
+              }`}
+            >
+              <ArrowRight className="w-4 h-4" />
+              <span>گەڕانەوە</span>
+            </button>
+          </div>
+
+          {/* ١. هەڵبژاردنی ٣ باکگراوندەکە */}
+          <div className={`p-5 rounded-3xl border space-y-3 ${getCardBg()}`}>
+            <span className="text-xs font-bold flex items-center gap-1.5">
+              <Palette className="w-4 h-4" />
+              شێوازی باکگراوندی قورئان:
+            </span>
+
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'white', label: 'سپیی پاک ⚪', desc: 'ڕۆشن و خاوێن' },
+                { id: 'cream', label: 'موسحەفی مەدینە 📜', desc: 'کاغەزی شاموا' },
+                { id: 'dark', label: 'شەوی تاریک 🖤', desc: 'ماتی ئارام' }
+              ].map(st => (
+                <button
+                  key={st.id}
+                  onClick={() => setBgStyle(st.id as any)}
+                  className={`p-3 rounded-2xl text-center border transition-all text-xs font-bold ${
+                    bgStyle === st.id
+                      ? `${getAccentBg()} shadow-md scale-102`
+                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  <span className="block">{st.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ٢. زمانی ئەپەکە */}
+          <div className={`p-5 rounded-3xl border space-y-3 ${getCardBg()}`}>
+            <span className="text-xs font-bold flex items-center gap-1.5">
+              <Globe className="w-4 h-4" />
+              زمانی بەرنامە (Language):
+            </span>
+
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'ku', label: 'کوردی' },
+                { id: 'ar', label: 'العربية' },
+                { id: 'en', label: 'English' }
+              ].map(lg => (
+                <button
+                  key={lg.id}
+                  onClick={() => setAppLang(lg.id as any)}
+                  className={`py-2.5 rounded-2xl text-xs font-bold border transition-all ${
+                    appLang === lg.id
+                      ? `${getAccentBg()} shadow-md`
+                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  {lg.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ٣. ڕەنگی سەرەکیی ئەپەکە */}
+          <div className={`p-5 rounded-3xl border space-y-3 ${getCardBg()}`}>
+            <span className="text-xs font-bold flex items-center gap-1.5">
+              <Palette className="w-4 h-4" />
+              ڕەنگی سەرەکی (Theme Color):
+            </span>
+
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'gold', label: 'زێڕین ⚜️' },
+                { id: 'emerald', label: 'سەوز 🌿' },
+                { id: 'blue', label: 'شین 💎' }
+              ].map(cl => (
+                <button
+                  key={cl.id}
+                  onClick={() => setAccentColor(cl.id as any)}
+                  className={`py-2.5 rounded-2xl text-xs font-bold border transition-all ${
+                    accentColor === cl.id
+                      ? `${getAccentBg()} shadow-md`
+                      : 'bg-slate-100 text-slate-700 border-slate-200'
+                  }`}
+                >
+                  {cl.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ٤. تایبەتمەندییەکانی پیشاندان و شاردنەوە */}
+          <div className={`p-5 rounded-3xl border space-y-4 ${getCardBg()}`}>
+            <span className="text-xs font-bold flex items-center gap-1.5">
+              <Eye className="w-4 h-4" />
+              ڕێکخستنی پیشاندان:
+            </span>
+
+            {/* وەرگێڕانی ناوی سوورەتەکان */}
+            <div className="flex items-center justify-between border-b pb-3">
+              <span className="text-xs font-bold">پیشاندانی وەرگێڕانی ناوی سوورەتەکان</span>
+              <input
+                type="checkbox"
+                checked={showKurdishNames}
+                onChange={(e) => setShowKurdishNames(e.target.checked)}
+                className="w-5 h-5 accent-amber-600 rounded cursor-pointer"
+              />
+            </div>
+
+            {/* ژمارەی لاپەڕە و سوورەتەکان */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold">پیشاندانی ژمارەی لاپەڕە و سوورەتەکان</span>
+              <input
+                type="checkbox"
+                checked={showNumbers}
+                onChange={(e) => setShowNumbers(e.target.checked)}
+                className="w-5 h-5 accent-amber-600 rounded cursor-pointer"
+              />
+            </div>
+          </div>
+
+        </div>
+      )}
+
     </div>
   );
 }
