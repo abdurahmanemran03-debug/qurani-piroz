@@ -166,7 +166,7 @@ export default function App() {
             <p className="text-xs text-slate-500 font-medium">موسحەفی فەرمیی مەدینەی منەوەرە</p>
           </div>
 
-          {/* شریتی سێرچی سپیی بێ زەردی */}
+          {/* شریتی سێرچ */}
           <div className="relative">
             <input
               type="text"
@@ -178,7 +178,7 @@ export default function App() {
             <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
           </div>
 
-          {/* کارتەکان */}
+          {/* کارتەکانی سوورەت */}
           <div className="space-y-2 pt-1">
             {filteredSurahs.map((surah) => (
               <div
@@ -210,7 +210,7 @@ export default function App() {
         </div>
       )}
 
-      {/* ٢. پەڕەی موسحەف بە سپیی خاوێن (Pure White Mushaf) */}
+      {/* ٢. پەڕەی موسحەف بە سپیی بەفریی تەواو (Pure White) */}
       {view === 'mushaf' && (
         <div className="max-w-lg mx-auto p-2 sm:p-4 space-y-3">
           
@@ -228,26 +228,31 @@ export default function App() {
             </span>
           </div>
 
-          {/* چوارچێوەی سپیی بەفریی لاپەڕەی مەدینە */}
-          <div className="relative rounded-3xl bg-white border-2 border-slate-200 shadow-md p-2 sm:p-3 overflow-hidden min-h-[550px] flex flex-col items-center justify-center">
+          {/* چوارچێوەی سپیی بەفری */}
+          <div className="relative rounded-3xl bg-white border-2 border-slate-200 shadow-sm p-2 sm:p-3 overflow-hidden min-h-[550px] flex flex-col items-center justify-center">
             
             {loadingPage && (
-              <div className="absolute inset-0 bg-white/90 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
+              <div className="absolute inset-0 bg-white/95 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
                 <Loader2 className="w-8 h-8 text-slate-600 animate-spin" />
                 <span className="text-xs text-slate-700 font-bold">لاپەڕەی {currentPage} باردەکرێت...</span>
               </div>
             )}
 
+            {/* فلتەری لادانی زەردی و سپیکردنەوەی تەواوی وێنەکە */}
             <img
               src={`https://android.quran.com/data/width_1260/page${formatPageNum(currentPage)}.png`}
               alt={`لاپەڕەی ${currentPage}`}
               onLoad={() => setLoadingPage(false)}
               className="w-full h-auto max-h-[80vh] object-contain rounded-xl select-none pointer-events-none"
+              style={{
+                filter: 'grayscale(100%) contrast(115%) brightness(102%)',
+                mixBlendMode: 'multiply'
+              }}
             />
 
-            <div className="w-full text-center pt-2 border-t border-slate-100 mt-1 flex items-center justify-between text-[11px] text-slate-600 font-bold px-3">
+            <div className="w-full text-center pt-2 border-t border-slate-100 mt-1 flex items-center justify-between text-[11px] text-slate-500 font-bold px-3">
               <span>جوزء {Math.ceil(currentPage / 20)}</span>
-              <span className="bg-slate-100 px-3 py-0.5 rounded-full border border-slate-200">
+              <span className="bg-slate-100 px-3 py-0.5 rounded-full border border-slate-200 text-slate-700">
                 {currentPage}
               </span>
               <span>حیزب {Math.ceil(currentPage / 10)}</span>
