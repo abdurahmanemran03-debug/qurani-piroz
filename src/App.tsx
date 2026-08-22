@@ -6,8 +6,6 @@ import {
 
 import { BgThemeType, AppLangType, AccentColorType, CityPrayerData } from './types';
 import { SURAHS_INDEX } from './data/surahsData';
-import { SEERAH_BOOK_CHAPTERS, SAHABA_ENCYCLOPEDIA, SCHOLARS_ENCYCLOPEDIA } from './data/seerahAndScholarsData';
-import { ALL_QUIZ_DATA } from './data/quizData';
 
 import { SurahListView } from './components/SurahListView';
 import { MushafPageView } from './components/MushafPageView';
@@ -172,19 +170,15 @@ export default function App() {
         )}
 
         {activeTab === 'library' && (
-          <LibraryView scholars={SCHOLARS_ENCYCLOPEDIA} />
+          <LibraryView />
         )}
 
         {activeTab === 'seerah' && (
-          <SeerahView
-            chapters={SEERAH_BOOK_CHAPTERS}
-            sahabaList={SAHABA_ENCYCLOPEDIA}
-          />
+          <SeerahView />
         )}
 
         {activeTab === 'quiz' && (
           <QuizView
-            quizList={ALL_QUIZ_DATA}
             hasanatScore={hasanatScore}
             onAddHasanat={(amt) => setHasanatScore(prev => prev + amt)}
           />
