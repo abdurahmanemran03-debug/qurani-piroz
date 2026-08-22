@@ -73,9 +73,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const currentJuz = Math.ceil(currentPage / 20);
   const currentSurah = surahsList.slice().reverse().find(s => currentPage >= s.startPage) || surahsList[0];
 
-  // ------------------------------------------------------------------
-  // ئەفێکتی هەڵدانەوەی لاپەڕە (Page-flip animation)
-  // ------------------------------------------------------------------
   const [displayPage, setDisplayPage] = useState(currentPage);
   const [flipOverlay, setFlipOverlay] = useState<{ page: number; direction: 'next' | 'prev' } | null>(null);
   const [flipTriggered, setFlipTriggered] = useState(false);
@@ -293,9 +290,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                 className="absolute inset-0"
                 style={{
                   transformStyle: 'preserve-3d',
-                  transformOrigin: flipOverlay.direction === 'next' ? 'right center' : 'left center',
+                  transformOrigin: flipOverlay.direction === 'next' ? 'left center' : 'right center',
                   transform: flipTriggered
-                    ? `rotateY(${flipOverlay.direction === 'next' ? '180deg' : '-180deg'})`
+                    ? `rotateY(${flipOverlay.direction === 'next' ? '-180deg' : '180deg'})`
                     : 'rotateY(0deg)',
                   transition: 'transform 0.6s cubic-bezier(0.45, 0, 0.55, 1)',
                   backfaceVisibility: 'hidden',
