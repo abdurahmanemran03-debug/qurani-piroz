@@ -36,10 +36,11 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [loadingPage, setLoadingPage] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
-  // سیستەمی لەمس
+  // سیستەمی لەمس و ئەنیمەیشنی چەمانەوەی لاپەڕە (3D Flip)
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
+  const [flipAnimation, setFlipAnimation] = useState<'next' | 'prev' | null>(null);
 
   // مۆداڵەکان
   const [isRecitersModalOpen, setIsRecitersModalOpen] = useState(false);
@@ -96,9 +97,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             surahNumber: a.surah.number,
             numberInSurah: a.numberInSurah,
             arabic: a.text,
-            asanTafsir: ku[i]?.text || 'بە ناوی خودای بەخشندەی میهرەبان...',
-            roshanTafsir: `بەناوی خوای بەخشندەی میهرەبان، کانگای ڕەحمەت و سۆز و بەزەییە. (${ku[i]?.text || ''})`,
-            namiTafsir: `[تەفسیری نامی - م. مەلا عەبدولکەریم]: دەستپێکردن بە ناوی خودا بۆ داوای هاوکاری و بەردەوامییە لەسەر فەرمانەکانی خودا.`
+            asanTafsir: ku[i]?.text || 'بە ناوی خودای بەخشندەی میهرەبان...'
           }));
           setPageAyahsData(combined);
         }
@@ -127,6 +126,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
+  // دەستپێکی لەمس
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.targetTouches[0].clientX);
     setIsDragging(true);
@@ -138,20 +138,58 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     setDragOffset(currentX - touchStartX);
   };
 
-  // ئاڕاستەی داواکراو: ڕاکێشان بەرەو چەپ دەچێتە لاپەڕەی دواتر (بەقەڕە)
+  // هەڵدانەوەی لاپەڕە بە پەنجە ڕاکێشان (هاوشێوەی پەنجەلێدان: چەپ = دواتر، ڕاست = پێشوو)
   const handleTouchEnd = () => {
     setIsDragging(false);
-    if (dragOffset < -30) {
-      // ڕاکێشان بەرەو چەپ ⬅️ -> دەچێتە لاپەڕەی دواتر (بەقەڕە: لاپەڕە ٢)
-      setLoadingPage(true);
-      onNextPage();
-    } else if (dragOffset > 30) {
-      // ڕاکێشان بەرەو ڕاست ➡️ -> دەگەڕێتەوە لاپەڕەی پێشوو (فاتیحە: لاپەڕە ١)
-      setLoadingPage(true);
-      onPrevPage();
+    if (dragOffset < -35) {
+      // ڕاکێشان بۆ چەپ ⬅️ -> لاپەڕەی دواتر (بەقەڕە)
+      triggerPageTurn('next');
+    } else if (dragOffset > 35) {
+      // ڕاکێشان بۆ ڕاست ➡️ -> لاپەڕەی پێشوو (فاتیحە)
+      triggerPageTurn('prev');
     }
     setDragOffset(0);
     setTouchStartX(null);
+  };
+
+  const triggerPageTurn = (direction: 'next' | 'prev') => {
+    setFlipAnimation(direction);
+    setTimeout(() => {
+      setLoadingPage(true);
+      if (direction === 'next') onNextPage();
+      else onPrevPage();
+      setFlipAnimation(null);
+    }, 200);
+  };
+
+  // ئەژمارکردنی چەمانەوەی ٣ ڕەهەندی لاپەڕەکە
+  const getPageTransform = () => {
+    if (isDragging) {
+      const rotateDeg = (dragOffset / 300) * 20; // چەمانەوە لە کاتی ڕاکێشان
+      return {
+        transform: `perspective(1200px) rotateY(${rotateDeg}deg) translateX(${dragOffset * 0.8}px)`,
+        transition: 'none'
+      };
+    }
+    if (flipAnimation === 'next') {
+      return {
+        transform: 'perspective(1200px) rotateY(-35deg) translateX(-60px)',
+        opacity: 0.6,
+        transition: 'all 0.22s ease-out'
+      };
+    }
+    if (flipAnimation === 'prev') {
+      return {
+        transform: 'perspective(1200px) rotateY(35deg) translateX(60px)',
+        opacity: 0.6,
+        transition: 'all 0.22s ease-out'
+      };
+    }
+    return {
+      transform: 'perspective(1200px) rotateY(0deg) translateX(0px)',
+      opacity: 1,
+      transition: 'all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1)'
+    };
   };
 
   return (
@@ -159,7 +197,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
       {/* شریتی سەرەوە */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-xs">
+      <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
+        showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+      }`}>
         <button
           onClick={onBackToIndex}
           className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-700 transition-colors"
@@ -201,14 +241,14 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           <button
             onClick={() => setIsTafsirSelectorOpen(true)}
             className="p-2 rounded-xl hover:bg-slate-100 text-slate-700"
-            title="هەڵبژاردنی تەفسیرەکان"
+            title="تەفسیرەکان"
           >
             <Globe className="w-4 h-4" />
           </button>
         </div>
       </header>
 
-      {/* ١. لاپەڕەی موسحەف: پەنجە بەرەو چەپ دەچێتە لاپەڕەی دواتر */}
+      {/* ١. لاپەڕەی موسحەف بە هەڵدانەوەی نەرمی ٣ ڕەهەندی */}
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex flex-col items-center justify-center p-2 cursor-pointer touch-pan-y"
@@ -217,17 +257,17 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* کلیک لە لای چەپ = دەچێتە بەقەڕە / دواتر */}
+          {/* پەنجەدان لە لای چەپ = دەچێتە بەقەڕە / لاپەڕەی دواتر */}
           <div 
-            onClick={(e) => { e.stopPropagation(); setLoadingPage(true); onNextPage(); }} 
+            onClick={(e) => { e.stopPropagation(); triggerPageTurn('next'); }} 
             className="absolute left-0 top-0 bottom-0 w-2/5 z-20 cursor-pointer" 
-            title="لاپەڕەی دواتر (بەرەو چەپ)"
+            title="لاپەڕەی دواتر"
           />
-          {/* کلیک لە لای ڕاست = دەگەڕێتەوە فاتیحە / پێشوو */}
+          {/* پەنجەدان لە لای ڕاست = دەگەڕێتەوە فاتیحە / لاپەڕەی پێشوو */}
           <div 
-            onClick={(e) => { e.stopPropagation(); setLoadingPage(true); onPrevPage(); }} 
+            onClick={(e) => { e.stopPropagation(); triggerPageTurn('prev'); }} 
             className="absolute right-0 top-0 bottom-0 w-2/5 z-20 cursor-pointer" 
-            title="لاپەڕەی پێشوو (بەرەو ڕاست)"
+            title="لاپەڕەی پێشوو"
           />
 
           {loadingPage && (
@@ -237,18 +277,28 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             </div>
           )}
 
+          {/* کانتینەری لاپەڕەکە بە سێبەر و چەمانەوەی کتێب */}
           <div 
-            className="w-full transition-transform"
-            style={{
-              transform: `translateX(${dragOffset}px)`,
-              transition: isDragging ? 'none' : 'transform 0.25s ease-out'
-            }}
+            className="w-full origin-center relative rounded-3xl"
+            style={getPageTransform()}
           >
+            {/* سێبەری چەمانەوەی کاغەز لە کاتی هەڵدانەوەدا */}
+            {isDragging && (
+              <div 
+                className="absolute inset-0 z-10 pointer-events-none rounded-3xl"
+                style={{
+                  background: dragOffset < 0
+                    ? 'linear-gradient(to left, rgba(0,0,0,0.08), transparent)'
+                    : 'linear-gradient(to right, rgba(0,0,0,0.08), transparent)'
+                }}
+              />
+            )}
+
             <img
               src={`https://android.quran.com/data/width_1260/page${formatPageNum(currentPage)}.png`}
               alt={`Page ${currentPage}`}
               onLoad={() => setLoadingPage(false)}
-              className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none"
+              className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none drop-shadow-sm"
               style={{
                 filter: 'grayscale(100%) contrast(115%) brightness(102%)',
                 mixBlendMode: 'multiply'
