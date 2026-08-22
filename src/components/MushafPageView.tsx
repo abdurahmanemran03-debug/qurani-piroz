@@ -36,7 +36,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [loadingPage, setLoadingPage] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
-  // سیستەمی لەمس بۆ پەڕە هەڵدانەوە
+  // سیستەمی لەمس
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -138,15 +138,15 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     setDragOffset(currentX - touchStartX);
   };
 
-  // ئاڕاستەی عەکسکراوە بەپێی ویستی بەکارهێنەر:
+  // ئاڕاستەی داواکراو: ڕاکێشان بەرەو چەپ دەچێتە لاپەڕەی دواتر (بەقەڕە)
   const handleTouchEnd = () => {
     setIsDragging(false);
-    if (dragOffset < -40) {
-      // ڕاکێشان بۆ چەپ -> لاپەڕەی دواتر (Next Page)
+    if (dragOffset < -30) {
+      // ڕاکێشان بەرەو چەپ ⬅️ -> دەچێتە لاپەڕەی دواتر (بەقەڕە: لاپەڕە ٢)
       setLoadingPage(true);
       onNextPage();
-    } else if (dragOffset > 40) {
-      // ڕاکێشان بۆ ڕاست -> لاپەڕەی پێشوو (Prev Page)
+    } else if (dragOffset > 30) {
+      // ڕاکێشان بەرەو ڕاست ➡️ -> دەگەڕێتەوە لاپەڕەی پێشوو (فاتیحە: لاپەڕە ١)
       setLoadingPage(true);
       onPrevPage();
     }
@@ -208,7 +208,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* ١. لاپەڕەی موسحەف */}
+      {/* ١. لاپەڕەی موسحەف: پەنجە بەرەو چەپ دەچێتە لاپەڕەی دواتر */}
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex flex-col items-center justify-center p-2 cursor-pointer touch-pan-y"
@@ -217,17 +217,17 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* لای چەپی شاشە = لاپەڕەی دواتر */}
+          {/* کلیک لە لای چەپ = دەچێتە بەقەڕە / دواتر */}
           <div 
             onClick={(e) => { e.stopPropagation(); setLoadingPage(true); onNextPage(); }} 
-            className="absolute left-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
-            title="لاپەڕەی دواتر"
+            className="absolute left-0 top-0 bottom-0 w-2/5 z-20 cursor-pointer" 
+            title="لاپەڕەی دواتر (بەرەو چەپ)"
           />
-          {/* لای ڕاستی شاشە = لاپەڕەی پێشوو */}
+          {/* کلیک لە لای ڕاست = دەگەڕێتەوە فاتیحە / پێشوو */}
           <div 
             onClick={(e) => { e.stopPropagation(); setLoadingPage(true); onPrevPage(); }} 
-            className="absolute right-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
-            title="لاپەڕەی پێشوو"
+            className="absolute right-0 top-0 bottom-0 w-2/5 z-20 cursor-pointer" 
+            title="لاپەڕەی پێشوو (بەرەو ڕاست)"
           />
 
           {loadingPage && (
