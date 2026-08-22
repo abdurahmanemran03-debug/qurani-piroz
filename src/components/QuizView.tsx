@@ -1,23 +1,28 @@
 import React, { useState } from 'react';
 import { Award, Palmtree } from 'lucide-react';
-import { QuizItem } from '../types';
+
+const QUIZ_LIST = [
+  { id: 1, question: 'یەکەمین ئایەت کە بۆ پێغەمبەری خوا ﷺ دابەزی کامە بوو؟', options: ['الفاتحة', 'اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ', 'المدثر', 'البقرة'], correctIndex: 1, rewardHasanat: 50, rewardText: '٥٠ چاکە + درەختێک لە بەهەشت 🌴' },
+  { id: 2, question: 'گەورەترین ئایەت لە قورئانی پیرۆزدا کامەیە؟', options: ['ئایەتی کورسی (البقرة: ٢٥٥)', 'ئایەتی دین (البقرة: ٢٨٢)', 'ئایەتی ئاخر فاتحة', 'ئیخلاس'], correctIndex: 0, rewardHasanat: 50, rewardText: '٥٠ چاکە + پارێزگاری لە شەیتان ✨' },
+  { id: 3, question: 'سوورەتی یاسین بە چی ناسراوە بەپێی فەرموودە؟', options: ['دایکی قورئان', 'دڵی قورئان', 'بووکی قورئان', 'کۆتایی قورئان'], correctIndex: 1, rewardHasanat: 50, rewardText: '٥٠ چاکە + لێخۆشبوونی تاوان 🕊️' },
+  { id: 4, question: 'نووسەری «تەفسیری نامی» بۆ قورئانی پیرۆز کێیە؟', options: ['مامۆستا عەلی باپیر', 'مامۆستا مەلا عەبدولکەریمی مودەڕڕیس', 'مامۆستا عوسمان عەبدولعەزیز', 'مەلا موحەممەد کۆیی'], correctIndex: 1, rewardHasanat: 50, rewardText: '٥٠ چاکە + دەستخۆشی زانستی 📚' },
+  { id: 5, question: 'کام لە هاوەڵان بە (سەیفوڵڵا - شمشێری خودا) ناسراوە؟', options: ['عومەری کوڕی خەتتاب', 'عەلی کوڕی ئەبی تالیب', 'خالیدی کوڕی وەلید', 'سەعدی کوڕی ئەبی وەقاس'], correctIndex: 2, rewardHasanat: 50, rewardText: '٥٠ چاکە + ناسینی پاڵەوانانی ئیسلام ⚔️' }
+];
 
 interface QuizViewProps {
-  quizList: QuizItem[];
   hasanatScore: number;
   onAddHasanat: (amount: number) => void;
 }
 
 export const QuizView: React.FC<QuizViewProps> = ({
-  quizList,
   hasanatScore,
   onAddHasanat
 }) => {
-  const [currentIndex, setCurrentIndex] = useState<number>(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
-  const [showRewardModal, setShowRewardModal] = useState<boolean>(false);
+  const [showRewardModal, setShowRewardModal] = useState(false);
 
-  const currentQ = quizList[currentIndex] || quizList[0];
+  const currentQ = QUIZ_LIST[currentIndex];
 
   const handleSelectOption = (idx: number) => {
     setSelectedAnswer(idx);
@@ -37,16 +42,14 @@ export const QuizView: React.FC<QuizViewProps> = ({
       <div className="p-5 rounded-3xl bg-white border border-slate-200 space-y-3.5 shadow-xs">
         <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
           <span className="px-3 py-1 rounded-full bg-amber-100 text-amber-900 text-xs font-bold">
-            پرسیاری {currentIndex + 1} لە {quizList.length}
+            پرسیاری {currentIndex + 1} لە {QUIZ_LIST.length}
           </span>
           <span className="text-xs text-emerald-700 font-bold flex items-center gap-1">
             <Palmtree className="w-4 h-4" /> +{currentQ.rewardHasanat} چاکە
           </span>
         </div>
 
-        <h3 className="font-bold text-sm text-slate-900 leading-snug">
-          {currentQ.question}
-        </h3>
+        <h3 className="font-bold text-sm text-slate-900 leading-snug">{currentQ.question}</h3>
 
         <div className="space-y-2 pt-1">
           {currentQ.options.map((opt, i) => {
@@ -72,7 +75,7 @@ export const QuizView: React.FC<QuizViewProps> = ({
             <button
               onClick={() => {
                 setSelectedAnswer(null);
-                if (currentIndex < quizList.length - 1) setCurrentIndex(prev => prev + 1);
+                if (currentIndex < QUIZ_LIST.length - 1) setCurrentIndex(prev => prev + 1);
                 else setCurrentIndex(0);
               }}
               className="w-full py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shadow-md"
