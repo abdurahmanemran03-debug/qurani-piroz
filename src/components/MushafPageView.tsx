@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowRight, Loader2, BookOpen, Volume2, Play, Pause, 
-  Bookmark, BookmarkCheck, ListFilter, X, Check, Mic, Globe
+  Bookmark, BookmarkCheck, ListFilter, X, Check, Mic, Globe, ChevronDown
 } from 'lucide-react';
 import { BgThemeType, AppLangType, SurahItem } from '../types';
 import { ALL_RECITERS_DIRECTORY, ReciterItem } from '../data/recitersList';
@@ -36,11 +36,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [loadingPage, setLoadingPage] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
-  // سیستەمی هەڵدانەوەی ٣ ڕەهەندی
+  // لەمس بۆ پەڕە هەڵدانەوە
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [dragOffset, setDragOffset] = useState<number>(0);
-  const [isDragging, setIsDragging] = useState(false);
-  const [flipState, setFlipState] = useState<'idle' | 'flipping-next' | 'flipping-prev'>('idle');
+  const [touchEndX, setTouchEndX] = useState<number | null>(null);
 
   // مۆداڵەکان
   const [isRecitersModalOpen, setIsRecitersModalOpen] = useState(false);
@@ -127,75 +125,37 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
+  // پەڕەهەڵدانەوە بە لەمس (Swipe)
   const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEndX(null);
     setTouchStartX(e.targetTouches[0].clientX);
-    setIsDragging(true);
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const currentX = e.targetTouches[0].clientX;
-    setDragOffset(currentX - touchStartX);
+    setTouchEndX(e.targetTouches[0].clientX);
   };
 
   const handleTouchEnd = () => {
-    setIsDragging(false);
-    if (dragOffset < -40 && currentPage < 604) {
-      triggerFlip('flipping-next', onNextPage);
-    } else if (dragOffset > 40 && currentPage > 1) {
-      triggerFlip('flipping-prev', onPrevPage);
-    }
-    setDragOffset(0);
-    setTouchStartX(null);
-  };
+    if (!touchStartX || !touchEndX) return;
+    const distance = touchStartX - touchEndX;
 
-  const triggerFlip = (state: 'flipping-next' | 'flipping-prev', callback: () => void) => {
-    setFlipState(state);
-    setTimeout(() => {
+    // ڕاکێشان بەرەو چەپ (distance > 40) -> لاپەڕەی دواتر (بەقەڕە)
+    if (distance > 40 && currentPage < 604) {
       setLoadingPage(true);
-      callback();
-      setFlipState('idle');
-    }, 240);
-  };
-
-  const getBookFlipStyle = () => {
-    if (isDragging) {
-      const angle = (dragOffset / 280) * 45;
-      return {
-        transformOrigin: dragOffset < 0 ? 'left center' : 'right center',
-        transform: `perspective(1400px) rotateY(${angle}deg) translateX(${dragOffset * 0.4}px)`,
-        transition: 'none'
-      };
+      onNextPage();
     }
-    if (flipState === 'flipping-next') {
-      return {
-        transformOrigin: 'left center',
-        transform: 'perspective(1400px) rotateY(-55deg) scale(0.96)',
-        opacity: 0.5,
-        transition: 'all 0.24s ease-out'
-      };
+    // ڕاکێشان بەرەو ڕاست (distance < -40) -> لاپەڕەی پێشوو (فاتیحە)
+    else if (distance < -40 && currentPage > 1) {
+      setLoadingPage(true);
+      onPrevPage();
     }
-    if (flipState === 'flipping-prev') {
-      return {
-        transformOrigin: 'right center',
-        transform: 'perspective(1400px) rotateY(55deg) scale(0.96)',
-        opacity: 0.5,
-        transition: 'all 0.24s ease-out'
-      };
-    }
-    return {
-      transformOrigin: 'center center',
-      transform: 'perspective(1400px) rotateY(0deg) scale(1)',
-      opacity: 1,
-      transition: 'all 0.26s cubic-bezier(0.25, 1, 0.5, 1)'
-    };
   };
 
   return (
-    <div className="relative min-h-screen max-w-lg mx-auto flex flex-col justify-between overflow-hidden select-none bg-[#fdfbf7] text-slate-900" dir="rtl">
+    <div className="relative min-h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-white text-slate-900" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
-      {/* شریتی سەرەوە */}
+      {/* شریتی سەرەوە (ڕێک وەک وێنەکەت) */}
       <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
@@ -216,7 +176,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 text-slate-700">
+        <div className="flex items-center gap-1 text-slate-700">
           <button
             onClick={() => setViewMode(prev => prev === 'mushaf' ? 'tafsir' : 'mushaf')}
             className={`p-2 rounded-xl transition-colors ${
@@ -247,25 +207,25 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* ١. لاپەڕەی موسحەف بە شێوازی چەمانەوەی کتێب */}
+      {/* ١. لاپەڕەی مەدینە - تەواو خاوێن، بێ بڕان، و لەسەر شاشەی مۆبایل ڕێکخراو */}
       {viewMode === 'mushaf' && (
         <div 
-          className="relative flex-1 flex flex-col items-center justify-center p-2 sm:p-3 cursor-pointer touch-pan-y"
+          className="relative flex-1 flex flex-col items-center justify-center p-2 cursor-pointer touch-pan-y"
           onClick={() => setShowControls(prev => !prev)}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* پەنجەدان لە لای چەپ = لاپەڕەی دواتر */}
+          {/* لای چەپی شاشە کلیک بکە دەچێتە سەر لاپەڕەی دواتر (بەقەڕە) */}
           <div 
-            onClick={(e) => { e.stopPropagation(); if (currentPage < 604) triggerFlip('flipping-next', onNextPage); }} 
-            className="absolute left-0 top-0 bottom-0 w-2/5 z-20 cursor-pointer" 
+            onClick={(e) => { e.stopPropagation(); if (currentPage < 604) { setLoadingPage(true); onNextPage(); } }} 
+            className="absolute left-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
             title="لاپەڕەی دواتر"
           />
-          {/* پەنجەدان لە لای ڕاست = لاپەڕەی پێشوو */}
+          {/* لای ڕاستی شاشە کلیک بکە دەگەڕێتەوە سەر لاپەڕەی پێشوو (فاتیحە) */}
           <div 
-            onClick={(e) => { e.stopPropagation(); if (currentPage > 1) triggerFlip('flipping-prev', onPrevPage); }} 
-            className="absolute right-0 top-0 bottom-0 w-2/5 z-20 cursor-pointer" 
+            onClick={(e) => { e.stopPropagation(); if (currentPage > 1) { setLoadingPage(true); onPrevPage(); } }} 
+            className="absolute right-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
             title="لاپەڕەی پێشوو"
           />
 
@@ -276,32 +236,13 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             </div>
           )}
 
-          {/* چوارچێوەی لاپەڕە بە سێبەری تیخی ناوەڕاست */}
-          <div 
-            className="w-full relative rounded-3xl overflow-hidden bg-white shadow-xl border border-slate-200/80"
-            style={{
-              ...getBookFlipStyle(),
-              boxShadow: currentPage % 2 === 0
-                ? 'inset -18px 0 24px -10px rgba(0,0,0,0.12), 0 10px 25px -5px rgba(0,0,0,0.08)'
-                : 'inset 18px 0 24px -10px rgba(0,0,0,0.12), 0 10px 25px -5px rgba(0,0,0,0.08)'
-            }}
-          >
-            {isDragging && (
-              <div 
-                className="absolute inset-0 z-10 pointer-events-none"
-                style={{
-                  background: dragOffset < 0
-                    ? 'linear-gradient(to left, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.02) 40%, transparent 100%)'
-                    : 'linear-gradient(to right, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.02) 40%, transparent 100%)'
-                }}
-              />
-            )}
-
+          {/* وێنەی لاپەڕەی قورئان بە کوالیتی بەرز و بێ بڕان */}
+          <div className="w-full flex items-center justify-center max-h-[82vh]">
             <img
               src={`https://android.quran.com/data/width_1260/page${formatPageNum(currentPage)}.png`}
               alt={`Page ${currentPage}`}
               onLoad={() => setLoadingPage(false)}
-              className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none p-1.5"
+              className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block"
               style={{
                 filter: 'grayscale(100%) contrast(115%) brightness(102%)',
                 mixBlendMode: 'multiply'
@@ -338,8 +279,10 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* شریتی خوارەوەی دەنگ */}
-      <footer className="sticky bottom-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg">
+      {/* شریتی خوارەوەی دەنگ (ڕێک وەک وێنەکەت) */}
+      <footer className={`sticky bottom-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
+        showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+      }`}>
         <button 
           onClick={() => setIsRecitersModalOpen(true)}
           className="text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5"
@@ -355,7 +298,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </button>
       </footer>
 
-      {/* مۆداڵەکانی دەنگ، تەفسیر و سوورەت */}
       <RecitersModal
         isOpen={isRecitersModalOpen}
         onClose={() => setIsRecitersModalOpen(false)}
