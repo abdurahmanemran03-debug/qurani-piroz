@@ -1,3 +1,8 @@
+export type AppThemeMode = 'minimalist-dark' | 'madinah-mushaf' | 'soft-modern';
+export type BgThemeType = 'white' | 'cream' | 'dark';
+export type AppLangType = 'ku' | 'ar' | 'en';
+export type AccentColorType = 'gold' | 'emerald' | 'blue';
+
 export interface SurahItem {
   number: number;
   nameAr: string;
@@ -9,10 +14,6 @@ export interface SurahItem {
   ayahs: number;
   startPage: number;
 }
-
-export type BgThemeType = 'white' | 'cream' | 'dark';
-export type AppLangType = 'ku' | 'ar' | 'en';
-export type AccentColorType = 'gold' | 'emerald' | 'blue';
 
 export interface DhikrItem {
   id: string;
@@ -65,4 +66,21 @@ export interface QuizItem {
   correctIndex: number;
   rewardHasanat: number;
   rewardText: string;
+}
+
+export interface ReciterItem {
+  id: string;
+  name: string;
+  subName?: string;
+  category: 'kurdish' | 'kurdish_tafsir' | 'famous' | 'riwayat' | 'teaching';
+  riwayah: string;
+  serverKey: string;
+}
+
+export interface TafsirItem {
+  id: string;
+  title: string;
+  author: string;
+  category: 'kurdish' | 'arabic' | 'english' | 'persian' | 'global';
+  language: string;
 }
