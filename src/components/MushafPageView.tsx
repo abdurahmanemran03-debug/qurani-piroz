@@ -293,9 +293,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                 className="absolute inset-0"
                 style={{
                   transformStyle: 'preserve-3d',
-                  transformOrigin: flipOverlay.direction === 'next' ? 'left center' : 'right center',
+                  transformOrigin: flipOverlay.direction === 'next' ? 'right center' : 'left center',
                   transform: flipTriggered
-                    ? `rotateY(${flipOverlay.direction === 'next' ? '-180deg' : '180deg'})`
+                    ? `rotateY(${flipOverlay.direction === 'next' ? '180deg' : '-180deg'})`
                     : 'rotateY(0deg)',
                   transition: 'transform 0.6s cubic-bezier(0.45, 0, 0.55, 1)',
                   backfaceVisibility: 'hidden',
