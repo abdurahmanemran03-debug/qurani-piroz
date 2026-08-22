@@ -1,13 +1,51 @@
 import React, { useState } from 'react';
-import { BookMarked, Volume2, BookOpen } from 'lucide-react';
-import { ScholarProfile } from '../types';
+import { BookMarked, Volume2 } from 'lucide-react';
 
-interface LibraryViewProps {
-  scholars: ScholarProfile[];
-}
+const SCHOLARS_LIST = [
+  {
+    id: 'mudarris',
+    name: 'مامۆستا مەلا عەبدولکەریمی مودەڕڕیس',
+    title: 'عەللامە و مەرجەعی باڵای کوردستان (١٩٠٥ - ٢٠٠٥)',
+    bio: 'گەورەترین زانا و موفەسیری مێژووی هاوچەرخی کورد کە زیاتر لە ٦٠ پەرتووکی بەنرخی نووسیوە.',
+    books: ['تەفسیری نامی (٦ بەرگ)', 'شەریعەتی ئیسلام', 'سەرچاوەی ئایین', 'بارانی ڕەحمەت'],
+    audioSeriesTitle: 'شیکردنەوەی تەفسیری نامی و حوکمە فیقهییەکان'
+  },
+  {
+    id: 'ali_bapir',
+    name: 'مامۆستا عەلی باپیر',
+    title: 'نووسەر و بیرمەندی پایەبەرز',
+    bio: 'خاوەنی دەیان پەرتووکی دەوڵەمەند لە بوارەکانی تەفسیر، عەقیدە و فیقهی ئیسلامی.',
+    books: ['تەفسیری قورئانی بەرز و بەپێز', 'باوەڕ و شوێنەواری', 'پوختەی عەقیدەی ئیسلامی'],
+    audioSeriesTitle: 'زنجیرە وانەکانی تەفسیر و بیروباوەڕ'
+  },
+  {
+    id: 'othman_abdulaziz',
+    name: 'پێشەوا مامۆستا مەلا عوسمان عەبدولعەزیز',
+    title: 'موفەسیر و ڕابەری ناسراوی کوردستان',
+    bio: 'زانایەکی گەورەی زانستە شەرعییەکان و خاوەنی تەفسیری ناوداری ڕێبەر بۆ قورئانی پیرۆز.',
+    books: ['تەفسیری ڕێبەر بۆ قورئانی پیرۆز', 'شیکردنەوەی مەنهەجی ئیسلام'],
+    audioSeriesTitle: 'زنجیرەی دەنگیی تەفسیری ڕێبەر و ئوسوڵی فیقهـ'
+  },
+  {
+    id: 'krekar',
+    name: 'مامۆستا کرێکار (نەجمەدین فەرەج)',
+    title: 'نووسەر و لێکۆڵەری ئیسلامی',
+    bio: 'شارەزای زانستەکانی حەدیس، عەقیدە و مێژووی ئیسلامی.',
+    books: ['شیکردنەوەی عەقیدەی تەحاوی', 'وانەکانی فیقهـ و تەوحید', 'سیرەی پێغەمبەر ﷺ'],
+    audioSeriesTitle: 'زنجیرە وانە زانستییەکانی عەقیدە و فەرموودەناسی'
+  },
+  {
+    id: 'othman_khamis',
+    name: 'د. عوسمان خەمیس (د. عثمان الخميس)',
+    title: 'گەورە زانای ناوداری جیهانی ئیسلامی',
+    bio: 'دکتۆرا لە زانستە شەرعییەکان و خاوەنی سەدان وتار لە شیکردنەوەی سوننەت.',
+    books: ['فەقهی پەرستشەکان', 'ڕوونکردنەوەی حوکمە شەرعییەکان'],
+    audioSeriesTitle: 'شیکردنەوەی فەرموودە، سیرە و بەڵگە فیقهییەکان'
+  }
+];
 
-export const LibraryView: React.FC<LibraryViewProps> = ({ scholars }) => {
-  const [selectedScholar, setSelectedScholar] = useState<ScholarProfile>(scholars[0]);
+export const LibraryView: React.FC = () => {
+  const [selectedScholar, setSelectedScholar] = useState(SCHOLARS_LIST[0]);
 
   return (
     <div className="space-y-4 max-w-xl mx-auto p-4">
@@ -17,7 +55,7 @@ export const LibraryView: React.FC<LibraryViewProps> = ({ scholars }) => {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-        {scholars.map(scholar => (
+        {SCHOLARS_LIST.map(scholar => (
           <div 
             key={scholar.id} 
             onClick={() => setSelectedScholar(scholar)}
