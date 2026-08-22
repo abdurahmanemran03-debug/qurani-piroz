@@ -15,6 +15,28 @@ export interface SurahItem {
   startPage: number;
 }
 
+export interface SurahHeader {
+  number: number;
+  name: string;
+  englishName: string;
+  numberOfAyahs: number;
+  revelationType: string;
+}
+
+export interface AyahDetail {
+  numberInSurah: number;
+  arabicText: string;
+  kurdishTranslation: string;
+  audioUrl: string;
+}
+
+export interface KurdishTafsirOption {
+  id: string;
+  name: string;
+  author: string;
+  language: string;
+}
+
 export interface DhikrItem {
   id: string;
   arabic: string;
