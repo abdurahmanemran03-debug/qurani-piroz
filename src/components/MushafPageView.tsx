@@ -21,6 +21,14 @@ interface MushafPageViewProps {
   onJumpToPage?: (page: number) => void;
 }
 
+const formatPageNum = (n: number) => String(n).padStart(3, '0');
+const pageImgUrl = (n: number) => `https://android.quran.com/data/width_1260/page${formatPageNum(n)}.png`;
+
+const PAGE_IMG_FILTER = {
+  filter: 'grayscale(100%) contrast(115%) brightness(102%)',
+  mixBlendMode: 'multiply' as const,
+};
+
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
   currentPage,
   onNextPage,
@@ -62,27 +70,45 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const isBookmarked = bookmarks.includes(currentPage);
-  const formatPageNum = (n: number) => String(n).padStart(3, '0');
   const currentJuz = Math.ceil(currentPage / 20);
-
   const currentSurah = surahsList.slice().reverse().find(s => currentPage >= s.startPage) || surahsList[0];
 
-  // ---- لۆجیکی سپرێد (هەردوو لاپەڕە پێکەوە) ----
-  const rightPageNum = currentPage % 2 !== 0 ? currentPage : currentPage - 1;
-  const leftPageNum = rightPageNum + 1 <= 604 ? rightPageNum + 1 : rightPageNum;
-  const hasLeftPage = leftPageNum !== rightPageNum;
-
-  const [rightLoaded, setRightLoaded] = useState(false);
-  const [leftLoaded, setLeftLoaded] = useState(false);
-
-  useEffect(() => {
-    setRightLoaded(false);
-    setLeftLoaded(!hasLeftPage);
-  }, [rightPageNum, leftPageNum, hasLeftPage]);
+  // ------------------------------------------------------------------
+  // ئەفێکتی هەڵدانەوەی لاپەڕە (Page-flip animation)
+  // ------------------------------------------------------------------
+  const [displayPage, setDisplayPage] = useState(currentPage);
+  const [flipOverlay, setFlipOverlay] = useState<{ page: number; direction: 'next' | 'prev' } | null>(null);
+  const [flipTriggered, setFlipTriggered] = useState(false);
+  const flipTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    if (rightLoaded && leftLoaded) setLoadingPage(false);
-  }, [rightLoaded, leftLoaded]);
+    if (currentPage === displayPage) return;
+
+    const direction: 'next' | 'prev' = currentPage > displayPage ? 'next' : 'prev';
+    setFlipOverlay({ page: displayPage, direction });
+    setLoadingPage(false);
+
+    if (flipTimerRef.current) clearTimeout(flipTimerRef.current);
+    flipTimerRef.current = setTimeout(() => {
+      setDisplayPage(currentPage);
+      setFlipOverlay(null);
+    }, 600);
+
+    return () => {
+      if (flipTimerRef.current) clearTimeout(flipTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  useEffect(() => {
+    if (flipOverlay) {
+      setFlipTriggered(false);
+      const raf = requestAnimationFrame(() => setFlipTriggered(true));
+      return () => cancelAnimationFrame(raf);
+    } else {
+      setFlipTriggered(false);
+    }
+  }, [flipOverlay]);
 
   const toggleBookmark = () => {
     let updated: number[];
@@ -137,29 +163,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // ---- گواستنەوەی سپرێد (٢ لاپەڕە بە یەکجار) ----
-  const goToNextSpread = () => {
-    if (leftPageNum >= 604) return;
-    setLoadingPage(true);
-    const target = Math.min(leftPageNum + 1, 604);
-    if (onJumpToPage) {
-      onJumpToPage(target);
-    } else {
-      onNextPage();
-      onNextPage();
-    }
+  const goNext = () => {
+    if (currentPage >= 604) return;
+    if (onJumpToPage) onJumpToPage(currentPage + 1);
+    else onNextPage();
   };
 
-  const goToPrevSpread = () => {
-    if (rightPageNum <= 1) return;
-    setLoadingPage(true);
-    const target = Math.max(rightPageNum - 2, 1);
-    if (onJumpToPage) {
-      onJumpToPage(target);
-    } else {
-      onPrevPage();
-      onPrevPage();
-    }
+  const goPrev = () => {
+    if (currentPage <= 1) return;
+    if (onJumpToPage) onJumpToPage(currentPage - 1);
+    else onPrevPage();
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -176,14 +189,14 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     const distance = touchStartX - touchEndX;
 
     if (distance > 40) {
-      goToNextSpread();
+      goNext();
     } else if (distance < -40) {
-      goToPrevSpread();
+      goPrev();
     }
   };
 
   return (
-    <div className="relative min-h-screen max-w-3xl mx-auto flex flex-col justify-between select-none bg-white text-slate-900" dir="rtl">
+    <div className="relative min-h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-white text-slate-900" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
       <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
@@ -202,7 +215,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             سووڕه‌تی {currentSurah?.nameAr || 'الفاتحة'}
           </h2>
           <p className="text-[11px] text-slate-500 font-medium">
-            په‌ڕه‌ی {hasLeftPage ? `${rightPageNum}-${leftPageNum}` : rightPageNum} , جوزئی {currentJuz}
+            په‌ڕه‌ی {currentPage} , جوزئی {currentJuz}
           </p>
         </div>
 
@@ -239,56 +252,66 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
       {viewMode === 'mushaf' && (
         <div 
-          className="relative flex-1 flex flex-col items-center justify-center p-1 cursor-pointer touch-pan-y"
+          className="relative flex-1 flex flex-col items-center justify-center p-2 cursor-pointer touch-pan-y overflow-hidden"
           onClick={() => setShowControls(prev => !prev)}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
           <div 
-            onClick={(e) => { e.stopPropagation(); goToNextSpread(); }} 
+            onClick={(e) => { e.stopPropagation(); goNext(); }} 
             className="absolute left-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
-            title="سپرێدی داهاتوو"
+            title="لاپەڕەی داهاتوو"
           />
           <div 
-            onClick={(e) => { e.stopPropagation(); goToPrevSpread(); }} 
+            onClick={(e) => { e.stopPropagation(); goPrev(); }} 
             className="absolute right-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
-            title="سپرێدی پێشوو"
+            title="لاپەڕەی پێشوو"
           />
 
           {loadingPage && (
             <div className="absolute inset-0 bg-white/90 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-30">
               <Loader2 className="w-8 h-8 text-slate-600 animate-spin" />
-              <span className="text-xs text-slate-700 font-bold">
-                لاپەڕەی {hasLeftPage ? `${rightPageNum}-${leftPageNum}` : rightPageNum} باردەکرێت...
-              </span>
+              <span className="text-xs text-slate-700 font-bold">لاپەڕەی {currentPage} باردەکرێت...</span>
             </div>
           )}
 
-          <div className="w-full flex flex-row items-stretch justify-center gap-0.5 max-h-[86vh]">
-            <div className="flex-1 min-w-0 flex items-center justify-center border-l border-slate-200">
-              <img
-                src={`https://android.quran.com/data/width_1260/page${formatPageNum(rightPageNum)}.png`}
-                alt={`Page ${rightPageNum}`}
-                onLoad={() => setRightLoaded(true)}
-                className="w-full h-auto max-h-[86vh] object-contain select-none pointer-events-none mx-auto block"
-                style={{
-                  filter: 'grayscale(100%) contrast(115%) brightness(102%)',
-                  mixBlendMode: 'multiply'
-                }}
-              />
-            </div>
+          <div
+            className="relative w-full flex items-center justify-center max-h-[82vh]"
+            style={{ perspective: '1800px' }}
+          >
+            <img
+              src={pageImgUrl(displayPage)}
+              alt={`Page ${displayPage}`}
+              onLoad={() => setLoadingPage(false)}
+              className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block"
+              style={PAGE_IMG_FILTER}
+            />
 
-            {hasLeftPage && (
-              <div className="flex-1 min-w-0 flex items-center justify-center">
+            {flipOverlay && (
+              <div
+                className="absolute inset-0"
+                style={{
+                  transformStyle: 'preserve-3d',
+                  transformOrigin: flipOverlay.direction === 'next' ? 'left center' : 'right center',
+                  transform: flipTriggered
+                    ? `rotateY(${flipOverlay.direction === 'next' ? '-180deg' : '180deg'})`
+                    : 'rotateY(0deg)',
+                  transition: 'transform 0.6s cubic-bezier(0.45, 0, 0.55, 1)',
+                  backfaceVisibility: 'hidden',
+                }}
+              >
                 <img
-                  src={`https://android.quran.com/data/width_1260/page${formatPageNum(leftPageNum)}.png`}
-                  alt={`Page ${leftPageNum}`}
-                  onLoad={() => setLeftLoaded(true)}
-                  className="w-full h-auto max-h-[86vh] object-contain select-none pointer-events-none mx-auto block"
+                  src={pageImgUrl(flipOverlay.page)}
+                  alt={`Page ${flipOverlay.page}`}
+                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block"
+                  style={PAGE_IMG_FILTER}
+                />
+                <div
+                  className="absolute inset-0 bg-black pointer-events-none"
                   style={{
-                    filter: 'grayscale(100%) contrast(115%) brightness(102%)',
-                    mixBlendMode: 'multiply'
+                    opacity: flipTriggered ? 0.28 : 0,
+                    transition: 'opacity 0.6s ease',
                   }}
                 />
               </div>
@@ -372,7 +395,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                   onClick={() => {
                     if (onJumpToPage) onJumpToPage(s.startPage);
                     setIsSurahPickerOpen(false);
-                    setLoadingPage(true);
                   }}
                   className={`p-3 rounded-2xl text-right border text-xs font-bold transition-all ${
                     currentPage >= s.startPage 
