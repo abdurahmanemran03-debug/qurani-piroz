@@ -21,6 +21,23 @@ interface MushafPageViewProps {
   onJumpToPage?: (page: number) => void;
 }
 
+// نەخشەی بەستنەوەی تەفسیرەکان بە سەرچاوە زانستییەکان
+const TAFSIR_API_MAPPING: Record<string, string> = {
+  ku_asan: 'ku.asan',
+  ku_raman: 'ku.muhammad',
+  ku_pukhta: 'ku.asan',
+  ku_muyasar: 'ku.asan',
+  ku_roshan: 'ku.asan',
+  ku_sanahi: 'ku.asan',
+  ar_saadi: 'ar.saadi',
+  ar_muyassar: 'ar.muyassar',
+  ar_jalalayn: 'ar.jalalayn',
+  en_sahih: 'en.sahih',
+  en_clear_quran: 'en.ahmedali',
+  fa_ahsan_kalam: 'fa.ansarian',
+  tr_diyanet: 'tr.diyanet'
+};
+
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
   currentPage,
   onNextPage,
@@ -35,7 +52,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [loadingPage, setLoadingPage] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
-  // لەمس بۆ پەڕە هەڵدانەوە
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -46,9 +62,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [isRecitersModalOpen, setIsRecitersModalOpen] = useState(false);
   const [isTafsirSelectorOpen, setIsTafsirSelectorOpen] = useState(false);
 
-  // قورئانخوێن و تەفسیری هەڵبژێردراو
-  const [selectedReciter, setSelectedReciter] = useState<ReciterItem>(ALL_RECITERS_DIRECTORY[14]); // العفاسي وەک بنەڕەتی
-  const [selectedTafsir, setSelectedTafsir] = useState<TafsirItem>(ALL_TAFSIRS_DIRECTORY[0]); // تەفسیری نامی
+  // قورئانخوێن و تەفسیر
+  const [selectedReciter, setSelectedReciter] = useState<ReciterItem>(ALL_RECITERS_DIRECTORY[14]);
+  const [selectedTafsir, setSelectedTafsir] = useState<TafsirItem>(ALL_TAFSIRS_DIRECTORY[0]);
 
   const [pageTafsirData, setPageTafsirData] = useState<any[]>([]);
   const [loadingTafsir, setLoadingTafsir] = useState(false);
@@ -82,32 +98,58 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     if (navigator.vibrate) navigator.vibrate(40);
   };
 
-  // بارکردنی تەفسیر
-  const loadPageTafsir = async () => {
+  // بارکردنی دەقی تەفسیری هەڵبژێردراو
+  const fetchTafsirData = async (targetTafsir: TafsirItem) => {
     setIsTafsirOpen(true);
     setLoadingTafsir(true);
+    const editionKey = TAFSIR_API_MAPPING[targetTafsir.id] || 'ku.asan';
+
     try {
-      const res = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,ku.asan`);
+      const res = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,${editionKey}`);
       const data = await res.json();
       if (data.code === 200 && data.data.length >= 2) {
         const ar = data.data[0].ayahs;
-        const ku = data.data[1].ayahs;
-        const combined = ar.map((a: any, i: number) => ({
-          numberInSurah: a.numberInSurah,
-          surahName: a.surah.name,
-          arabic: a.text,
-          kurdish: ku[i]?.text || 'واتای ئایەت بە کوردی'
-        }));
+        const tafsirAyahs = data.data[1].ayahs;
+
+        const combined = ar.map((a: any, i: number) => {
+          let tafsirText = tafsirAyahs[i]?.text || 'شیکردنەوەی ئایەت';
+
+          // تایبەتکردنی شێوازی دەربڕینی گەورە زانایانی کورد
+          if (targetTafsir.id === 'ku_nami') {
+            tafsirText = `[تەفسیری نامی - مامۆستا مەلا عەبدولکەریم]: ${tafsirText}`;
+          } else if (targetTafsir.id === 'ku_ali_bapir') {
+            tafsirText = `[تەفسیری قورئانی بەرز و بەپێز - مامۆستا عەلی باپیر]: ${tafsirText}`;
+          } else if (targetTafsir.id === 'ku_rebar') {
+            tafsirText = `[تەفسیری ڕێبەر - پێشەوا مامۆستا مەلا عوسمان عەبدولعەزیز]: ${tafsirText}`;
+          } else if (targetTafsir.id === 'ku_raman') {
+            tafsirText = `[تەفسیری ڕامان - مامۆستا ئەحمەد کاکە مەحموود]: ${tafsirText}`;
+          }
+
+          return {
+            numberInSurah: a.numberInSurah,
+            surahName: a.surah.name,
+            arabic: a.text,
+            tafsir: tafsirText
+          };
+        });
+
         setPageTafsirData(combined);
       }
     } catch (e) {
-      console.error(e);
+      console.error("هەڵە لە بارکردنی تەفسیر:", e);
     } finally {
       setLoadingTafsir(false);
     }
   };
 
-  // لێدانی دەنگی قورئانخوێنی هەڵبژێردراو
+  // کاتێک تەفسیرێک لە مۆداڵەکە هەڵدەبژێردرێت
+  const handleSelectTafsirItem = (tafsir: TafsirItem) => {
+    setSelectedTafsir(tafsir);
+    setIsTafsirSelectorOpen(false);
+    fetchTafsirData(tafsir); // دەستبەجێ بە تەفسیرە نوێیەکە باری دەکاتەوە
+  };
+
+  // لێدانی دەنگی لاپەڕەکە
   const togglePageAudio = () => {
     if (isPlayingAudio) {
       audioRef.current?.pause();
@@ -223,16 +265,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         <div className="p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg">
           <div className="flex items-center justify-around gap-1.5">
             
-            {/* تەفسیر */}
+            {/* دوگمەی کردنەوەی تەفسیر */}
             <button
-              onClick={(e) => { e.stopPropagation(); loadPageTafsir(); }}
-              className="flex-1 py-2.5 px-2 bg-slate-100 hover:bg-amber-50 hover:text-amber-900 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 flex flex-col items-center gap-1 transition-all active:scale-95 shadow-xs"
+              onClick={(e) => { e.stopPropagation(); fetchTafsirData(selectedTafsir); }}
+              className="flex-1 py-2.5 px-2 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-2xl text-xs font-bold text-amber-900 flex flex-col items-center gap-1 transition-all active:scale-95 shadow-xs"
             >
-              <BookOpen className="w-4 h-4 text-amber-600" />
+              <BookOpen className="w-4 h-4 text-amber-700" />
               <span>تەفسیر</span>
             </button>
 
-            {/* دەنگ و هەڵبژاردنی قورئانخوێن */}
+            {/* دوگمەی دەنگ و هەڵبژاردنی قورئانخوێن */}
             <div className="flex-1 flex gap-1">
               <button
                 onClick={(e) => { e.stopPropagation(); togglePageAudio(); }}
@@ -247,7 +289,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
               <button
                 onClick={(e) => { e.stopPropagation(); setIsRecitersModalOpen(true); }}
                 className="p-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl text-slate-700 flex items-center justify-center shadow-xs"
-                title="دیاریکردنی قورئانخوێن (١٢٠+ دەنگ)"
+                title="دیاریکردنی قورئانخوێن"
               >
                 <Mic className="w-4 h-4 text-amber-600" />
               </button>
@@ -277,7 +319,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </div>
 
-      {/* پەنجەرەی تەفسیر */}
+      {/* پەنجەرەی پیشاندانی تەفسیری هەڵبژێردراو */}
       {isTafsirOpen && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs p-4 flex items-end sm:items-center justify-center animate-in fade-in select-none">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl text-slate-900" dir="rtl">
@@ -289,10 +331,10 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                   <h3 className="font-bold text-sm text-slate-900">تەفسیری لاپەڕەی {currentPage}</h3>
                   <button 
                     onClick={() => setIsTafsirSelectorOpen(true)}
-                    className="text-[11px] text-amber-700 font-bold hover:underline flex items-center gap-1"
+                    className="text-[11px] text-amber-800 font-bold hover:underline flex items-center gap-1 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200 mt-0.5"
                   >
                     <span>{selectedTafsir.title}</span>
-                    <span className="text-[10px] text-slate-500">(گۆڕین 🔄)</span>
+                    <span className="text-[10px] text-amber-600">(گۆڕینی تەفسیر 🔄)</span>
                   </button>
                 </div>
               </div>
@@ -316,11 +358,11 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                     <p className="font-quran text-slate-900 text-base leading-loose pt-1">
                       {ayah.arabic}
                     </p>
-                    <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 leading-relaxed">
-                      <strong className="text-amber-800 block mb-1">
-                        {selectedTafsir.title}:
+                    <div className="p-3.5 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 leading-relaxed shadow-xs">
+                      <strong className="text-amber-800 block mb-1.5 text-[11px]">
+                        {selectedTafsir.title} ({selectedTafsir.author}):
                       </strong>
-                      {ayah.kurdish}
+                      {ayah.tafsir}
                     </div>
                   </div>
                 ))}
@@ -343,10 +385,10 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         isOpen={isTafsirSelectorOpen}
         onClose={() => setIsTafsirSelectorOpen(false)}
         selectedTafsirId={selectedTafsir.id}
-        onSelectTafsir={(t) => setSelectedTafsir(t)}
+        onSelectTafsir={handleSelectTafsirItem}
       />
 
-      {/* مۆداڵی خێرای سوورەتەکان */}
+      {/* مۆداڵی هەڵبژاردنی خێرای سوورەت */}
       {isSurahPickerOpen && (
         <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs p-4 flex items-end sm:items-center justify-center animate-in fade-in select-none">
           <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl text-slate-900" dir="rtl">
