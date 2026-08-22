@@ -1,13 +1,24 @@
 import React, { useState } from 'react';
 import { Heart, ShieldCheck } from 'lucide-react';
-import { SeerahChapter, SahabiBio } from '../types';
 
-interface SeerahViewProps {
-  chapters: SeerahChapter[];
-  sahabaList: SahabiBio[];
-}
+const SEERAH_CHAPTERS = [
+  { id: 1, title: 'لەدایکبوون، نەژاد و منداڵی', era: '٥٧١ ز', summary: 'لەدایکبوونی پیرۆزی پێغەمبەر ﷺ لە مەککە لە ساڵی فیلدا.', content: 'موحەممەدی کوڕی عەبدوڵڵای کوڕی عەبدولموتەلیب لە بەڕێزترین هۆزی قوڕەیش لەدایکبوو. لە منداڵییەوە بە دەستپاکی و ئەمانەت ناوبانگی دەرکرد و بە (الأمين) ناسرا.' },
+  { id: 2, title: 'دەستپێکی وەحی لە ئەشکەوتی حەڕا', era: '٦١٠ ز', summary: 'دابەزینی یەکەمین وەحی لە تەمەنی ٤٠ ساڵیدا.', content: 'لە کاتێکدا پێغەمبەر ﷺ لە ئەشکەوتی حەڕا خەریکی پەرستش بوو، جوبرەئیل هاتە خوارەوە بە فەرمانی: (اقْرَأْ بِاسْمِ رَبِّكَ الَّذِي خَلَقَ).' },
+  { id: 3, title: 'کۆچ بۆ مەدینەی منەوەرە', era: '٦٢٢ ز', summary: 'دامەزراندنی دەوڵەت و برایەتیی نێوان هاوەڵان.', content: 'پاش ١٣ ساڵ ئارامگرتن لەسەر ئازاری موشریکان، پێغەمبەر ﷺ و هاوەڵان کۆچیان کرد بەرەو مەدینە و یەکەم مزگەوتیان بنیاتنا.' },
+  { id: 4, title: 'غەزا مەزنەکان و فەتحی مەککە', era: '٢ - ٨ ک', summary: 'بەدر، ئوحود، خەندەق و فەتحی مەزنی مەککە.', content: 'لە ساڵی ٨ی کۆچیدا مەککەی پیرۆز فەتح کرا و پێغەمبەر ﷺ لێبوردەیی گشتیی ڕاگەیاند: (اذهبوا فأنتم الطلقاء).' },
+  { id: 5, title: 'حەجی ماڵئاوایی و وەفات', era: '١١ ک', summary: 'تەواوبوونی دین و وەفاتی حەزرەت ﷺ.', content: 'لە حەجی ماڵئاواییدا ئایەتی (الْيَوْمَ أَكْمَلْتُ لَكُمْ دِينَكُمْ) دابەزی و لە ١١ی کۆچی گەیشتە ڕەفیقی ئەعلا.' }
+];
 
-export const SeerahView: React.FC<SeerahViewProps> = ({ chapters, sahabaList }) => {
+const SAHABA_LIST = [
+  { name: 'ئەبوبەکری سدیق (ڕەزای خوای لێبێت)', title: 'یەکەمین خەلیفە و هاوەڵی ئەشکەوت', description: 'گەورەترین هاوەڵی پێغەمبەر ﷺ کە هەموو ماڵی لە پێناوی ئیسلامدا بەخشی.' },
+  { name: 'عومەری کوڕی خەتتاب (فاروق)', title: 'دووەمین خەلیفە و سیمبولی دادپەروەری', description: 'ئەو هاوەڵەی ئیسلام بە موسڵمانبوونی بەهێز بوو و سنوری دادپەروەریی فراوان کرد.' },
+  { name: 'عوسمانی کوڕی عەففان (ذو النورین)', title: 'سێیەمین خەلیفە و کۆکەرەوەی قورئان', description: 'هاوەڵێکی شەرمکەر و بەخشندە کە قورئانی پیرۆزی بۆ هەموو ئوممەت کۆکردەوە.' },
+  { name: 'عەلی کوڕی ئەبی تالیب (ڕەزای خوای لێبێت)', title: 'چوارەمین خەلیفە و دەریای زانست', description: 'ئامۆزا و زاوای پێغەمبەر ﷺ و سوارچاکی گۆڕەپانەکان و حیکمەت.' },
+  { name: 'خالیدی کوڕی وەلید (شمشێری خودا)', title: 'سەرکردەی بێشکستی جەنگەکان', description: 'سەرکردەیەکی سەربازیی بێوێنە کە لە هیچ جەنگێکدا نەبەزی.' },
+  { name: 'خەدیجەی کچی خووەیلید (دایکی باوەڕداران)', title: 'یەکەمین ئیماندار و پشتیوانی پەیامبەر ﷺ', description: 'ئەو خانمە مەزنەی کە لە کاتی تەنگانەدا دڵی پێغەمبەری ئارام کردەوە.' }
+];
+
+export const SeerahView: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'seerah' | 'sahaba'>('seerah');
 
   return (
@@ -41,7 +52,7 @@ export const SeerahView: React.FC<SeerahViewProps> = ({ chapters, sahabaList }) 
 
       {activeTab === 'seerah' && (
         <div className="space-y-3">
-          {chapters.map(ch => (
+          {SEERAH_CHAPTERS.map(ch => (
             <div key={ch.id} className="p-4 rounded-3xl bg-white border border-slate-200 space-y-2 shadow-xs">
               <div className="flex items-center justify-between border-b border-slate-100 pb-2">
                 <h3 className="font-bold text-xs sm:text-sm text-slate-900 flex items-center gap-2">
@@ -61,7 +72,7 @@ export const SeerahView: React.FC<SeerahViewProps> = ({ chapters, sahabaList }) 
 
       {activeTab === 'sahaba' && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          {sahabaList.map((s, i) => (
+          {SAHABA_LIST.map((s, i) => (
             <div key={i} className="p-3.5 rounded-2xl bg-white border border-slate-200 text-xs space-y-1 shadow-xs">
               <strong className="text-slate-900 text-xs block font-bold">{s.name}</strong>
               <span className="text-amber-800 font-bold text-[11px] block">{s.title}</span>
