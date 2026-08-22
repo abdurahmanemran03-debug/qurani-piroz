@@ -13,3 +13,56 @@ export interface SurahItem {
 export type BgThemeType = 'white' | 'cream' | 'dark';
 export type AppLangType = 'ku' | 'ar' | 'en';
 export type AccentColorType = 'gold' | 'emerald' | 'blue';
+
+export interface DhikrItem {
+  id: string;
+  arabic: string;
+  kurdish: string;
+  count: number;
+  virtue?: string;
+}
+
+export interface DhikrCategory {
+  id: string;
+  title: string;
+  items: DhikrItem[];
+}
+
+export interface CityPrayerData {
+  id: string;
+  name: string;
+  qiblaAngle: number;
+}
+
+export interface SeerahChapter {
+  id: number;
+  title: string;
+  era: string;
+  summary: string;
+  content: string;
+}
+
+export interface SahabiBio {
+  name: string;
+  title: string;
+  category: 'khulafa' | 'mubashirun' | 'mothers' | 'commanders' | 'women';
+  description: string;
+}
+
+export interface ScholarProfile {
+  id: string;
+  name: string;
+  title: string;
+  bio: string;
+  books: string[];
+  audioSeriesTitle: string;
+}
+
+export interface QuizItem {
+  id: number;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  rewardHasanat: number;
+  rewardText: string;
+}
