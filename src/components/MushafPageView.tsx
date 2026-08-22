@@ -1,9 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowRight, Loader2, BookOpen, Volume2, Play, Pause, 
-  Bookmark, BookmarkCheck, ListFilter, X, Check
+  Bookmark, BookmarkCheck, ListFilter, X, Check, Mic, Globe
 } from 'lucide-react';
 import { BgThemeType, AppLangType, SurahItem } from '../types';
+import { ALL_RECITERS_DIRECTORY, ReciterItem } from '../data/recitersList';
+import { ALL_TAFSIRS_DIRECTORY, TafsirItem } from '../data/tafsirList';
+import { RecitersModal } from './RecitersModal';
+import { TafsirSelectorModal } from './TafsirSelectorModal';
 
 interface MushafPageViewProps {
   currentPage: number;
@@ -29,22 +33,27 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   onJumpToPage
 }) => {
   const [loadingPage, setLoadingPage] = useState(false);
-  
-  // دۆخی شاردنەوە و پیشاندانی مینیۆ لە کاتی پەنجەنان لە شاشە
   const [showControls, setShowControls] = useState(true);
 
-  // شێوازی پەڕە ڕاکێشان لەگەڵ جوڵەی پەنجە
+  // لەمس بۆ پەڕە هەڵدانەوە
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
 
-  // مۆداڵەکانی تەفسیر، دەنگ، هەڵبژاردنی سوورەت و بووکمارک
+  // مۆداڵەکان
   const [isTafsirOpen, setIsTafsirOpen] = useState(false);
   const [isSurahPickerOpen, setIsSurahPickerOpen] = useState(false);
+  const [isRecitersModalOpen, setIsRecitersModalOpen] = useState(false);
+  const [isTafsirSelectorOpen, setIsTafsirSelectorOpen] = useState(false);
+
+  // قورئانخوێن و تەفسیری هەڵبژێردراو
+  const [selectedReciter, setSelectedReciter] = useState<ReciterItem>(ALL_RECITERS_DIRECTORY[14]); // العفاسي وەک بنەڕەتی
+  const [selectedTafsir, setSelectedTafsir] = useState<TafsirItem>(ALL_TAFSIRS_DIRECTORY[0]); // تەفسیری نامی
+
   const [pageTafsirData, setPageTafsirData] = useState<any[]>([]);
   const [loadingTafsir, setLoadingTafsir] = useState(false);
 
-  // بووکمارک و پاشەکەوتکردنی لاپەڕە
+  // بووکمارک
   const [bookmarks, setBookmarks] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem('quran_bookmarks');
@@ -59,7 +68,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const isBookmarked = bookmarks.includes(currentPage);
-
   const formatPageNum = (n: number) => String(n).padStart(3, '0');
 
   const toggleBookmark = () => {
@@ -74,7 +82,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     if (navigator.vibrate) navigator.vibrate(40);
   };
 
-  // بارکردنی تەفسیری لاپەڕەی ئێستا
+  // بارکردنی تەفسیر
   const loadPageTafsir = async () => {
     setIsTafsirOpen(true);
     setLoadingTafsir(true);
@@ -99,16 +107,15 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // لێدانی دەنگی لاپەڕەکە
+  // لێدانی دەنگی قورئانخوێنی هەڵبژێردراو
   const togglePageAudio = () => {
     if (isPlayingAudio) {
       audioRef.current?.pause();
       setIsPlayingAudio(false);
     } else {
       setIsPlayingAudio(true);
-      // لێدانی دەنگ بۆ ئەو لاپەڕەیە
       if (audioRef.current) {
-        audioRef.current.src = `https://everyayah.com/data/Alafasy_128kbps/PageMp3s/Page${formatPageNum(currentPage)}.mp3`;
+        audioRef.current.src = `https://everyayah.com/data/${selectedReciter.serverKey}/PageMp3s/Page${formatPageNum(currentPage)}.mp3`;
         audioRef.current.play().catch(() => {
           setIsPlayingAudio(false);
         });
@@ -116,29 +123,23 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // دەستپێکی ڕاکێشانی پەنجە
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.targetTouches[0].clientX);
     setIsDragging(true);
   };
 
-  // لە کاتی جوڵاندنی پەنجە: لاپەڕەکە لەگەڵ پەنجەدا دەجوڵێت
   const handleTouchMove = (e: React.TouchEvent) => {
     if (touchStartX === null) return;
     const currentX = e.targetTouches[0].clientX;
-    const diff = currentX - touchStartX;
-    setDragOffset(diff); // دەقی لاپەڕەکە لەگەڵ پەنجە ڕادەکێشێت
+    setDragOffset(currentX - touchStartX);
   };
 
-  // کاتێک پەنجە بەردەدرێت: پەڕەکە هەڵدەدرێتەوە
   const handleTouchEnd = () => {
     setIsDragging(false);
     if (dragOffset > 50) {
-      // ڕاکێشان بەرەو ڕاست -> لاپەڕەی پێشوو
       setLoadingPage(true);
       onPrevPage();
     } else if (dragOffset < -50) {
-      // ڕاکێشان بەرەو چەپ -> لاپەڕەی دواتر
       setLoadingPage(true);
       onNextPage();
     }
@@ -150,14 +151,10 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     <div className="relative min-h-screen max-w-lg mx-auto flex flex-col justify-between overflow-hidden select-none bg-white">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
-      {/* ========================================================================= */}
-      {/* شریتی سەرەوە (کە بە کلیک دەردەکەوێت یان دەشاردرێتەوە) */}
-      {/* ========================================================================= */}
-      <div 
-        className={`sticky top-0 z-30 transition-all duration-300 ${
-          showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
-        }`}
-      >
+      {/* شریتی سەرەوە */}
+      <div className={`sticky top-0 z-30 transition-all duration-300 ${
+        showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
+      }`}>
         <div className="flex items-center justify-between p-3 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-xs">
           <button
             onClick={onBackToIndex}
@@ -169,7 +166,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
           <div className="flex items-center gap-2">
             {isBookmarked && (
-              <span className="text-amber-500 flex items-center gap-1 text-[11px] font-bold bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
+              <span className="text-amber-600 flex items-center gap-1 text-[11px] font-bold bg-amber-50 px-2.5 py-1 rounded-xl border border-amber-200">
                 <BookmarkCheck className="w-3.5 h-3.5" />
                 <span>نیشانەکراوە</span>
               </span>
@@ -184,9 +181,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* ناوەڕۆک: لاپەڕەی موسحەف بە جوڵەی فیزیکیی ڕاکێشان (Smooth Dragging Page) */}
-      {/* ========================================================================= */}
+      {/* ناوەڕۆک: لاپەڕەی مەدینە بە ڕاکێشانی پەنجە */}
       <div 
         className="relative flex-1 flex flex-col items-center justify-center p-2 cursor-pointer touch-pan-y"
         onClick={() => setShowControls(prev => !prev)}
@@ -201,7 +196,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           </div>
         )}
 
-        {/* وێنەی لاپەڕەکە کە لەگەڵ پەنجەتدا ڕادەکێشرێت */}
         <div 
           className="w-full transition-transform"
           style={{
@@ -211,7 +205,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         >
           <img
             src={`https://android.quran.com/data/width_1260/page${formatPageNum(currentPage)}.png`}
-            alt={`لاپەڕەی ${currentPage}`}
+            alt={`Page ${currentPage}`}
             onLoad={() => setLoadingPage(false)}
             className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none"
             style={{
@@ -222,18 +216,14 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* شریتی مۆدێرنی خوارەوە لە کاتی پەنجەنان (Floating Bottom Action Bar) */}
-      {/* ========================================================================= */}
-      <div 
-        className={`sticky bottom-0 z-30 transition-all duration-300 ${
-          showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
-        }`}
-      >
+      {/* شریتی خوارەوە لە کاتی پەنجەنان */}
+      <div className={`sticky bottom-0 z-30 transition-all duration-300 ${
+        showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+      }`}>
         <div className="p-3 bg-white/95 backdrop-blur-md border-t border-slate-200 shadow-lg">
           <div className="flex items-center justify-around gap-1.5">
             
-            {/* دوگمەی تەفسیری نامی */}
+            {/* تەفسیر */}
             <button
               onClick={(e) => { e.stopPropagation(); loadPageTafsir(); }}
               className="flex-1 py-2.5 px-2 bg-slate-100 hover:bg-amber-50 hover:text-amber-900 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 flex flex-col items-center gap-1 transition-all active:scale-95 shadow-xs"
@@ -242,20 +232,28 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
               <span>تەفسیر</span>
             </button>
 
-            {/* دوگمەی دەنگی قورئانخوێن */}
-            <button
-              onClick={(e) => { e.stopPropagation(); togglePageAudio(); }}
-              className={`flex-1 py-2.5 px-2 border rounded-2xl text-xs font-bold flex flex-col items-center gap-1 transition-all active:scale-95 shadow-xs ${
-                isPlayingAudio 
-                  ? 'bg-amber-600 text-white border-amber-500 shadow-md' 
-                  : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800'
-              }`}
-            >
-              {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-amber-600" />}
-              <span>{isPlayingAudio ? 'ڕاگرتن' : 'دەنگ'}</span>
-            </button>
+            {/* دەنگ و هەڵبژاردنی قورئانخوێن */}
+            <div className="flex-1 flex gap-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); togglePageAudio(); }}
+                className={`flex-1 py-2.5 px-2 border rounded-2xl text-xs font-bold flex flex-col items-center gap-1 transition-all active:scale-95 shadow-xs ${
+                  isPlayingAudio ? 'bg-amber-600 text-white border-amber-500 shadow-md' : 'bg-slate-100 border-slate-200 text-slate-800'
+                }`}
+              >
+                {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Volume2 className="w-4 h-4 text-amber-600" />}
+                <span>{isPlayingAudio ? 'ڕاگرتن' : 'دەنگ'}</span>
+              </button>
 
-            {/* دوگمەی هەڵبژاردنی سوورەت / لاپەڕە */}
+              <button
+                onClick={(e) => { e.stopPropagation(); setIsRecitersModalOpen(true); }}
+                className="p-2.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl text-slate-700 flex items-center justify-center shadow-xs"
+                title="دیاریکردنی قورئانخوێن (١٢٠+ دەنگ)"
+              >
+                <Mic className="w-4 h-4 text-amber-600" />
+              </button>
+            </div>
+
+            {/* هەڵبژاردنی سوورەت */}
             <button
               onClick={(e) => { e.stopPropagation(); setIsSurahPickerOpen(true); }}
               className="flex-1 py-2.5 px-2 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-2xl text-xs font-bold text-slate-800 flex flex-col items-center gap-1 transition-all active:scale-95 shadow-xs"
@@ -264,13 +262,11 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
               <span>سوورەتەکان</span>
             </button>
 
-            {/* دوگمەی نیشانەکردن (Bookmark) */}
+            {/* بووکمارک */}
             <button
               onClick={(e) => { e.stopPropagation(); toggleBookmark(); }}
               className={`flex-1 py-2.5 px-2 border rounded-2xl text-xs font-bold flex flex-col items-center gap-1 transition-all active:scale-95 shadow-xs ${
-                isBookmarked 
-                  ? 'bg-amber-500 text-white border-amber-400' 
-                  : 'bg-slate-100 hover:bg-slate-200 border-slate-200 text-slate-800'
+                isBookmarked ? 'bg-amber-500 text-white border-amber-400' : 'bg-slate-100 border-slate-200 text-slate-800'
               }`}
             >
               {isBookmarked ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4 text-amber-600" />}
@@ -281,16 +277,24 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </div>
 
-      {/* ========================================================================= */}
-      {/* پەنجەرەی تەفسیر (Tafsir Drawer) */}
-      {/* ========================================================================= */}
+      {/* پەنجەرەی تەفسیر */}
       {isTafsirOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm p-4 flex items-end sm:items-center justify-center animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl text-slate-900">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs p-4 flex items-end sm:items-center justify-center animate-in fade-in select-none">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl text-slate-900" dir="rtl">
+            
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
                 <BookOpen className="w-5 h-5 text-amber-600" />
-                <h3 className="font-bold text-sm text-slate-900">تەفسیری لاپەڕەی {currentPage}</h3>
+                <div>
+                  <h3 className="font-bold text-sm text-slate-900">تەفسیری لاپەڕەی {currentPage}</h3>
+                  <button 
+                    onClick={() => setIsTafsirSelectorOpen(true)}
+                    className="text-[11px] text-amber-700 font-bold hover:underline flex items-center gap-1"
+                  >
+                    <span>{selectedTafsir.title}</span>
+                    <span className="text-[10px] text-slate-500">(گۆڕین 🔄)</span>
+                  </button>
+                </div>
               </div>
               <button onClick={() => setIsTafsirOpen(false)} className="p-1.5 rounded-xl bg-slate-100 text-slate-600">
                 <X className="w-5 h-5" />
@@ -313,7 +317,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                       {ayah.arabic}
                     </p>
                     <div className="p-3 rounded-xl bg-white border border-slate-200 text-xs text-slate-700 leading-relaxed">
-                      <strong className="text-amber-800 block mb-1">تەفسیری کوردی:</strong>
+                      <strong className="text-amber-800 block mb-1">
+                        {selectedTafsir.title}:
+                      </strong>
                       {ayah.kurdish}
                     </div>
                   </div>
@@ -324,12 +330,26 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* ========================================================================= */}
-      {/* پەنجەرەی هەڵبژاردنی خێرای سوورەت و لاپەڕە (Surah / Page Quick Picker) */}
-      {/* ========================================================================= */}
+      {/* مۆداڵی ١٢٠+ قورئانخوێنەکە */}
+      <RecitersModal
+        isOpen={isRecitersModalOpen}
+        onClose={() => setIsRecitersModalOpen(false)}
+        selectedReciterId={selectedReciter.id}
+        onSelectReciter={(r) => setSelectedReciter(r)}
+      />
+
+      {/* مۆداڵی ٥٠+ تەفسیرەکە */}
+      <TafsirSelectorModal
+        isOpen={isTafsirSelectorOpen}
+        onClose={() => setIsTafsirSelectorOpen(false)}
+        selectedTafsirId={selectedTafsir.id}
+        onSelectTafsir={(t) => setSelectedTafsir(t)}
+      />
+
+      {/* مۆداڵی خێرای سوورەتەکان */}
       {isSurahPickerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm p-4 flex items-end sm:items-center justify-center animate-in fade-in">
-          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl text-slate-900">
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs p-4 flex items-end sm:items-center justify-center animate-in fade-in select-none">
+          <div className="bg-white border border-slate-200 rounded-3xl max-w-lg w-full p-5 space-y-4 max-h-[80vh] overflow-y-auto shadow-2xl text-slate-900" dir="rtl">
             <div className="flex items-center justify-between border-b pb-3">
               <h3 className="font-bold text-sm text-slate-900">هەڵبژاردنی سوورەت یان لاپەڕە</h3>
               <button onClick={() => setIsSurahPickerOpen(false)} className="p-1.5 rounded-xl bg-slate-100 text-slate-600">
