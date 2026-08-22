@@ -21,22 +21,6 @@ interface MushafPageViewProps {
   onJumpToPage?: (page: number) => void;
 }
 
-const TAFSIR_API_MAPPING: Record<string, string> = {
-  ku_asan: 'ku.asan',
-  ku_raman: 'ku.muhammad',
-  ku_pukhta: 'ku.asan',
-  ku_muyasar: 'ku.asan',
-  ku_roshan: 'ku.asan',
-  ku_sanahi: 'ku.asan',
-  ar_saadi: 'ar.saadi',
-  ar_muyassar: 'ar.muyassar',
-  ar_jalalayn: 'ar.jalalayn',
-  en_sahih: 'en.sahih',
-  en_clear_quran: 'en.ahmedali',
-  fa_ahsan_kalam: 'fa.ansarian',
-  tr_diyanet: 'tr.diyanet'
-};
-
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
   currentPage,
   onNextPage,
@@ -52,7 +36,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [loadingPage, setLoadingPage] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
-  // سیستەمی لەمس بۆ پەڕە هەڵدانەوە بەرەو ڕاست و چەپ
+  // سیستەمی لەمس بۆ پەڕە هەڵدانەوە
   const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [dragOffset, setDragOffset] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -143,7 +127,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // دەستپێکی لەمس
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStartX(e.targetTouches[0].clientX);
     setIsDragging(true);
@@ -155,15 +138,15 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     setDragOffset(currentX - touchStartX);
   };
 
-  // کاتێک پەنجە بەردەدرێت: ئاڕاستەی عەرەبی (هەڵدانەوە بەرەو دەستە ڕاست دەچێتە لاپەڕەی دواتر)
+  // ئاڕاستەی عەکسکراوە بەپێی ویستی بەکارهێنەر:
   const handleTouchEnd = () => {
     setIsDragging(false);
-    if (dragOffset > 40) {
-      // ڕاکێشان بەرەو ڕاست (لە فاتیحەوە بەرەو بەقەڕە) -> لاپەڕەی دواتر
+    if (dragOffset < -40) {
+      // ڕاکێشان بۆ چەپ -> لاپەڕەی دواتر (Next Page)
       setLoadingPage(true);
       onNextPage();
-    } else if (dragOffset < -40) {
-      // ڕاکێشان بەرەو چەپ -> لاپەڕەی پێشوو
+    } else if (dragOffset > 40) {
+      // ڕاکێشان بۆ ڕاست -> لاپەڕەی پێشوو (Prev Page)
       setLoadingPage(true);
       onPrevPage();
     }
@@ -225,7 +208,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* ١. لاپەڕەی موسحەف بە هەڵدانەوەی دروستی عەرەبی بەرەو ڕاست */}
+      {/* ١. لاپەڕەی موسحەف */}
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex flex-col items-center justify-center p-2 cursor-pointer touch-pan-y"
@@ -234,16 +217,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {/* لای ڕاستی شاشە کلیک بکە دەچێتە لاپەڕەی دواتر */}
+          {/* لای چەپی شاشە = لاپەڕەی دواتر */}
           <div 
             onClick={(e) => { e.stopPropagation(); setLoadingPage(true); onNextPage(); }} 
-            className="absolute right-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
+            className="absolute left-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
             title="لاپەڕەی دواتر"
           />
-          {/* لای چەپی شاشە کلیک بکە دەچێتە لاپەڕەی پێشوو */}
+          {/* لای ڕاستی شاشە = لاپەڕەی پێشوو */}
           <div 
             onClick={(e) => { e.stopPropagation(); setLoadingPage(true); onPrevPage(); }} 
-            className="absolute left-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
+            className="absolute right-0 top-0 bottom-0 w-1/3 z-20 cursor-pointer" 
             title="لاپەڕەی پێشوو"
           />
 
