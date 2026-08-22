@@ -51,6 +51,8 @@ export default function App() {
           bgStyle={bgStyle}
           appLang={appLang}
           showNumbers={showNumbers}
+          surahsList={SURAHS_INDEX}
+          onJumpToPage={(p) => setCurrentPage(p)}
         />
       )}
 
