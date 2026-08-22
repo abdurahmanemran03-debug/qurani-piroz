@@ -6,7 +6,6 @@ import {
 
 import { BgThemeType, AppLangType, AccentColorType, CityPrayerData } from './types';
 import { SURAHS_INDEX } from './data/surahsData';
-import { ALL_ADHKAR_DATA } from './data/adhKarData';
 import { SEERAH_BOOK_CHAPTERS, SAHABA_ENCYCLOPEDIA, SCHOLARS_ENCYCLOPEDIA } from './data/seerahAndScholarsData';
 import { ALL_QUIZ_DATA } from './data/quizData';
 
@@ -44,7 +43,6 @@ export default function App() {
   const [showNumbers, setShowNumbers] = useState<boolean>(true);
 
   // Adhkar & Score
-  const [activeAdhkarCat, setActiveAdhkarCat] = useState<string>('morning');
   const [adhkarCounts, setAdhkarCounts] = useState<Record<string, number>>({});
   const [hasanatScore, setHasanatScore] = useState<number>(200);
 
@@ -157,9 +155,6 @@ export default function App() {
 
         {activeTab === 'adhkar' && (
           <AdhkarView
-            categories={ALL_ADHKAR_DATA}
-            activeCat={activeAdhkarCat}
-            onSelectCat={setActiveAdhkarCat}
             counts={adhkarCounts}
             onCount={handleAdhkarCount}
             onReset={(id) => setAdhkarCounts(prev => ({ ...prev, [id]: 0 }))}
