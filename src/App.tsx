@@ -4,7 +4,7 @@ import {
   Award, Heart, BookMarked, MessageSquare, Palmtree
 } from 'lucide-react';
 
-import { AppThemeMode, BgThemeType, AppLangType, AccentColorType, CityPrayerData } from './types';
+import { BgThemeType, AppLangType, AccentColorType, CityPrayerData } from './types';
 import { SURAHS_INDEX } from './data/surahsData';
 import { ALL_ADHKAR_DATA } from './data/adhkarData';
 import { SEERAH_BOOK_CHAPTERS, SAHABA_ENCYCLOPEDIA, SCHOLARS_ENCYCLOPEDIA } from './data/seerahAndScholarsData';
@@ -43,7 +43,7 @@ export default function App() {
   const [showKurdishNames, setShowKurdishNames] = useState<boolean>(true);
   const [showNumbers, setShowNumbers] = useState<boolean>(true);
 
-  // Adhkar & Score
+  // Adhkar & Hasanat
   const [activeAdhkarCat, setActiveAdhkarCat] = useState<string>('morning');
   const [adhkarCounts, setAdhkarCounts] = useState<Record<string, number>>({});
   const [hasanatScore, setHasanatScore] = useState<number>(200);
@@ -55,11 +55,11 @@ export default function App() {
 
   // AI state
   const [aiMessages, setAiMessages] = useState<Array<{ sender: 'user' | 'bot'; text: string }>>([
-    { sender: 'bot', text: 'سڵاو لە ئێوەی بەڕێز. من یاریدەدەری زیرەکی شەرعیم. وەڵامی پرسیارە فیقهییەکان بەپێی ٤ مەزهەبەکە لەسەر بنەمای قورئان و سوننەت دەدەمەوە.' }
+    { sender: 'bot', text: 'سڵاو لە ئێوەی بەڕێز. من یاریدەدەری زیرەکی شەرعیم. وەڵامی پرسیارە فیقهییەکان بەپێی ٤ مەزهەبەکە دەدەمەوە.' }
   ]);
   const [aiLoading, setAiLoading] = useState<boolean>(false);
 
-  // Prayer Times API
+  // Prayer API
   useEffect(() => {
     async function fetchPrayers() {
       setLoadingPrayer(true);
@@ -90,28 +90,20 @@ export default function App() {
     setAiMessages(prev => [...prev, { sender: 'user', text: userQ }]);
     setAiLoading(true);
     setTimeout(() => {
-      let botAnswer = `
-بەڵگەی شەرعی لەسەر ئەم بابەتە:
-- لەسەر بنەمای قورئانی پیرۆز و سوننەتی صەحیحی پێغەمبەر ﷺ.
-
-شیکاریی هەر ٤ مەزهەبە فیقهییەکە:
-• مەزهەبی ئیمامی شافعی: لەسەر دەقی بەڵگە سەحیحەکان حوکمەکە واجبە و پێویستە پابەند بین.
-• مەزهەبی ئیمامی حەنەفی: بە پێی بنەمای قیاس و ئیستحسان ڕێگەپێدراوە.
-• مەزهەبی ئیمامی مالیکی: لەسەر عەمەلی ئەهلی مەدینە دەڕوات.
-• مەزهەبی ئیمامی حەنبەلی: تەواو پابەندبوونە بە دەقی فەرموودە.
-      `;
-      if (userQ.includes('تەڵاق') || userQ.includes('میرات') || userQ.includes('ئاڵۆز')) {
-        botAnswer = `⚠️ ئەم پرسیارە پەیوەستە بە بابەتێکی هەستیاری شەرعی. پرسیارەکەت ڕەوانەی «لێژنەی مامۆستایانی ئایینی» کرا و لە ماوەی کەمتر لە ٢٤ کاتژمێردا وەڵامەکەت پێ دەگات ان شاء الله.`;
+      let botAnswer = `بەڵگەی شەرعی: لەسەر بنەمای قورئانی پیرۆز و فەرموودە صەحیحەکانی پێغەمبەر ﷺ.\n\nشیکاریی هەر ٤ مەزهەبەکە:\n• شافعی: واجبە بە بەڵگەی سەحیح.\n• حەنەفی: ڕێگەپێدراوە بەپێی ئیستحسان.\n• مالیکی: لەسەر عەمەلی ئەهلی مەدینەیە.\n• حەنبەلی: پابەندبوونە بە فەرموودە.`;
+      
+      if (userQ.includes('تەڵاق') || userQ.includes('میرات')) {
+        botAnswer = `⚠️ پرسیارەکەت ڕەوانەی «لێژنەی مامۆستایانی ئایینی» کرا و لە ماوەی کەمتر لە ٢٤ کاتژمێردا وەڵامەکەت پێ دەگات ان شاء الله.`;
       }
       setAiMessages(prev => [...prev, { sender: 'bot', text: botAnswer }]);
       setAiLoading(false);
-    }, 1000);
+    }, 900);
   };
 
   const getContainerBg = () => {
     if (bgStyle === 'cream') return 'bg-[#f7f2e5] text-[#3c2d15]';
     if (bgStyle === 'dark') return 'bg-[#0a0d14] text-slate-100';
-    return 'bg-[#f8f9fa] text-slate-800';
+    return 'bg-white text-slate-800';
   };
 
   return (
@@ -229,7 +221,7 @@ export default function App() {
         )}
       </main>
 
-      {/* مینیۆی خوارەوە (Bottom Navigation Bar) */}
+      {/* مینیۆی خوارەوە */}
       <nav className="fixed bottom-0 inset-x-0 z-50 bg-white/95 border-t border-slate-200 backdrop-blur-md flex items-center justify-around py-1.5 px-1 shadow-md">
         {[
           { id: 'quran', label: 'قورئان', icon: BookOpen },
