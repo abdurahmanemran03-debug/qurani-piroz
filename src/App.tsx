@@ -6,7 +6,7 @@ import {
 
 import { BgThemeType, AppLangType, AccentColorType, CityPrayerData } from './types';
 import { SURAHS_INDEX } from './data/surahsData';
-import { ALL_ADHKAR_DATA } from './data/adhkarData';
+import { ALL_ADHKAR_DATA } from './data/adhKarData';
 import { SEERAH_BOOK_CHAPTERS, SAHABA_ENCYCLOPEDIA, SCHOLARS_ENCYCLOPEDIA } from './data/seerahAndScholarsData';
 import { ALL_QUIZ_DATA } from './data/quizData';
 
@@ -43,7 +43,7 @@ export default function App() {
   const [showKurdishNames, setShowKurdishNames] = useState<boolean>(true);
   const [showNumbers, setShowNumbers] = useState<boolean>(true);
 
-  // Adhkar & Hasanat
+  // Adhkar & Score
   const [activeAdhkarCat, setActiveAdhkarCat] = useState<string>('morning');
   const [adhkarCounts, setAdhkarCounts] = useState<Record<string, number>>({});
   const [hasanatScore, setHasanatScore] = useState<number>(200);
@@ -55,11 +55,11 @@ export default function App() {
 
   // AI state
   const [aiMessages, setAiMessages] = useState<Array<{ sender: 'user' | 'bot'; text: string }>>([
-    { sender: 'bot', text: 'سڵاو لە ئێوەی بەڕێز. من یاریدەدەری زیرەکی شەرعیم. وەڵامی پرسیارە فیقهییەکان بەپێی ٤ مەزهەبەکە دەدەمەوە.' }
+    { sender: 'bot', text: 'سڵاو لە ئێوەی بەڕێز. من یاریدەدەری زیرەکی شەرعیم. وەڵامی پرسیارە فیقهییەکان بەپێی ٤ مەزهەبەکە لەسەر بنەمای قورئان و سوننەت دەدەمەوە.' }
   ]);
   const [aiLoading, setAiLoading] = useState<boolean>(false);
 
-  // Prayer API
+  // Prayer Times API
   useEffect(() => {
     async function fetchPrayers() {
       setLoadingPrayer(true);
@@ -90,8 +90,7 @@ export default function App() {
     setAiMessages(prev => [...prev, { sender: 'user', text: userQ }]);
     setAiLoading(true);
     setTimeout(() => {
-      let botAnswer = `بەڵگەی شەرعی: لەسەر بنەمای قورئانی پیرۆز و فەرموودە صەحیحەکانی پێغەمبەر ﷺ.\n\nشیکاریی هەر ٤ مەزهەبەکە:\n• شافعی: واجبە بە بەڵگەی سەحیح.\n• حەنەفی: ڕێگەپێدراوە بەپێی ئیستحسان.\n• مالیکی: لەسەر عەمەلی ئەهلی مەدینەیە.\n• حەنبەلی: پابەندبوونە بە فەرموودە.`;
-      
+      let botAnswer = `بەڵگەی شەرعی: لەسەر بنەمای قورئانی پیرۆز و فەرموودە صەحیحەکانی پێغەمبەر ﷺ.\n\nشیکاریی هەر ٤ مەزهەبە فیقهییەکە:\n• شافعی: واجبە بە بەڵگەی سەحیح.\n• حەنەفی: ڕێگەپێدراوە بەپێی ئیستحسان.\n• مالیکی: لەسەر عەمەلی ئەهلی مەدینەیە.\n• حەنبەلی: پابەندبوونە بە فەرموودە.`;
       if (userQ.includes('تەڵاق') || userQ.includes('میرات')) {
         botAnswer = `⚠️ پرسیارەکەت ڕەوانەی «لێژنەی مامۆستایانی ئایینی» کرا و لە ماوەی کەمتر لە ٢٤ کاتژمێردا وەڵامەکەت پێ دەگات ان شاء الله.`;
       }
