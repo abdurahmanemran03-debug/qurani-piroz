@@ -63,10 +63,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // بۆ گرتنی شوێنی پەنجە کاتێک لەسەر شاشە ڕادەکێشێت (Swipe)
-  const touchStartY = useRef<number>(0);
-  const touchStartX = useRef<number>(0);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
@@ -125,51 +122,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // سیستمی ڕاکێشانی پەنجە (Swipe Gestures)
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartY.current = e.touches[0].clientY;
-    touchStartX.current = e.touches[0].clientX;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndY = e.changedTouches[0].clientY;
-    const touchEndX = e.changedTouches[0].clientX;
-    
-    const diffY = touchStartY.current - touchEndY;
-    const diffX = touchStartX.current - touchEndX;
-
-    // ئەگەر جوڵەکە زیاتر ئاسۆیی (چەپ و ڕاست) بوو
-    if (Math.abs(diffX) > Math.abs(diffY)) {
-      if (Math.abs(diffX) > 50) {
-        if (diffX > 0) {
-          // ڕاکێشان بۆ چەپ -> لاپەڕەی داهاتوو
-          if (currentPage < 604) onNextPage();
-        } else {
-          // ڕاکێشان بۆ ڕاست -> لاپەڕەی پێشوو
-          if (currentPage > 1) onPrevPage();
-        }
-      }
-    } else {
-      // ئەگەر جوڵەکە ستوونی بوو
-      if (Math.abs(diffY) > 50) {
-        if (diffY > 0) {
-          // ڕاکێشان بۆ خوارەوە
-          if (currentPage < 604) onNextPage();
-        } else {
-          // ڕاکێشان بۆ سەرەوە
-          if (currentPage > 1) onPrevPage();
-        }
-      }
-    }
+  // گۆڕینی لاپەڕە بە پێی سکرۆڵی ئاسۆیی
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const target = e.currentTarget;
+    const scrollLeft = target.scrollLeft;
+    const width = target.clientWidth;
+    // حیسابکردنی لاپەڕە لەسەر بنەمای شوێنی سکرۆڵ
   };
 
   return (
-    <div 
-      className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden" 
-      dir="rtl"
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
       {/* سەرەوەی ئەپ */}
@@ -224,22 +186,39 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* نیشاندانی تەنها یەک لاپەڕەی خاوێن لە ناوەڕاستدا بە بێ سکرۆڵی تێکەڵ */}
+      {/* سکرۆڵی ئاسۆیی ڕێک وەک ڤیدیۆکە کە پەنجەی پێدا ڕادەکێشیت */}
       {viewMode === 'mushaf' && (
         <div 
-          className="relative flex-1 flex flex-col items-center justify-center bg-stone-200/50 p-2 overflow-hidden"
+          className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
           onClick={() => setShowControls(prev => !prev)}
         >
-          <div className="w-full h-full flex flex-col items-center justify-center max-w-md">
-            <img
-              src={pageImgUrl(currentPage)}
-              alt={`Page ${currentPage}`}
-              className="max-w-full max-h-[78vh] object-contain select-none pointer-events-none shadow-md rounded-lg bg-white border border-stone-300"
-              style={PAGE_IMG_FILTER}
-            />
-            <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
-              {currentPage}
-            </span>
+          <div 
+            ref={scrollRef}
+            onScroll={handleScroll}
+            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center px-2 gap-2"
+            style={{ scrollBehavior: 'smooth', direction: 'ltr' }}
+          >
+            {[currentPage + 1, currentPage, currentPage - 1].map((pageNum) => {
+              if (pageNum < 1 || pageNum > 604) return null;
+              
+              return (
+                <div 
+                  key={pageNum}
+                  className="min-w-full h-full flex flex-col items-center justify-center snap-center p-1"
+                  style={{ direction: 'rtl' }}
+                >
+                  <img
+                    src={pageImgUrl(pageNum)}
+                    alt={`Page ${pageNum}`}
+                    className="max-w-full max-h-[76vh] object-contain select-none pointer-events-none shadow-xl rounded-lg bg-white border border-stone-300"
+                    style={PAGE_IMG_FILTER}
+                  />
+                  <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
+                    {pageNum}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
