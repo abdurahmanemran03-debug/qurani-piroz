@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowRight, Loader2, BookOpen, Volume2, Play, Pause, 
-  Bookmark, BookmarkCheck, ListFilter, X, Check, Mic, Globe, ChevronDown
+  Bookmark, BookmarkCheck, Globe, X, ChevronRight, ChevronLeft
 } from 'lucide-react';
 import { BgThemeType, AppLangType, SurahItem } from '../types';
 import { ALL_RECITERS_DIRECTORY, ReciterItem } from '../data/recitersList';
@@ -21,6 +21,14 @@ interface MushafPageViewProps {
   onJumpToPage?: (page: number) => void;
 }
 
+const formatPageNum = (n: number) => String(n).padStart(3, '0');
+const pageImgUrl = (n: number) => `https://android.quran.com/data/width_1260/page${formatPageNum(n)}.png`;
+
+const PAGE_IMG_FILTER = {
+  filter: 'grayscale(100%) contrast(115%) brightness(102%)',
+  mixBlendMode: 'multiply' as const,
+};
+
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
   currentPage,
   onNextPage,
@@ -36,12 +44,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [loadingPage, setLoadingPage] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
-  // سیستەمی خلیسکانی ٢ لاپەڕە بە گەڕانەوەی نەرم (Snap-Back)
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
-  const [dragOffset, setDragOffset] = useState<number>(0);
-  const [isDragging, setIsDragging] = useState(false);
-
-  // مۆداڵەکان
   const [isRecitersModalOpen, setIsRecitersModalOpen] = useState(false);
   const [isTafsirSelectorOpen, setIsTafsirSelectorOpen] = useState(false);
   const [isSurahPickerOpen, setIsSurahPickerOpen] = useState(false);
@@ -52,7 +54,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [pageAyahsData, setPageAyahsData] = useState<any[]>([]);
   const [loadingTafsir, setLoadingTafsir] = useState(false);
 
-  // بووکمارک
   const [bookmarks, setBookmarks] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem('quran_bookmarks');
@@ -64,11 +65,10 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const isBookmarked = bookmarks.includes(currentPage);
-  const formatPageNum = (n: number) => String(n).padStart(3, '0');
   const currentJuz = Math.ceil(currentPage / 20);
-
   const currentSurah = surahsList.slice().reverse().find(s => currentPage >= s.startPage) || surahsList[0];
 
   const toggleBookmark = () => {
@@ -83,7 +83,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     if (navigator.vibrate) navigator.vibrate(35);
   };
 
-  // بارکردنی تەفسیر
   useEffect(() => {
     async function loadPageVerses() {
       setLoadingTafsir(true);
@@ -110,7 +109,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     loadPageVerses();
   }, [currentPage]);
 
-  // دەنگ
   const togglePageAudio = () => {
     if (isPlayingAudio) {
       audioRef.current?.pause();
@@ -126,47 +124,23 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // دەستپێکی لەمس
-  const handleTouchStart = (e: React.TouchEvent) => {
-    setTouchStartX(e.targetTouches[0].clientX);
-    setIsDragging(true);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (touchStartX === null) return;
-    const currentX = e.targetTouches[0].clientX;
-    setDragOffset(currentX - touchStartX);
-  };
-
-  // کاتێک پەنجە بەردەدرێت: پێوانەکردنی تەواوی ڕاکێشان
-  const handleTouchEnd = () => {
-    setIsDragging(false);
-    const screenWidth = typeof window !== 'undefined' ? window.innerWidth : 360;
-    // دەبێت لانیکەم تا ٤٥٪ی شاشەکە ڕابکێشرێت تاوەکو پەڕەکە هەڵبدرێتەوە
-    const fullSwipeThreshold = Math.min(screenWidth * 0.45, 170);
-
-    if (dragOffset > fullSwipeThreshold && currentPage < 604) {
-      // ڕاکێشانی تەواو بەرەو ڕاست -> لاپەڕەی دواتر دەهێنێت
+  // گواستنەوە بۆ لاپەڕەی پێشوو یان داهاتوو بە شێوازێکی جووڵەی نەرم
+  const scrollToPageDirection = (targetPage: number) => {
+    if (targetPage < 1 || targetPage > 604) return;
+    if (onJumpToPage) {
+      onJumpToPage(targetPage);
+    } else if (targetPage > currentPage) {
       onNextPage();
-    } else if (dragOffset < -fullSwipeThreshold && currentPage > 1) {
-      // ڕاکێشانی تەواو بەرەو چەپ -> لاپەڕەی پێشوو دەهێنێت
+    } else {
       onPrevPage();
     }
-    
-    // ئەگەر کەمتر لە نیوە ڕاکێشرابوو: ڕاستەوخۆ دەگەڕێتەوە شوێنی خۆی بێ گۆڕانی لاپەڕە!
-    setDragOffset(0);
-    setTouchStartX(null);
   };
 
-  const nextPageNum = currentPage < 604 ? currentPage + 1 : currentPage;
-  const prevPageNum = currentPage > 1 ? currentPage - 1 : currentPage;
-
   return (
-    <div className="relative min-h-screen max-w-lg mx-auto flex flex-col justify-between overflow-hidden select-none bg-[#fbf9f4] text-slate-900" dir="rtl">
+    <div className="relative min-h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
-      {/* شریتی سەرەوە */}
-      <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
+      <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
         <button
@@ -182,11 +156,11 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             سووڕه‌تی {currentSurah?.nameAr || 'الفاتحة'}
           </h2>
           <p className="text-[11px] text-slate-500 font-medium">
-            په‌ڕه‌ی {currentPage} , جوزئی {currentJuz}
+            په‌ڕه‌ی {currentPage} ، جوزئی {currentJuz}
           </p>
         </div>
 
-        <div className="flex items-center gap-1.5 text-slate-700">
+        <div className="flex items-center gap-1 text-slate-700">
           <button
             onClick={() => setViewMode(prev => prev === 'mushaf' ? 'tafsir' : 'mushaf')}
             className={`p-2 rounded-xl transition-colors ${
@@ -217,63 +191,69 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* ١. لاپەڕەی موسحەف بە سیستەمی خلیسکانی تەواو و گەڕانەوەی نەرم */}
+      {/* شێوازی بینینی لاپەڕەکان بە شێوەی هۆریزۆنتاڵی خلیسکاو (سکرۆڵی لادانی کە نیوەی لاپەڕەکەی تر دەردەخات) */}
       {viewMode === 'mushaf' && (
         <div 
-          className="relative flex-1 overflow-hidden flex items-center justify-center p-0 cursor-pointer touch-pan-y"
+          className="relative flex-1 flex items-center justify-center overflow-hidden bg-stone-200/40 py-2"
           onClick={() => setShowControls(prev => !prev)}
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
         >
           <div 
-            className="w-full flex items-center justify-center transition-transform"
-            style={{
-              transform: `translate3d(${dragOffset}px, 0, 0)`,
-              transition: isDragging ? 'none' : 'transform 0.32s cubic-bezier(0.2, 0.9, 0.2, 1)'
+            ref={scrollContainerRef}
+            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center px-4 gap-4"
+            style={{ scrollBehavior: 'smooth' }}
+            onScroll={(e) => {
+              // دەتوانیت لێرەدا کۆنترۆڵی ڕێژەی بینینی لاپەڕەکان بکەیت ئەگەر پێویست بکات
             }}
           >
-            {/* لاپەڕەی دواتر (لە لای چەپەوە دێت) */}
-            {currentPage < 604 && (
-              <div className="min-w-full w-full flex-shrink-0 flex items-center justify-center relative px-2">
+            {/* لاپەڕەی پێشوو (بۆ ئەوەی نیوەکەی دەربکەوێت لە کاتی ڕاکێشاندا) */}
+            {currentPage > 1 && (
+              <div 
+                className="min-w-[85%] sm:min-w-[70%] h-full flex items-center justify-center snap-center cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  scrollToPageDirection(currentPage - 1);
+                }}
+              >
                 <img
-                  src={`https://android.quran.com/data/width_1260/page${formatPageNum(nextPageNum)}.png`}
-                  alt={`Page ${nextPageNum}`}
-                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none"
-                  style={{ filter: 'grayscale(100%) contrast(115%) brightness(102%)', mixBlendMode: 'multiply' }}
+                  src={pageImgUrl(currentPage - 1)}
+                  alt={`Page ${currentPage - 1}`}
+                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-md rounded bg-white"
+                  style={PAGE_IMG_FILTER}
                 />
-                <div className="absolute right-0 top-0 bottom-0 w-3 bg-gradient-to-l from-black/15 to-transparent pointer-events-none" />
               </div>
             )}
 
-            {/* لاپەڕەی ئێستا (لە ناوەڕاستدا) */}
-            <div className="min-w-full w-full flex-shrink-0 flex items-center justify-center relative px-2">
+            {/* لاپەڕەی ئێستا */}
+            <div className="min-w-[92%] sm:min-w-[80%] h-full flex items-center justify-center snap-center">
               <img
-                src={`https://android.quran.com/data/width_1260/page${formatPageNum(currentPage)}.png`}
+                src={pageImgUrl(currentPage)}
                 alt={`Page ${currentPage}`}
-                className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none"
-                style={{ filter: 'grayscale(100%) contrast(115%) brightness(102%)', mixBlendMode: 'multiply' }}
+                className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-xl rounded-lg bg-white border border-stone-300"
+                style={PAGE_IMG_FILTER}
               />
-              <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-black/15 to-transparent pointer-events-none" />
             </div>
 
-            {/* لاپەڕەی پێشوو (لە لای ڕاستەوە) */}
-            {currentPage > 1 && (
-              <div className="min-w-full w-full flex-shrink-0 flex items-center justify-center relative px-2">
+            {/* لاپەڕەی داهاتوو (بۆ ئەوەی نیوەکەی دەربکەوێت لە کاتی ڕاکێشاندا) */}
+            {currentPage < 604 && (
+              <div 
+                className="min-w-[85%] sm:min-w-[70%] h-full flex items-center justify-center snap-center cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
+                onClick={(ev) => {
+                  ev.stopPropagation();
+                  scrollToPageDirection(currentPage + 1);
+                }}
+              >
                 <img
-                  src={`https://android.quran.com/data/width_1260/page${formatPageNum(prevPageNum)}.png`}
-                  alt={`Page ${prevPageNum}`}
-                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none"
-                  style={{ filter: 'grayscale(100%) contrast(115%) brightness(102%)', mixBlendMode: 'multiply' }}
+                  src={pageImgUrl(currentPage + 1)}
+                  alt={`Page ${currentPage + 1}`}
+                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-md rounded bg-white"
+                  style={PAGE_IMG_FILTER}
                 />
-                <div className="absolute left-0 top-0 bottom-0 w-3 bg-gradient-to-r from-black/15 to-transparent pointer-events-none" />
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* ٢. شێوازی تەفسیر ئایەت بە ئایەت */}
       {viewMode === 'tafsir' && (
         <div className="flex-1 overflow-y-auto p-4 space-y-6 animate-in fade-in bg-white">
           {loadingTafsir ? (
@@ -300,21 +280,40 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* شریتی خوارەوەی دەنگ */}
-      <footer className="sticky bottom-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg">
+      <footer className={`sticky bottom-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
+        showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+      }`}>
         <button 
           onClick={() => setIsRecitersModalOpen(true)}
           className="text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5"
         >
-          <span>{selectedReciter.name} (متصل)</span>
+          <span>{selectedReciter.name}</span>
         </button>
 
-        <button
-          onClick={togglePageAudio}
-          className="p-2 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-transform active:scale-95"
-        >
-          {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => scrollToPageDirection(currentPage - 1)}
+            className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            title="پەڕەی پێشوو"
+          >
+            <ChevronRight className="w-5 h-5" />
+          </button>
+
+          <button
+            onClick={togglePageAudio}
+            className="p-2 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-transform active:scale-95"
+          >
+            {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
+          </button>
+
+          <button
+            onClick={() => scrollToPageDirection(currentPage + 1)}
+            className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+            title="پەڕەی دواتر"
+          >
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+        </div>
       </footer>
 
       <RecitersModal
@@ -330,7 +329,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         selectedTafsirId={selectedTafsir.id}
         onSelectTafsir={(t) => setSelectedTafsir(t)}
       />
-
     </div>
   );
 };
