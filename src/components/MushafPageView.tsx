@@ -70,6 +70,8 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
+  
+  // ڕاستکردنەوەی دۆزینەوەی سورەت بەپێی currentPage بە ڕیزبەندی ڕاستەقینە
   const currentSurah = surahsList.slice().reverse().find(s => currentPage >= s.startPage) || surahsList[0];
 
   const toggleBookmark = () => {
@@ -277,7 +279,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                 </p>
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed">
                   <strong className="text-amber-800 block mb-1">تەفسیری کوردی:</strong>
-                  {ayah.asanTafsir}
+                  {ayah.asanTafsirk || ayah.asanTafsir}
                 </div>
               </div>
             ))
@@ -290,8 +292,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
       }`} dir="rtl">
         <button 
-          onClick={() => setIsRecitersModalRef(true)} // کێشەی نامۆیی ناو دگمەن چارەسەر کراوە
-          onClickCapture={() => setIsRecitersModalOpen(true)}
+          onClick={() => setIsRecitersModalOpen(true)}
           className="text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5"
         >
           <span>{selectedReciter.name}</span>
