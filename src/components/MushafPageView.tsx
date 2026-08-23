@@ -64,9 +64,8 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // متغیر بۆ ڕێگریکردن لە دووبارەبوونەوەی سکرۆڵ لە کاتی گۆڕینی دەرەکی
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
-  const isUpdating = useRef(false);
+  const isProgrammaticScroll = useRef(false);
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
@@ -110,18 +109,20 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     loadPageVerses();
   }, [currentPage]);
 
-  // ڕێکخستنی شوێنی سکرۆڵ کاتێک currentPage دەگۆڕێت بە شێوازێکی زۆر پارێزراو
+  // گواستنەوەی ڕاستەوخۆ و بێهەڵە بۆ لاپەڕەی دیاریکراو بەپێی ئیندیکسی سروشتی
   useEffect(() => {
-    if (scrollContainerRef.current && !isUpdating.current) {
-      isUpdating.current = true;
-      const targetIndex = 604 - currentPage;
+    if (scrollContainerRef.current) {
+      isProgrammaticScroll.current = true;
+      const targetIndex = currentPage - 1;
       const pageWidth = scrollContainerRef.current.clientWidth;
+      
       scrollContainerRef.current.scrollTo({
         left: targetIndex * pageWidth,
         behavior: 'smooth'
       });
+
       setTimeout(() => {
-        isUpdating.current = false;
+        isProgrammaticScroll.current = false;
       }, 350);
     }
   }, [currentPage]);
@@ -141,26 +142,26 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // کۆنتڕۆڵی تەواوی سکرۆڵ بە جۆرێک تەنها کاتێک لاپەڕە دەگۆڕێت کە بڕی پێویست تەواو ببێت
+  // کۆنتڕۆڵی تەواوی سکرۆڵ بە شێوازێکی زۆر پاک و جێگیر
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    if (isUpdating.current) return;
+    if (isProgrammaticScroll.current) return;
     const target = e.currentTarget;
     const scrollLeft = target.scrollLeft;
     const pageWidth = target.clientWidth;
     
     if (pageWidth > 0) {
       const pageIndex = Math.round(scrollLeft / pageWidth);
-      const targetPage = 604 - pageIndex;
+      const targetPage = pageIndex + 1;
       
       if (targetPage >= 1 && targetPage <= 604 && targetPage !== currentPage) {
-        isUpdating.current = true;
+        isProgrammaticScroll.current = true;
         if (targetPage > currentPage) {
           onNextPage();
         } else {
           onPrevPage();
         }
         setTimeout(() => {
-          isUpdating.current = false;
+          isProgrammaticScroll.current = false;
         }, 300);
       }
     }
@@ -222,7 +223,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* بەشی قورئان بە سکرۆڵی ئاسۆیی و snap بۆ ڕێگریکردن لە تێکچوون */}
+      {/* بەشی قورئان بە ڕیزبەندی دروستی لاپەڕەکان لە 1 بۆ 604 */}
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
@@ -235,7 +236,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             style={{ scrollBehavior: 'smooth', direction: 'ltr' }}
           >
             {Array.from({ length: 604 }, (_, i) => {
-              const pageNum = 604 - i;
+              const pageNum = i + 1;
               return (
                 <div 
                   key={pageNum}
@@ -290,8 +291,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
       }`} dir="rtl">
         <button 
-          onClick={() => setIsRecitersModalRef(true)} // کێشەی نامۆیی ناو دگمەن چارەسەر کراوە
-          onClickCapture={() => setIsRecitersModalOpen(true)}
+          onClick={() => setIsRecitersModalOpen(true)}
           className="text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5"
         >
           <span>{selectedReciter.name}</span>
