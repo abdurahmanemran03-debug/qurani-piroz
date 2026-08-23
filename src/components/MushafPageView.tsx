@@ -89,7 +89,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     flipTimerRef.current = setTimeout(() => {
       setDisplayPage(currentPage);
       setFlipOverlay(null);
-    }, 600);
+    }, 700);
 
     return () => {
       if (flipTimerRef.current) clearTimeout(flipTimerRef.current);
@@ -276,15 +276,12 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
             {flipOverlay && (
               <div
-                className="absolute inset-0"
+                className="absolute inset-0 overflow-hidden"
                 style={{
-                  transformStyle: 'preserve-3d',
-                  transformOrigin: flipOverlay.direction === 'next' ? 'right center' : 'left center',
-                  transform: flipTriggered
-                    ? `rotateY(${flipOverlay.direction === 'next' ? '180deg' : '-180deg'})`
-                    : 'rotateY(0deg)',
-                  transition: 'transform 0.6s cubic-bezier(0.45, 0, 0.55, 1)',
-                  backfaceVisibility: 'hidden',
+                  clipPath: flipTriggered
+                    ? (flipOverlay.direction === 'next' ? 'inset(0 0 0 100%)' : 'inset(0 100% 0 0)')
+                    : 'inset(0 0 0 0%)',
+                  transition: 'clip-path 0.7s cubic-bezier(0.45, 0, 0.55, 1)',
                 }}
               >
                 <img
@@ -294,10 +291,18 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                   style={PAGE_IMG_FILTER}
                 />
                 <div
-                  className="absolute inset-0 bg-black pointer-events-none"
+                  className="absolute top-0 bottom-0 pointer-events-none"
                   style={{
-                    opacity: flipTriggered ? 0.28 : 0,
-                    transition: 'opacity 0.6s ease',
+                    width: '6%',
+                    left: flipOverlay.direction === 'next' ? '0%' : 'auto',
+                    right: flipOverlay.direction === 'prev' ? '0%' : 'auto',
+                    background: flipOverlay.direction === 'next'
+                      ? 'linear-gradient(to right, rgba(0,0,0,0.03), rgba(0,0,0,0.35), rgba(0,0,0,0.03))'
+                      : 'linear-gradient(to left, rgba(0,0,0,0.03), rgba(0,0,0,0.35), rgba(0,0,0,0.03))',
+                    transform: flipTriggered
+                      ? `translateX(${flipOverlay.direction === 'next' ? '1566%' : '-1566%'})`
+                      : 'translateX(0%)',
+                    transition: 'transform 0.7s cubic-bezier(0.45, 0, 0.55, 1)',
                   }}
                 />
               </div>
