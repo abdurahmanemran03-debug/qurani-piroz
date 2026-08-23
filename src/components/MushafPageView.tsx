@@ -63,10 +63,8 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // شوێنی دەستپێکی پەنجە بۆ Swipe
-  const touchStartX = useRef<number>(0);
-  const touchStartY = useRef<number>(0);
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const isScrollingProgrammatically = useRef(false);
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
@@ -110,6 +108,19 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     loadPageVerses();
   }, [currentPage]);
 
+  // چوونە سەر لاپەڕەی دیاریکراو کاتێک لە دەرەوە دەگۆڕێت
+  useEffect(() => {
+    if (scrollRef.current) {
+      const targetIndex = 604 - currentPage;
+      const width = scrollRef.current.clientWidth;
+      isScrollingProgrammatically.current = true;
+      scrollRef.current.scrollTo({ left: targetIndex * width, behavior: 'smooth' });
+      setTimeout(() => {
+        isScrollingProgrammatically.current = false;
+      }, 300);
+    }
+  }, [currentPage]);
+
   const togglePageAudio = () => {
     if (isPlayingAudio) {
       audioRef.current?.pause();
@@ -125,30 +136,19 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // گرتنی دەستپێکی پەنجە
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  // کاتێک پەنجە هەڵدەگرێت، تەنها یەک لاپەڕە دەگۆڕێت بەپێی ئاراستەی ڕاکێشان
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-
-    const diffX = touchStartX.current - touchEndX;
-    const diffY = touchStartY.current - touchEndY;
-
-    // دڵنیابوونەوە لەوەی جوڵەکە زیاتر ئاسۆیی بووە و بڕەکەی گەورەیە (زیاتر لە 40 پیکسڵ)
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
-      if (diffX > 0) {
-        // ڕاکێشان بۆ چەپ (چوون بۆ لاپەڕەی داهاتوو لە ڕستەی قورئاندا)
-        if (currentPage < 604) {
+  // کۆنتڕۆڵکردنی سکرۆڵ بۆ ئەوەی تەنها یەک لاپەڕە بگۆڕێت و خێرایی تێپەڕ نەبێت
+  const handleScrollEnd = (e: React.UIEvent<HTMLDivElement>) => {
+    if (isScrollingProgrammatically.current) return;
+    const target = e.currentTarget;
+    const scrollLeft = target.scrollLeft;
+    const width = target.clientWidth;
+    if (width > 0) {
+      const index = Math.round(scrollLeft / width);
+      const newPage = 604 - index;
+      if (newPage >= 1 && newPage <= 604 && newPage !== currentPage) {
+        if (newPage > currentPage) {
           onNextPage();
-        }
-      } else {
-        // ڕاکێشان بۆ ڕاست (چوون بۆ لاپەڕەی پێشوو)
-        if (currentPage > 1) {
+        } else {
           onPrevPage();
         }
       }
@@ -211,24 +211,38 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* نیشاندانی تەنها یەک لاپەڕە بە کۆنتڕۆڵی تەواوی Swipe بۆ گۆڕینی تەنها یەک لاپەڕە */}
+      {/* سکرۆڵی ئاسۆیی کە بە snap-mandatory تەنها لەسەر یەک لاپەڕە ڕادەوەستێت */}
       {viewMode === 'mushaf' && (
         <div 
-          className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden p-2"
+          className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
           onClick={() => setShowControls(prev => !prev)}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
         >
-          <div className="w-full h-full flex flex-col items-center justify-center max-w-md animate-fadeIn">
-            <img
-              src={pageImgUrl(currentPage)}
-              alt={`Page ${currentPage}`}
-              className="max-w-full max-h-[76vh] object-contain select-none pointer-events-none shadow-xl rounded-lg bg-white border border-stone-300"
-              style={PAGE_IMG_FILTER}
-            />
-            <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
-              {currentPage}
-            </span>
+          <div 
+            ref={scrollRef}
+            onScrollEnd={handleScrollEnd}
+            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center"
+            style={{ scrollBehavior: 'smooth', direction: 'ltr', touchAction: 'pan-x' }}
+          >
+            {Array.from({ length: 604 }, (_, i) => {
+              const pageNum = 604 - i;
+              return (
+                <div 
+                  key={pageNum}
+                  className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2"
+                  style={{ direction: 'rtl' }}
+                >
+                  <img
+                    src={pageImgUrl(pageNum)}
+                    alt={`Page ${pageNum}`}
+                    className="max-w-full max-h-[76vh] object-contain select-none pointer-events-none shadow-xl rounded-lg bg-white border border-stone-300"
+                    style={PAGE_IMG_FILTER}
+                  />
+                  <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
+                    {pageNum}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
