@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowRight, Loader2, BookOpen, Play, Pause, 
-  Bookmark, BookmarkCheck, Globe, X, ChevronRight, ChevronLeft
+  Bookmark, BookmarkCheck, Globe, X, ChevronUp, ChevronDown
 } from 'lucide-react';
 import { BgThemeType, AppLangType, SurahItem } from '../types';
 import { ALL_RECITERS_DIRECTORY, ReciterItem } from '../data/recitersList';
@@ -41,7 +41,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   onJumpToPage
 }) => {
   const [viewMode, setViewMode] = useState<'mushaf' | 'tafsir'>('mushaf');
-  const [loadingPage, setLoadingPage] = useState(false);
   const [showControls, setShowControls] = useState(true);
 
   const [isRecitersModalOpen, setIsRecitersModalOpen] = useState(false);
@@ -64,7 +63,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
@@ -123,23 +122,11 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // گواستنەوە بۆ لاپەڕەی تر بە شێوازێکی ڕێک
-  const handlePageChange = (targetPage: number) => {
-    if (targetPage < 1 || targetPage > 604) return;
-    if (onJumpToPage) {
-      onJumpToPage(targetPage);
-    } else if (targetPage > currentPage) {
-      onNextPage();
-    } else {
-      onPrevPage();
-    }
-  };
-
   return (
     <div className="relative min-h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
-      {/* سەرەوەی ئەپ (بەرگ و کۆنترۆڵەکان) */}
+      {/* سەرەوەی ئەپ */}
       <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
@@ -191,63 +178,35 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* ناوەندی بینینی قورئان (تاکە لاپەڕە کە نیوەی لاپەڕەکەی تر لە تەنیشتەوە دەردەکەوێت) */}
+      {/* شێوازی بینینی مۆسحەف بە سکرۆڵی ستوونی (وەکوو ڤیدیۆکە) */}
       {viewMode === 'mushaf' && (
         <div 
-          className="relative flex-1 flex items-center justify-center overflow-hidden bg-stone-200/50 py-2"
+          ref={containerRef}
+          className="relative flex-1 overflow-y-auto bg-stone-200/40 p-2 space-y-4"
           onClick={() => setShowControls(prev => !prev)}
         >
-          <div 
-            ref={scrollContainerRef}
-            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center px-4 gap-3"
-            style={{ scrollBehavior: 'smooth' }}
-          >
-            {/* لاپەڕەی پێشوو (کە نیوەی دیار دەبێت) */}
-            {currentPage > 1 && (
+          {/* نیشاندانی مەودایەکی لاپەڕەکان (بۆ نموونە پێنج لاپەڕەی پێشوو، ئێستا و داهاتوو بۆ ئەوەی بە ئاسانی سکرۆڵ بکرێن) */}
+          {Array.from({ length: 5 }, (_, i) => {
+            const pageNum = currentPage - 2 + i;
+            if (pageNum < 1 || pageNum > 604) return null;
+
+            return (
               <div 
-                className="min-w-[80%] sm:min-w-[65%] h-full flex items-center justify-center snap-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePageChange(currentPage - 1);
-                }}
+                key={pageNum} 
+                className="flex flex-col items-center bg-white shadow-md rounded-lg p-2 border border-stone-300 mx-auto max-w-md"
               >
                 <img
-                  src={pageImgUrl(currentPage - 1)}
-                  alt={`Page ${currentPage - 1}`}
-                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-sm rounded bg-white"
+                  src={pageImgUrl(pageNum)}
+                  alt={`Page ${pageNum}`}
+                  className="w-full h-auto object-contain select-none pointer-events-none mx-auto block"
                   style={PAGE_IMG_FILTER}
                 />
+                <span className="text-xs font-bold text-slate-500 mt-2 font-mono">
+                  {pageNum}
+                </span>
               </div>
-            )}
-
-            {/* لاپەڕەی سەرەکی ئێستا */}
-            <div className="min-w-[94%] sm:min-w-[82%] h-full flex items-center justify-center snap-center">
-              <img
-                src={pageImgUrl(currentPage)}
-                alt={`Page ${currentPage}`}
-                className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-xl rounded-lg bg-white border border-stone-300"
-                style={PAGE_IMG_FILTER}
-              />
-            </div>
-
-            {/* لاپەڕەی داهاتوو (کە نیوەی دیار دەبێت) */}
-            {currentPage < 604 && (
-              <div 
-                className="min-w-[80%] sm:min-w-[65%] h-full flex items-center justify-center snap-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePageChange(currentPage + 1);
-                }}
-              >
-                <img
-                  src={pageImgUrl(currentPage + 1)}
-                  alt={`Page ${currentPage + 1}`}
-                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-sm rounded bg-white"
-                  style={PAGE_IMG_FILTER}
-                />
-              </div>
-            )}
-          </div>
+            );
+          })}
         </div>
       )}
 
@@ -278,7 +237,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* خوارەوەی ئەپ (دوگمەکانی دەنگ و گۆڕینی لاپەڕە) */}
+      {/* خوارەوەی ئەپ */}
       <footer className={`sticky bottom-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
       }`}>
@@ -291,11 +250,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => handlePageChange(currentPage - 1)}
+            onClick={() => {
+              if (currentPage > 1) {
+                if (onJumpToPage) onJumpToPage(currentPage - 1);
+                else onPrevPage();
+              }
+            }}
             className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
             title="پەڕەی پێشوو"
           >
-            <ChevronRight className="w-5 h-5" />
+            <ChevronUp className="w-5 h-5" />
           </button>
 
           <button
@@ -306,11 +270,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           </button>
 
           <button
-            onClick={() => handlePageChange(currentPage + 1)}
+            onClick={() => {
+              if (currentPage < 604) {
+                if (onJumpToPage) onJumpToPage(currentPage + 1);
+                else onNextPage();
+              }
+            }}
             className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
             title="پەڕەی داهاتوو"
           >
-            <ChevronLeft className="w-5 h-5" />
+            <ChevronDown className="w-5 h-5" />
           </button>
         </div>
       </footer>
