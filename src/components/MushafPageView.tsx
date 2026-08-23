@@ -64,14 +64,13 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
-  // متغیر بۆ ڕێگریکردن لە دووبارەبوونەوەی سکرۆڵ لە کاتی گۆڕینی دەرەکی
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const isUpdating = useRef(false);
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
   
-  // ڕاستکردنەوەی دۆزینەوەی سورەت بەپێی currentPage بە ڕیزبەندی ڕاستەقینە
+  // لێرەدا پشت بەcurrentPage دەبەستین کە ڕاستەوخۆ لە باوکەوە دێت (کە کلیلە بۆ ناسینەوەی لاپەڕەکە)
   const currentSurah = surahsList.slice().reverse().find(s => currentPage >= s.startPage) || surahsList[0];
 
   const toggleBookmark = () => {
@@ -112,7 +111,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     loadPageVerses();
   }, [currentPage]);
 
-  // ڕێکخستنی شوێنی سکرۆڵ کاتێک currentPage دەگۆڕێت بە شێوازێکی زۆر پارێزراو
+  // سکرۆڵی ئاسۆیی: کاتێکcurrentPage دەگۆڕێت، شوێنی سکرۆڵەکە ڕێکدەخەینەوە
   useEffect(() => {
     if (scrollContainerRef.current && !isUpdating.current) {
       isUpdating.current = true;
@@ -143,7 +142,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // کۆنتڕۆڵی تەواوی سکرۆڵ بە جۆرێک تەنها کاتێک لاپەڕە دەگۆڕێت کە بڕی پێویست تەواو ببێت
+  // کاتێک بەکارهێنەر سکرۆڵ دەکات، حساب بۆpageNumـی ڕاستەقینە دەکەین
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (isUpdating.current) return;
     const target = e.currentTarget;
@@ -152,7 +151,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     
     if (pageWidth > 0) {
       const pageIndex = Math.round(scrollLeft / pageWidth);
-      const targetPage = 604 - pageIndex;
+      const targetPage = 604 - pageIndex; // لێرەدا دەبێت لە 604 کەم بکرێتەوە بۆ وەرگرتنی ژمارەی ڕاستەقینەی پەڕە
       
       if (targetPage >= 1 && targetPage <= 604 && targetPage !== currentPage) {
         isUpdating.current = true;
@@ -172,7 +171,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     <div className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
-      {/* سەرەوەی ئەپ */}
+      {/* سەرەوەی ئەپ - هێدەر */}
       <header className={`absolute top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
@@ -224,7 +223,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* بەشی قورئان بە سکرۆڵی ئاسۆیی و snap بۆ ڕێگریکردن لە تێکچوون */}
+      {/* بەشی قورئان بە سکرۆڵی ئاسۆیی */}
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
@@ -279,7 +278,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                 </p>
                 <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed">
                   <strong className="text-amber-800 block mb-1">تەفسیری کوردی:</strong>
-                  {ayah.asanTafsirk || ayah.asanTafsir}
+                  {ayah.asanTafsir}
                 </div>
               </div>
             ))
