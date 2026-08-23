@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowRight, Loader2, BookOpen, Play, Pause, 
-  Bookmark, BookmarkCheck, Globe, X, ChevronUp, ChevronDown
+  Bookmark, BookmarkCheck, Globe 
 } from 'lucide-react';
 import { BgThemeType, AppLangType, SurahItem } from '../types';
 import { ALL_RECITERS_DIRECTORY, ReciterItem } from '../data/recitersList';
@@ -63,7 +63,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
@@ -122,12 +122,22 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
+  // کاتێک سکرۆڵی ئاسۆیی دەگۆڕێت، با لاپەڕەکە نوێ ببێتەوە
+  const handleScrollEnd = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const scrollLeft = container.scrollLeft;
+    const width = container.clientWidth;
+    const index = Math.round(Math.abs(scrollLeft) / width);
+    
+    // لە عەرەبیدا سکرۆڵ پێچەوانەیە، بۆیە دەتوانین بەپێی قەبارە و شوێن ڕێکی بخەین
+  };
+
   return (
-    <div className="relative min-h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900" dir="rtl">
+    <div className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
       {/* سەرەوەی ئەپ */}
-      <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
+      <header className={`absolute top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
         <button
@@ -178,41 +188,53 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* شێوازی بینینی مۆسحەف بە سکرۆڵی ستوونی (وەکوو ڤیدیۆکە) */}
+      {/* سکرۆڵی ئاسۆیی (Horizontal Swipe) ڕێک وەک ڤیدیۆکە */}
       {viewMode === 'mushaf' && (
         <div 
-          ref={containerRef}
-          className="relative flex-1 overflow-y-auto bg-stone-200/40 p-2 space-y-4"
+          className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
           onClick={() => setShowControls(prev => !prev)}
         >
-          {/* نیشاندانی مەودایەکی لاپەڕەکان (بۆ نموونە پێنج لاپەڕەی پێشوو، ئێستا و داهاتوو بۆ ئەوەی بە ئاسانی سکرۆڵ بکرێن) */}
-          {Array.from({ length: 5 }, (_, i) => {
-            const pageNum = currentPage - 2 + i;
-            if (pageNum < 1 || pageNum > 604) return null;
+          <div 
+            ref={scrollContainerRef}
+            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center px-2 gap-4"
+            style={{ scrollBehavior: 'smooth', direction: 'ltr' }} // LTR بۆ ئەوەی سکرۆڵی ئاسۆیی ڕێک کار بکات لەگەڵ snap
+          >
+            {/* گەڕان بەدوای لاپەڕەکاندا لە ڕاست بۆ چەپ */}
+            {Array.from({ length: 604 }, (_, i) => {
+              const pageNum = 604 - i; // لە 604 دەست پێدەکات بۆ 1 یان بە پێچەوانە
+              // بۆ ئاسانکاری و خێرایی، دەتوانین تەنها دەوروبەری لاپەڕەی ئێستا نیشان بدەین یان هەموویان
+              // با کۆدی خوارەوە ڕێک لاپەڕەی ئێستا و دراوسێکانی بهێنێت
+            })}
 
-            return (
-              <div 
-                key={pageNum} 
-                className="flex flex-col items-center bg-white shadow-md rounded-lg p-2 border border-stone-300 mx-auto max-w-md"
-              >
-                <img
-                  src={pageImgUrl(pageNum)}
-                  alt={`Page ${pageNum}`}
-                  className="w-full h-auto object-contain select-none pointer-events-none mx-auto block"
-                  style={PAGE_IMG_FILTER}
-                />
-                <span className="text-xs font-bold text-slate-500 mt-2 font-mono">
-                  {pageNum}
-                </span>
-              </div>
-            );
-          })}
+            {/* بۆ ئەوەی خێرا بێت و کێشەی نەبێت، لاپەڕەی پێشوو، ئێستا و داهاتوو لە ئاراستەی ئاسۆیدا دادەنێን */}
+            {[currentPage + 1, currentPage, currentPage - 1].map((pageNum) => {
+              if (pageNum < 1 || pageNum > 604) return null;
+              
+              return (
+                <div 
+                  key={pageNum}
+                  className="min-w-full h-full flex flex-col items-center justify-center snap-center p-2"
+                  style={{ direction: 'rtl' }}
+                >
+                  <img
+                    src={pageImgUrl(pageNum)}
+                    alt={`Page ${pageNum}`}
+                    className="max-w-full max-h-[76vh] object-contain select-none pointer-events-none shadow-xl rounded-lg bg-white border border-stone-300"
+                    style={PAGE_IMG_FILTER}
+                  />
+                  <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
+                    {pageNum}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
       {/* بەشی تەفسیر */}
       {viewMode === 'tafsir' && (
-        <div className="flex-1 overflow-y-auto p-4 space-y-6 animate-in fade-in bg-white">
+        <div className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white" dir="rtl">
           {loadingTafsir ? (
             <div className="text-center py-20">
               <Loader2 className="w-8 h-8 mx-auto text-amber-600 animate-spin" />
@@ -237,10 +259,10 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* خوارەوەی ئەپ */}
-      <footer className={`sticky bottom-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
+      {/* خوارەوەی ئەپ (دەنگ و بەڕێوەبردن) */}
+      <footer className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
-      }`}>
+      }`} dir="rtl">
         <button 
           onClick={() => setIsRecitersModalOpen(true)}
           className="text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5"
@@ -248,38 +270,12 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           <span>{selectedReciter.name}</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => {
-              if (currentPage > 1) {
-                if (onJumpToPage) onJumpToPage(currentPage - 1);
-                else onPrevPage();
-              }
-            }}
-            className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-            title="پەڕەی پێشوو"
-          >
-            <ChevronUp className="w-5 h-5" />
-          </button>
-
+        <div className="flex items-center gap-3">
           <button
             onClick={togglePageAudio}
-            className="p-2 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-transform active:scale-95"
+            className="p-2.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-transform active:scale-95 shadow-md"
           >
             {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
-          </button>
-
-          <button
-            onClick={() => {
-              if (currentPage < 604) {
-                if (onJumpToPage) onJumpToPage(currentPage + 1);
-                else onNextPage();
-              }
-            }}
-            className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-            title="پەڕەی داهاتوو"
-          >
-            <ChevronDown className="w-5 h-5" />
           </button>
         </div>
       </footer>
