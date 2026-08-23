@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
-  ArrowRight, Loader2, BookOpen, Volume2, Play, Pause, 
+  ArrowRight, Loader2, BookOpen, Play, Pause, 
   Bookmark, BookmarkCheck, Globe, X, ChevronRight, ChevronLeft
 } from 'lucide-react';
 import { BgThemeType, AppLangType, SurahItem } from '../types';
@@ -46,7 +46,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [isRecitersModalOpen, setIsRecitersModalOpen] = useState(false);
   const [isTafsirSelectorOpen, setIsTafsirSelectorOpen] = useState(false);
-  const [isSurahPickerOpen, setIsSurahPickerOpen] = useState(false);
 
   const [selectedReciter, setSelectedReciter] = useState<ReciterItem>(ALL_RECITERS_DIRECTORY[18]);
   const [selectedTafsir, setSelectedTafsir] = useState<TafsirItem>(ALL_TAFSIRS_DIRECTORY[0]);
@@ -124,8 +123,8 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // گواستنەوە بۆ لاپەڕەی پێشوو یان داهاتوو بە شێوازێکی جووڵەی نەرم
-  const scrollToPageDirection = (targetPage: number) => {
+  // گواستنەوە بۆ لاپەڕەی تر بە شێوازێکی ڕێک
+  const handlePageChange = (targetPage: number) => {
     if (targetPage < 1 || targetPage > 604) return;
     if (onJumpToPage) {
       onJumpToPage(targetPage);
@@ -140,6 +139,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     <div className="relative min-h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
+      {/* سەرەوەی ئەپ (بەرگ و کۆنترۆڵەکان) */}
       <header className={`sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
@@ -191,40 +191,37 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* شێوازی بینینی لاپەڕەکان بە شێوەی هۆریزۆنتاڵی خلیسکاو (سکرۆڵی لادانی کە نیوەی لاپەڕەکەی تر دەردەخات) */}
+      {/* ناوەندی بینینی قورئان (تاکە لاپەڕە کە نیوەی لاپەڕەکەی تر لە تەنیشتەوە دەردەکەوێت) */}
       {viewMode === 'mushaf' && (
         <div 
-          className="relative flex-1 flex items-center justify-center overflow-hidden bg-stone-200/40 py-2"
+          className="relative flex-1 flex items-center justify-center overflow-hidden bg-stone-200/50 py-2"
           onClick={() => setShowControls(prev => !prev)}
         >
           <div 
             ref={scrollContainerRef}
-            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center px-4 gap-4"
+            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center px-4 gap-3"
             style={{ scrollBehavior: 'smooth' }}
-            onScroll={(e) => {
-              // دەتوانیت لێرەدا کۆنترۆڵی ڕێژەی بینینی لاپەڕەکان بکەیت ئەگەر پێویست بکات
-            }}
           >
-            {/* لاپەڕەی پێشوو (بۆ ئەوەی نیوەکەی دەربکەوێت لە کاتی ڕاکێشاندا) */}
+            {/* لاپەڕەی پێشوو (کە نیوەی دیار دەبێت) */}
             {currentPage > 1 && (
               <div 
-                className="min-w-[85%] sm:min-w-[70%] h-full flex items-center justify-center snap-center cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
-                onClick={(ev) => {
-                  ev.stopPropagation();
-                  scrollToPageDirection(currentPage - 1);
+                className="min-w-[80%] sm:min-w-[65%] h-full flex items-center justify-center snap-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePageChange(currentPage - 1);
                 }}
               >
                 <img
                   src={pageImgUrl(currentPage - 1)}
                   alt={`Page ${currentPage - 1}`}
-                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-md rounded bg-white"
+                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-sm rounded bg-white"
                   style={PAGE_IMG_FILTER}
                 />
               </div>
             )}
 
-            {/* لاپەڕەی ئێستا */}
-            <div className="min-w-[92%] sm:min-w-[80%] h-full flex items-center justify-center snap-center">
+            {/* لاپەڕەی سەرەکی ئێستا */}
+            <div className="min-w-[94%] sm:min-w-[82%] h-full flex items-center justify-center snap-center">
               <img
                 src={pageImgUrl(currentPage)}
                 alt={`Page ${currentPage}`}
@@ -233,19 +230,19 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
               />
             </div>
 
-            {/* لاپەڕەی داهاتوو (بۆ ئەوەی نیوەکەی دەربکەوێت لە کاتی ڕاکێشاندا) */}
+            {/* لاپەڕەی داهاتوو (کە نیوەی دیار دەبێت) */}
             {currentPage < 604 && (
               <div 
-                className="min-w-[85%] sm:min-w-[70%] h-full flex items-center justify-center snap-center cursor-pointer opacity-70 hover:opacity-100 transition-opacity"
-                onClick={(ev) => {
-                  ev.stopPropagation();
-                  scrollToPageDirection(currentPage + 1);
+                className="min-w-[80%] sm:min-w-[65%] h-full flex items-center justify-center snap-center cursor-pointer opacity-60 hover:opacity-100 transition-opacity"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePageChange(currentPage + 1);
                 }}
               >
                 <img
                   src={pageImgUrl(currentPage + 1)}
                   alt={`Page ${currentPage + 1}`}
-                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-md rounded bg-white"
+                  className="w-full h-auto max-h-[82vh] object-contain select-none pointer-events-none mx-auto block shadow-sm rounded bg-white"
                   style={PAGE_IMG_FILTER}
                 />
               </div>
@@ -254,6 +251,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
+      {/* بەشی تەفسیر */}
       {viewMode === 'tafsir' && (
         <div className="flex-1 overflow-y-auto p-4 space-y-6 animate-in fade-in bg-white">
           {loadingTafsir ? (
@@ -280,6 +278,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
+      {/* خوارەوەی ئەپ (دوگمەکانی دەنگ و گۆڕینی لاپەڕە) */}
       <footer className={`sticky bottom-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
       }`}>
@@ -292,7 +291,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => scrollToPageDirection(currentPage - 1)}
+            onClick={() => handlePageChange(currentPage - 1)}
             className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
             title="پەڕەی پێشوو"
           >
@@ -307,9 +306,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           </button>
 
           <button
-            onClick={() => scrollToPageDirection(currentPage + 1)}
+            onClick={() => handlePageChange(currentPage + 1)}
             className="p-2 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
-            title="پەڕەی دواتر"
+            title="پەڕەی داهاتوو"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
