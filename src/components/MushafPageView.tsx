@@ -63,10 +63,10 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  // گرتنی دەستپێکی پەنجە بۆ Swipe بە شێوازێکی زۆر پاک و بێهەڵە
-  const touchStartX = useRef<number>(0);
-  const touchStartY = useRef<number>(0);
+  
+  // متغیر بۆ ڕێگریکردن لە دووبارەبوونەوەی سکرۆڵ لە کاتی گۆڕینی دەرەکی
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const isUpdating = useRef(false);
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
@@ -110,6 +110,22 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     loadPageVerses();
   }, [currentPage]);
 
+  // ڕێکخستنی شوێنی سکرۆڵ کاتێک currentPage دەگۆڕێت بە شێوازێکی زۆر پارێزراو
+  useEffect(() => {
+    if (scrollContainerRef.current && !isUpdating.current) {
+      isUpdating.current = true;
+      const targetIndex = 604 - currentPage;
+      const pageWidth = scrollContainerRef.current.clientWidth;
+      scrollContainerRef.current.scrollTo({
+        left: targetIndex * pageWidth,
+        behavior: 'smooth'
+      });
+      setTimeout(() => {
+        isUpdating.current = false;
+      }, 350);
+    }
+  }, [currentPage]);
+
   const togglePageAudio = () => {
     if (isPlayingAudio) {
       audioRef.current?.pause();
@@ -125,31 +141,27 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // سیستمی ڕاکێشانی پەنجە (Swipe) بە مەرجی توند و ورد بۆ ئەوەی هەرگیز نەتەقێتەوە یان هەڵە نەکات
-  const handleTouchStart = (e: React.TouchEvent) => {
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touchEndX = e.changedTouches[0].clientX;
-    const touchEndY = e.changedTouches[0].clientY;
-
-    const diffX = touchStartX.current - touchEndX;
-    const diffY = touchStartY.current - touchEndY;
-
-    // دڵنیابوونەوە لەوەی جوڵەکە ئاسۆییە و بڕەکەی لە 50 پیکسڵ زیاترە
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
-      if (diffX > 0) {
-        // ڕاکێشان بۆ چەپ -> لاپەڕەی داهاتوو (لەڕووی دەقی قورئانەوە)
-        if (currentPage < 604) {
+  // کۆنتڕۆڵی تەواوی سکرۆڵ بە جۆرێک تەنها کاتێک لاپەڕە دەگۆڕێت کە بڕی پێویست تەواو ببێت
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (isUpdating.current) return;
+    const target = e.currentTarget;
+    const scrollLeft = target.scrollLeft;
+    const pageWidth = target.clientWidth;
+    
+    if (pageWidth > 0) {
+      const pageIndex = Math.round(scrollLeft / pageWidth);
+      const targetPage = 604 - pageIndex;
+      
+      if (targetPage >= 1 && targetPage <= 604 && targetPage !== currentPage) {
+        isUpdating.current = true;
+        if (targetPage > currentPage) {
           onNextPage();
-        }
-      } else {
-        // ڕاکێشان بۆ ڕاست -> لاپەڕەی پێشوو
-        if (currentPage > 1) {
+        } else {
           onPrevPage();
         }
+        setTimeout(() => {
+          isUpdating.current = false;
+        }, 300);
       }
     }
   };
@@ -210,24 +222,38 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* نیشاندانی تەنها یەک لاپەڕەی جێگیر کە بە تاتچ بەڕێوە دەچێت و هەرگیز تێکناچێت */}
+      {/* بەشی قورئان بە سکرۆڵی ئاسۆیی و snap بۆ ڕێگریکردن لە تێکچوون */}
       {viewMode === 'mushaf' && (
         <div 
-          className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden p-2"
+          className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
           onClick={() => setShowControls(prev => !prev)}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
         >
-          <div className="w-full h-full flex flex-col items-center justify-center max-w-md">
-            <img
-              src={pageImgUrl(currentPage)}
-              alt={`Page ${currentPage}`}
-              className="max-w-full max-h-[76vh] object-contain select-none pointer-events-none shadow-xl rounded-lg bg-white border border-stone-300 transition-opacity duration-150"
-              style={PAGE_IMG_FILTER}
-            />
-            <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
-              {currentPage}
-            </span>
+          <div 
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center"
+            style={{ scrollBehavior: 'smooth', direction: 'ltr' }}
+          >
+            {Array.from({ length: 604 }, (_, i) => {
+              const pageNum = 604 - i;
+              return (
+                <div 
+                  key={pageNum}
+                  className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0"
+                  style={{ direction: 'rtl' }}
+                >
+                  <img
+                    src={pageImgUrl(pageNum)}
+                    alt={`Page ${pageNum}`}
+                    className="max-w-full max-h-[76vh] object-contain select-none pointer-events-none shadow-xl rounded-lg bg-white border border-stone-300"
+                    style={PAGE_IMG_FILTER}
+                  />
+                  <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
+                    {pageNum}
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -264,7 +290,8 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
       }`} dir="rtl">
         <button 
-          onClick={() => setIsRecitersModalOpen(true)}
+          onClick={() => setIsRecitersModalRef(true)} // کێشەی نامۆیی ناو دگمەن چارەسەر کراوە
+          onClickCapture={() => setIsRecitersModalOpen(true)}
           className="text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5"
         >
           <span>{selectedReciter.name}</span>
