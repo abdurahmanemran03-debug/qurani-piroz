@@ -109,11 +109,11 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     loadPageVerses();
   }, [currentPage]);
 
-  // گواستنەوەی ڕاستەوخۆ و بێهەڵە بۆ لاپەڕەی دیاریکراو بەپێی ئیندیکسی سروشتی
+  // گەڕانەوە بۆ لۆجیکی ڕەسەن (پێچەوانەکردنەوە بۆ سکرۆڵی ئاسۆیی قورئان)
   useEffect(() => {
     if (scrollContainerRef.current) {
       isProgrammaticScroll.current = true;
-      const targetIndex = currentPage - 1;
+      const targetIndex = 604 - currentPage;
       const pageWidth = scrollContainerRef.current.clientWidth;
       
       scrollContainerRef.current.scrollTo({
@@ -142,7 +142,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // کۆنتڕۆڵی تەواوی سکرۆڵ بە شێوازێکی زۆر پاک و جێگیر
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     if (isProgrammaticScroll.current) return;
     const target = e.currentTarget;
@@ -151,7 +150,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     
     if (pageWidth > 0) {
       const pageIndex = Math.round(scrollLeft / pageWidth);
-      const targetPage = pageIndex + 1;
+      const targetPage = 604 - pageIndex;
       
       if (targetPage >= 1 && targetPage <= 604 && targetPage !== currentPage) {
         isProgrammaticScroll.current = true;
@@ -223,7 +222,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* بەشی قورئان بە ڕیزبەندی دروستی لاپەڕەکان لە 1 بۆ 604 */}
+      {/* سکرۆڵی ئاسۆیی ڕەسەن (کە لە 604 دەست پێدەکات بەرەو 1) */}
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
@@ -236,7 +235,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             style={{ scrollBehavior: 'smooth', direction: 'ltr' }}
           >
             {Array.from({ length: 604 }, (_, i) => {
-              const pageNum = i + 1;
+              const pageNum = 604 - i;
               return (
                 <div 
                   key={pageNum}
