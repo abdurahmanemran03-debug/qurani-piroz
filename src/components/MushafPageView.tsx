@@ -69,6 +69,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const pageRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const isFirstScroll = useRef(true);
+  const scrollInitiatedByUser = useRef(false);
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
@@ -114,18 +115,48 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   }, [currentPage]);
 
   useEffect(() => {
-    const el = pageRefs.current[currentPage];
-    if (el) {
-      isUpdating.current = true;
-      el.scrollIntoView({
-        behavior: isFirstScroll.current ? 'auto' : 'smooth',
-        inline: 'center',
-        block: 'nearest',
+    if (scrollInitiatedByUser.current) {
+      scrollInitiatedByUser.current = false;
+      return;
+    }
+
+    const scrollToTarget = () => {
+      const el = pageRefs.current[currentPage];
+      if (el) {
+        isUpdating.current = true;
+        el.scrollIntoView({
+          behavior: isFirstScroll.current ? 'auto' : 'smooth',
+          inline: 'center',
+          block: 'nearest',
+        });
+        isFirstScroll.current = false;
+        setTimeout(() => {
+          isUpdating.current = false;
+        }, 400);
+      }
+    };
+
+    if (isFirstScroll.current) {
+      const raf1 = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToTarget();
+          setTimeout(() => {
+            const el = pageRefs.current[currentPage];
+            const container = scrollContainerRef.current;
+            if (el && container) {
+              const elRect = el.getBoundingClientRect();
+              const containerRect = container.getBoundingClientRect();
+              const isVisible = elRect.left >= containerRect.left - 5 && elRect.right <= containerRect.right + 5;
+              if (!isVisible) {
+                el.scrollIntoView({ behavior: 'auto', inline: 'center', block: 'nearest' });
+              }
+            }
+          }, 250);
+        });
       });
-      isFirstScroll.current = false;
-      setTimeout(() => {
-        isUpdating.current = false;
-      }, 400);
+      return () => cancelAnimationFrame(raf1);
+    } else {
+      scrollToTarget();
     }
   }, [currentPage]);
 
@@ -156,6 +187,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
       if (targetPage >= 1 && targetPage <= 604 && targetPage !== currentPage) {
         isUpdating.current = true;
+        scrollInitiatedByUser.current = true;
         if (onJumpToPage) {
           onJumpToPage(targetPage);
         } else if (targetPage > currentPage) {
@@ -234,7 +266,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             ref={scrollContainerRef}
             onScroll={handleScroll}
             className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center"
-            style={{ scrollBehavior: 'smooth', direction: 'ltr' }}
+            style={{ direction: 'ltr' }}
           >
             {Array.from({ length: 604 }, (_, i) => {
               const pageNum = 604 - i;
