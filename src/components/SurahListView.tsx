@@ -60,6 +60,7 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
+  const [searchMode, setSearchMode] = useState<'ayah' | 'tafsir'>('ayah'); // جیاکردنەوەی گەڕان بۆ ئایەت یان تەفسیر
 
   const combinedList = useMemo<CombinedItem[]>(() => {
     const list: CombinedItem[] = [];
@@ -74,58 +75,45 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     return list;
   }, [surahs]);
 
-  const [ayahResults, setAyahResults] = useState<any[]>([]);
-  const [loadingAyah, setLoadingAyah] = useState(false);
-  const [ayahSearchDone, setAyahSearchDone] = useState(false);
+  const [results, setResults] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchDone, setSearchDone] = useState(false);
 
-  // گەڕان بۆ هەموو ئەنجامەکان لە سەرتاسەری قورئاندا بێ سنووردارکردن بە 30 دانە
+  // گەڕانی سەربخۆ پشتبەستن بە هەڵبژاردنی ئایەت یان تەفسیری کوردی
   useEffect(() => {
     const q = searchQuery.trim();
     if (!q || q.length < 1) {
-      setAyahResults([]);
-      setAyahSearchDone(false);
-      setLoadingAyah(false);
+      setResults([]);
+      setSearchDone(false);
+      setLoading(false);
       return;
     }
 
-    setLoadingAyah(true);
-    setAyahSearchDone(false);
+    setLoading(true);
+    setSearchDone(false);
     const timer = setTimeout(async () => {
       try {
-        const [resAr, resKu] = await Promise.all([
-          fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(q)}/all/quran-uthmani`),
-          fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(q)}/all/ku.asan`)
-        ]);
+        const edition = searchMode === 'ayah' ? 'quran-uthmani' : 'ku.asan';
+        const res = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(q)}/all/${edition}`);
+        const data = await res.json();
         
-        const dataAr = await resAr.json();
-        const dataKu = await resKu.json();
-        
-        let combinedMatches: any[] = [];
-        if (dataAr.code === 200 && dataAr.data?.matches) {
-          combinedMatches = [...dataAr.data.matches];
+        if (data.code === 200 && data.data?.matches) {
+          setResults(data.data.matches);
+        } else {
+          setResults([]);
         }
-        if (dataKu.code === 200 && dataKu.data?.matches) {
-          dataKu.data.matches.forEach((kuMatch: any) => {
-            if (!combinedMatches.some(m => m.number === kuMatch.number)) {
-              combinedMatches.push(kuMatch);
-            }
-          });
-        }
-
-        // لێرەدا کۆتایی بە سنووردارکردن هێنراوە تاوەکو هەموو ئەنجامەکان نیشان بدات
-        setAyahResults(combinedMatches);
       } catch {
-        setAyahResults([]);
+        setResults([]);
       } finally {
-        setLoadingAyah(false);
-        setAyahSearchDone(true);
+        setLoading(false);
+        setSearchDone(true);
       }
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [searchQuery]);
+  }, [searchQuery, searchMode]);
 
-  const openAyahResult = async (match: any) => {
+  const openResult = async (match: any) => {
     if (match.page) {
       onOpenSurah(match.page);
       return;
@@ -223,7 +211,7 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
                 autoFocus
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={appLang === 'ku' ? 'گەڕان لە ئایەت و تەفسیر...' : 'Search ayahs & tafsir...'}
+                placeholder={searchMode === 'ayah' ? 'گەڕان لە ئایەتەکان...' : 'گەڕان لە تەفسیری کوردی...'}
                 className="w-44 sm:w-56 text-xs px-3 py-2 pl-7 pr-8 rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-slate-500 shadow-xs"
               />
               <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
@@ -255,6 +243,28 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
         </div>
       </div>
 
+      {/* دوگمەکانی جیاکردنەوەی گەڕان (ئایەت یان تەفسیر) تەنها کاتێک دەردەکەون کە سێرچ کارا بێت */}
+      {isSearchActive && (
+        <div className="flex items-center gap-2 bg-slate-200/60 p-1 rounded-xl">
+          <button
+            onClick={() => setSearchMode('ayah')}
+            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+              searchMode === 'ayah' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            📖 گەڕانی ئایەتەکان
+          </button>
+          <button
+            onClick={() => setSearchMode('tafsir')}
+            className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+              searchMode === 'tafsir' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            📚 گەڕانی تەفسیری کوردی
+          </button>
+        </div>
+      )}
+
       <div className="space-y-2 pt-1">
         {!showingSearch && combinedList.map((item) =>
           item.kind === 'juz'
@@ -264,23 +274,25 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
 
         {showingSearch && (
           <div className="space-y-2">
-            {loadingAyah && (
+            {loading && (
               <div className="flex items-center justify-center gap-2 py-10 text-slate-500 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>گەڕان لە هەموو سورەت و ئایەتەکاندا...</span>
+                <span>
+                  {searchMode === 'ayah' ? 'گەڕان لە ئایەتەکاندا...' : 'گەڕان لە تەفسیری کوردییدا...'}
+                </span>
               </div>
             )}
 
-            {!loadingAyah && ayahSearchDone && ayahResults.length === 0 && (
+            {!loading && searchDone && results.length === 0 && (
               <div className="text-center py-12 text-xs text-slate-400">
                 هیچ ئەنجامێک بۆ ئەم وشەیە نەدۆزرایەوە
               </div>
             )}
 
-            {!loadingAyah && ayahResults.map((match, idx) => (
+            {!loading && results.map((match, idx) => (
               <div
                 key={`${match.number}-${idx}`}
-                onClick={() => openAyahResult(match)}
+                onClick={() => openResult(match)}
                 className={`p-3.5 rounded-2xl border cursor-pointer transition-all active:scale-[0.99] ${getCardStyle()}`}
               >
                 <div className="flex items-center justify-between mb-1.5">
@@ -288,7 +300,9 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
                     سورة {match.surah?.name || match.surah?.englishName} • ئایەتی {match.numberInSurah}
                   </span>
                 </div>
-                <p className="font-quran text-sm leading-relaxed text-right">{match.text}</p>
+                <p className={searchMode === 'ayah' ? 'font-quran text-sm leading-relaxed text-right' : 'text-xs sm:text-sm leading-relaxed text-right'}>
+                  {match.text}
+                </p>
               </div>
             ))}
           </div>
