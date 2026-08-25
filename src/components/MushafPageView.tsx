@@ -52,9 +52,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [pageAyahsData, setPageAyahsData] = useState<any[]>([]);
   const [loadingTafsir, setLoadingTafsir] = useState(false);
 
-  // شوێنی کلیک و پۆپ-ئاپ لەسەر وێنەکە
-  const [popupPosition, setPopupPosition] = useState<{ x: number; y: number } | null>(null);
+  // دۆخی پۆپ-ئاپ و هایلايت لەسەر وێنە
   const [activeAyah, setActiveAyah] = useState<any | null>(null);
+  const [popupCoords, setPopupCoords] = useState<{ x: number; y: number } | null>(null);
   const [activeAyahTafsir, setActiveAyahTafsir] = useState<any | null>(null);
 
   const [bookmarks, setBookmarks] = useState<number[]>(() => {
@@ -119,8 +119,8 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       }
     }
     loadPageVerses();
-    setPopupPosition(null);
     setActiveAyah(null);
+    setPopupCoords(null);
   }, [currentPage]);
 
   useEffect(() => {
@@ -220,22 +220,26 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // کاتێک لەسەر وێنەی لاپەڕە دەدرێت، پۆپ-ئاپەکە لەو شوێنە دەکەینەوە و ئایەتێکی نموونەیی لەو پەڕەیە هەڵدەبژێرین
+  // کاتێک پەنجە لەسەر وێنە دەدرێت بۆ دیاریکردنی ئایەت و شوێنی پۆپ-ئاپ
   const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // دیاریکردنی نزیکترین ئایەت لەو پەڕەیە بەپێی بەرزی کلیکەکە
-    const clickRatio = y / rect.height;
+    const ratio = y / rect.height;
     const index = Math.min(
-      Math.floor(clickRatio * pageAyahsData.length),
+      Math.floor(ratio * pageAyahsData.length),
       pageAyahsData.length - 1
     );
 
     if (pageAyahsData.length > 0) {
-      setActiveAyah(pageAyahsData[index >= 0 ? index : 0]);
-      setPopupPosition({ x: Math.min(Math.max(x, 60), rect.width - 60), y: Math.max(y - 60, 40) });
+      const targetAyah = pageAyahsData[index >= 0 ? index : 0];
+      setActiveAyah(targetAyah);
+      // ڕێکخستنی شوێنی پۆپ-ئاپەکە لە نزیک کلیکەکە
+      setPopupCoords({
+        x: Math.min(Math.max(x, 80), rect.width - 80),
+        y: Math.max(y - 50, 60)
+      });
     }
   };
 
@@ -252,7 +256,8 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       if (targetPage >= 1 && targetPage <= 604 && targetPage !== currentPage) {
         isUpdating.current = true;
         scrollInitiatedByUser.current = true;
-        setPopupPosition(null);
+        setActiveAyah(null);
+        setPopupCoords(null);
         if (onJumpToPage) {
           onJumpToPage(targetPage);
         } else if (targetPage > currentPage) {
@@ -322,14 +327,14 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* شێوازی ڕەسەنی وێنەی موسحەف */}
+      {/* شێوازی وێنەی موسحەف بە پشتگیری کلیک و پۆپ-ئاپ */}
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
           onClick={() => {
             setShowControls(prev => !prev);
-            setPopupPosition(null);
             setActiveAyah(null);
+            setPopupCoords(null);
           }}
         >
           <div 
@@ -348,7 +353,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                   style={{ direction: 'rtl' }}
                 >
                   <div 
-                    className="relative cursor-pointer"
+                    className="relative cursor-pointer inline-block"
                     onClick={pageNum === currentPage ? handleImageClick : undefined}
                   >
                     <img
@@ -359,65 +364,70 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                       style={PAGE_IMG_FILTER}
                     />
 
-                    {/* پۆپ-ئاپەکە لەسەر هەمان شوێنی کلیک و وێنەکە وەک داواکراو */}
-                    {pageNum === currentPage && popupPosition && activeAyah && (
+                    {/* سێبەری هایلايت بۆ ئایەتی هەڵبژێردراو لەسەر وێنە */}
+                    {pageNum === currentPage && activeAyah && (
                       <div 
-                        className="absolute z-50 bg-[#1b2a22] text-white px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-700/50 backdrop-blur-md -translate-x-1/2 -translate-y-full animate-in fade-in zoom-in-95 duration-150"
-                        style={{ left: popupPosition.x, top: popupPosition.y }}
+                        className="absolute bg-sky-400/20 border border-sky-500/40 rounded-md pointer-events-none transition-all duration-200"
+                        style={{
+                          top: '30%',
+                          left: '10%',
+                          right: '10%',
+                          height: '10%',
+                        }}
+                      />
+                    )}
+
+                    {/* پۆپ-ئاپەکە (وەک وێنەکەی تۆ) بە دوگمەکانی خەزن، شەیر، تەفسیر و دەنگ */}
+                    {pageNum === currentPage && popupCoords && activeAyah && (
+                      <div 
+                        className="absolute z-50 bg-[#1b2a22] text-white px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2.5 border border-emerald-600/60 backdrop-blur-md -translate-x-1/2 -translate-y-full animate-in fade-in zoom-in-95 duration-150"
+                        style={{ left: popupCoords.x, top: popupCoords.y }}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        {/* 1. خەزنکردن */}
                         <button
-                          onClick={() => { saveAyahBookmark(activeAyah); setPopupPosition(null); }}
-                          className="flex flex-col items-center gap-0.5 hover:text-emerald-400 transition-colors"
+                          onClick={() => { saveAyahBookmark(activeAyah); setPopupCoords(null); }}
+                          className="p-1 hover:text-emerald-400 transition-colors"
                           title="خەزنکردن"
                         >
                           <Bookmark className="w-4 h-4 text-emerald-400" />
-                          <span className="text-[9px]">خەزن</span>
                         </button>
 
-                        <div className="w-[1px] h-5 bg-white/20" />
+                        <div className="w-[1px] h-4 bg-white/20" />
 
-                        {/* 2. شەیرکردن */}
                         <button
-                          onClick={() => { shareAyah(activeAyah); setPopupPosition(null); }}
-                          className="flex flex-col items-center gap-0.5 hover:text-blue-400 transition-colors"
+                          onClick={() => { shareAyah(activeAyah); setPopupCoords(null); }}
+                          className="p-1 hover:text-blue-400 transition-colors"
                           title="شەیرکردن"
                         >
                           <Share2 className="w-4 h-4 text-blue-400" />
-                          <span className="text-[9px]">شەیر</span>
                         </button>
 
-                        <div className="w-[1px] h-5 bg-white/20" />
+                        <div className="w-[1px] h-4 bg-white/20" />
 
-                        {/* 3. تەفسیر */}
                         <button
                           onClick={() => {
                             setActiveAyahTafsir(activeAyah);
-                            setPopupPosition(null);
+                            setPopupCoords(null);
                           }}
-                          className="flex flex-col items-center gap-0.5 hover:text-amber-400 transition-colors"
+                          className="p-1 hover:text-amber-400 transition-colors"
                           title="تەفسیر"
                         >
                           <BookOpen className="w-4 h-4 text-amber-400" />
-                          <span className="text-[9px]">تەفسیر</span>
                         </button>
 
-                        <div className="w-[1px] h-5 bg-white/20" />
+                        <div className="w-[1px] h-4 bg-white/20" />
 
-                        {/* 4. خوێندنەوەی دەنگی */}
                         <button
-                          onClick={() => { playSingleAyahAudio(activeAyah); setPopupPosition(null); }}
-                          className="flex flex-col items-center gap-0.5 hover:text-emerald-400 transition-colors"
+                          onClick={() => { playSingleAyahAudio(activeAyah); setPopupCoords(null); }}
+                          className="p-1 hover:text-emerald-400 transition-colors"
                           title="خوێندنەوە"
                         >
                           <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
-                          <span className="text-[9px]">خوێندنەوە</span>
                         </button>
 
                         <button
-                          onClick={() => setPopupPosition(null)}
-                          className="mr-1 p-1 hover:bg-white/10 rounded-full text-slate-400 hover:text-white"
+                          onClick={() => setPopupCoords(null)}
+                          className="mr-1 p-0.5 hover:bg-white/10 rounded-full text-slate-400 hover:text-white"
                         >
                           <X className="w-3.5 h-3.5" />
                         </button>
@@ -487,7 +497,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* مۆداڵی پیشاندانی تەفسیری فراوانی ئایەتەکە */}
+      {/* مۆداڵی تەفسیری فراوان */}
       {activeAyahTafsir && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 text-right">
