@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowRight, Loader2, BookOpen, Play, Pause, 
-  Bookmark, BookmarkCheck, Globe 
+  Bookmark, BookmarkCheck, Globe, Share2, X 
 } from 'lucide-react';
 import { BgThemeType, AppLangType, SurahItem } from '../types';
 import { ALL_RECITERS_DIRECTORY, ReciterItem } from '../data/recitersList';
@@ -52,6 +52,12 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [pageAyahsData, setPageAyahsData] = useState<any[]>([]);
   const [loadingTafsir, setLoadingTafsir] = useState(false);
 
+  // دیاریکردنی ئایەتی هەڵبژێردراو بۆ پۆپ-ئاپەکە
+  const [selectedAyahForPopup, setSelectedAyahForPopup] = useState<any | null>(null);
+
+  // مۆداڵ بۆ نیشاندانی تەفسیری ئایەتی هەڵبژێردراو
+  const [activeAyahTafsir, setActiveAyahTafsir] = useState<any | null>(null);
+
   const [bookmarks, setBookmarks] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem('quran_bookmarks');
@@ -98,7 +104,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           const ar = data.data[0].ayahs;
           const ku = data.data[1].ayahs;
           const combined = ar.map((a: any, i: number) => ({
+            number: a.number,
             surahNumber: a.surah.number,
+            surahName: a.surah.name,
             numberInSurah: a.numberInSurah,
             arabic: a.text,
             asanTafsir: ku[i]?.text || 'بە ناوی خودای بەخشندەی میهرەبان...'
@@ -172,6 +180,46 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
           setIsPlayingAudio(false);
         });
       }
+    }
+  };
+
+  // لێدانی دەنگی ئایەتێکی دیاریکراو بە تاجی دەنگ
+  const playSingleAyahAudio = (ayah: any) => {
+    setIsPlayingAudio(true);
+    if (audioRef.current) {
+      // بەکارهێنانی APIـی دەنگی ئایەتە تاکەکان
+      audioRef.current.src = `https://cdn.islamic.network/quran/audio/128/${selectedReciter.serverKey}/${ayah.number}.mp3`;
+      audioRef.current.play().catch(() => {
+        setIsPlayingAudio(false);
+      });
+    }
+  };
+
+  // خەزنکردنی ئایەت لە LocalStorage
+  const saveAyahBookmark = (ayah: any) => {
+    try {
+      const saved = localStorage.getItem('quran_ayah_bookmarks');
+      const list = saved ? JSON.parse(saved) : [];
+      if (!list.some((item: any) => item.number === ayah.number)) {
+        list.push(ayah);
+        localStorage.setItem('quran_ayah_bookmarks', JSON.stringify(list));
+        alert('ئایەتەکە بە سەرکەوتوویی خزنکرا!');
+      } else {
+        alert('ئەم ئایەتە پێشتر خزنکراوە.');
+      }
+    } catch {}
+  };
+
+  // شەیرکردنی ئایەت
+  const shareAyah = (ayah: any) => {
+    if (navigator.share) {
+      navigator.share({
+        title: 'قورئانی پیرۆز',
+        text: `${ayah.arabic}\n(سورة ${ayah.surahName} - ئایەتی ${ayah.numberInSurah})`,
+      }).catch(() => {});
+    } else {
+      navigator.clipboard.writeText(`${ayah.arabic}\n(سورة ${ayah.surahName} - ئایەتی ${ayah.numberInSurah})`);
+      alert('دەقی ئایەت کۆپی کرا!');
     }
   };
 
@@ -260,7 +308,10 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
-          onClick={() => setShowControls(prev => !prev)}
+          onClick={() => {
+            setShowControls(prev => !prev);
+            setSelectedAyahForPopup(null);
+          }}
         >
           <div 
             ref={scrollContainerRef}
@@ -274,16 +325,101 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                 <div 
                   key={pageNum}
                   ref={(el) => { pageRefs.current[pageNum] = el; }}
-                  className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0"
+                  className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0 relative"
                   style={{ direction: 'rtl' }}
                 >
-                  <img
-                    src={pageImgUrl(pageNum)}
-                    alt={`Page ${pageNum}`}
-                    loading="lazy"
-                    className="max-w-full max-h-[76vh] object-contain select-none pointer-events-none shadow-xl rounded-lg bg-white border border-stone-300"
-                    style={PAGE_IMG_FILTER}
-                  />
+                  <div className="relative">
+                    <img
+                      src={pageImgUrl(pageNum)}
+                      alt={`Page ${pageNum}`}
+                      loading="lazy"
+                      className="max-w-full max-h-[76vh] object-contain select-none pointer-events-none shadow-xl rounded-lg bg-white border border-stone-300"
+                      style={PAGE_IMG_FILTER}
+                    />
+
+                    {/* لایەری کلیک لەسەر ئایەتەکانی ئەم لاپەڕەیە بۆ پۆپ-ئاپ */}
+                    {pageNum === currentPage && !loadingTafsir && pageAyahsData.map((ayah, idx) => (
+                      <div
+                        key={idx}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedAyahForPopup(ayah);
+                        }}
+                        className="absolute cursor-pointer hover:bg-emerald-500/10 transition-colors rounded"
+                        style={{
+                          // شوێنپێدانی نموونەیی بۆ نمویشی پۆپ-ئاپ لەسەر ئایەتەکان
+                          top: `${12 + (idx * 11)}%`,
+                          left: '5%',
+                          right: '5%',
+                          height: '9%',
+                        }}
+                        title="کلیک لەسەر ئایەت"
+                      />
+                    ))}
+                  </div>
+
+                  {/* پۆپ-ئاپ مۆدیوولی ئایەت (خوێندنەوە، تەفسیر، شەیر، خەزنکردن) */}
+                  {pageNum === currentPage && selectedAyahForPopup && (
+                    <div className="absolute z-50 bottom-24 bg-[#1b2a22] text-white px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-4 border border-emerald-700/50 backdrop-blur-md animate-in fade-in zoom-in-95 duration-150" onClick={(e) => e.stopPropagation()}>
+                      
+                      {/* 1. خەزنکردن */}
+                      <button
+                        onClick={() => { saveAyahBookmark(selectedAyahForPopup); setSelectedAyahForPopup(null); }}
+                        className="flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors"
+                        title="خەزنکردن"
+                      >
+                        <Bookmark className="w-4 h-4 text-emerald-400" />
+                        <span className="text-[10px]">خەزن</span>
+                      </button>
+
+                      <div className="w-[1px] h-6 bg-white/20" />
+
+                      {/* 2. شەیرکردن */}
+                      <button
+                        onClick={() => { shareAyah(selectedAyahForPopup); setSelectedAyahForPopup(null); }}
+                        className="flex flex-col items-center gap-1 hover:text-blue-400 transition-colors"
+                        title="شەیرکردن"
+                      >
+                        <Share2 className="w-4 h-4 text-blue-400" />
+                        <span className="text-[10px]">شەیر</span>
+                      </button>
+
+                      <div className="w-[1px] h-6 bg-white/20" />
+
+                      {/* 3. تەفسیر */}
+                      <button
+                        onClick={() => {
+                          setActiveAyahTafsir(selectedAyahForPopup);
+                          setSelectedAyahForPopup(null);
+                        }}
+                        className="flex flex-col items-center gap-1 hover:text-amber-400 transition-colors"
+                        title="تەفسیر"
+                      >
+                        <BookOpen className="w-4 h-4 text-amber-400" />
+                        <span className="text-[10px]">تەفسیر</span>
+                      </button>
+
+                      <div className="w-[1px] h-6 bg-white/20" />
+
+                      {/* 4. خوێندنەوەی دەنگی */}
+                      <button
+                        onClick={() => { playSingleAyahAudio(selectedAyahForPopup); setSelectedAyahForPopup(null); }}
+                        className="flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors"
+                        title="خوێندنەوە"
+                      >
+                        <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+                        <span className="text-[10px]">خوێندنەوە</span>
+                      </button>
+
+                      <button
+                        onClick={() => setSelectedAyahForPopup(null)}
+                        className="mr-2 p-1 hover:bg-white/10 rounded-full text-slate-400 hover:text-white"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
+
                   <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
                     {pageNum}
                   </span>
@@ -317,6 +453,32 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* مۆداڵی پیشاندانی تەفسیری ئایەتی هەڵبژێردراو */}
+      {activeAyahTafsir && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 text-right">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
+                ئایەتی {activeAyahTafsir.numberInSurah}
+              </span>
+              <button 
+                onClick={() => setActiveAyahTafsir(null)}
+                className="p-1 hover:bg-slate-100 rounded-full text-slate-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="font-quran text-lg leading-relaxed text-slate-900">
+              {activeAyahTafsir.arabic}
+            </p>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs sm:text-sm leading-relaxed text-slate-700">
+              <strong className="text-amber-800 block mb-1">تەفسیر:</strong>
+              {activeAyahTafsir.asanTafsir}
+            </div>
+          </div>
         </div>
       )}
 
