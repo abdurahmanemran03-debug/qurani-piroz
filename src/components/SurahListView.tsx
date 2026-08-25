@@ -23,6 +23,31 @@ type CombinedItem =
   | { kind: 'juz'; juzNumber: number; page: number }
   | { kind: 'surah'; surah: SurahItem };
 
+const KaabaIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="6" width="18" height="15" rx="1" fill="#111111" />
+    <rect x="3" y="6" width="18" height="4.2" fill="#d4af37" />
+    <rect x="10.2" y="12" width="3.6" height="9" fill="#1a1a1a" stroke="#d4af37" strokeWidth="0.5" />
+    <path d="M3 6 L12 2 L21 6" stroke="#111111" strokeWidth="1.2" strokeLinejoin="round" fill="none" />
+  </svg>
+);
+
+const MedinaIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="4" y="15" width="16" height="6" rx="0.5" fill="#0f6b4c" />
+    <rect x="2" y="19" width="20" height="2" rx="0.5" fill="#0a4a34" />
+    <circle cx="12" cy="10.5" r="4" fill="#0f6b4c" />
+    <rect x="10.5" y="6" width="3" height="4" fill="#0f6b4c" />
+    <circle cx="12" cy="5" r="1" fill="#d4af37" />
+    <rect x="4.4" y="9" width="1.6" height="10" fill="#0f6b4c" />
+    <rect x="18" y="9" width="1.6" height="10" fill="#0f6b4c" />
+    <path d="M5.2 9 L5.2 5.5" stroke="#0f6b4c" strokeWidth="1.6" strokeLinecap="round" />
+    <path d="M18.8 9 L18.8 5.5" stroke="#0f6b4c" strokeWidth="1.6" strokeLinecap="round" />
+    <circle cx="5.2" cy="5" r="0.9" fill="#d4af37" />
+    <circle cx="18.8" cy="5" r="0.9" fill="#d4af37" />
+  </svg>
+);
+
 export const SurahListView: React.FC<SurahListViewProps> = ({
   surahs,
   onOpenSurah,
@@ -136,7 +161,7 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
             <p className="text-[11px] opacity-75 flex items-center gap-1 flex-wrap">
               {showKurdishNames && <span>{appLang === 'en' ? surah.nameEn : surah.nameKu} • </span>}
               <span className="flex items-center gap-1">
-                <span aria-hidden="true">{isMeccan ? '🕋' : '🕌'}</span>
+                {isMeccan ? <KaabaIcon className="w-4 h-4 shrink-0" /> : <MedinaIcon className="w-4 h-4 shrink-0" />}
                 <span>{appLang === 'ar' ? surah.typeAr : (appLang === 'en' ? surah.typeEn : surah.typeKu)}</span>
               </span>
               <span>• {surah.ayahs} {appLang === 'ar' ? 'آيات' : (appLang === 'en' ? 'verses' : 'ئایەت')}</span>
