@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, BookOpen, Settings as SettingsIcon, Loader2 } from 'lucide-react';
+import { Search, BookOpen, Settings as SettingsIcon, Loader2, X } from 'lucide-react';
 import { SurahItem, BgThemeType, AppLangType, AccentColorType } from '../types';
 
 interface SurahListViewProps {
@@ -59,16 +59,10 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
   showNumbers
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchActive, setIsSearchActive] = useState(false);
 
-  const filtered = useMemo(() => surahs.filter(s =>
-    s.nameKu.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.nameAr.includes(searchQuery) ||
-    s.nameEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    String(s.number).includes(searchQuery)
-  ), [surahs, searchQuery]);
-
+  // لیستی سورەتەکان بە تەواوی وەک خۆیان دەردەکەون کاتێک گەڕان کارا نییە
   const combinedList = useMemo<CombinedItem[]>(() => {
-    if (searchQuery.trim()) return [];
     const list: CombinedItem[] = [];
     let juzIndex = 0;
     for (const s of surahs) {
@@ -79,15 +73,16 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
       list.push({ kind: 'surah', surah: s });
     }
     return list;
-  }, [surahs, searchQuery]);
+  }, [surahs]);
 
   const [ayahResults, setAyahResults] = useState<any[]>([]);
   const [loadingAyah, setLoadingAyah] = useState(false);
   const [ayahSearchDone, setAyahSearchDone] = useState(false);
 
+  // گەڕان تەنها بۆ ئایەتەکان و تەفسیری کوردی لە سەرجەم سورەتەکاندا
   useEffect(() => {
     const q = searchQuery.trim();
-    if (!q || q.length < 2 || filtered.length > 0) {
+    if (!q || q.length < 2) {
       setAyahResults([]);
       setAyahSearchDone(false);
       setLoadingAyah(false);
@@ -98,13 +93,29 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     setAyahSearchDone(false);
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(q)}/all/quran-uthmani`);
-        const data = await res.json();
-        if (data.code === 200 && data.data?.matches) {
-          setAyahResults(data.data.matches.slice(0, 30));
-        } else {
-          setAyahResults([]);
+        // گەڕان لە دەقی عەرەبی ئایەتەکان و تەفسیری کوردی پێکەوە
+        const [resAr, resKu] = await Promise.all([
+          fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(q)}/all/quran-uthmani`),
+          fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(q)}/all/ku.asan`)
+        ]);
+        
+        const dataAr = await resAr.json();
+        const dataKu = await resKu.json();
+        
+        let combinedMatches: any[] = [];
+        if (dataAr.code === 200 && dataAr.data?.matches) {
+          combinedMatches = [...dataAr.data.matches];
         }
+        if (dataKu.code === 200 && dataKu.data?.matches) {
+          // زیادکردنی ئەنجامی تەفسیری کوردی ئەگەر هەبێت
+          dataKu.data.matches.forEach((kuMatch: any) => {
+            if (!combinedMatches.some(m => m.number === kuMatch.number)) {
+              combinedMatches.push(kuMatch);
+            }
+          });
+        }
+
+        setAyahResults(combinedMatches.slice(0, 40));
       } catch {
         setAyahResults([]);
       } finally {
@@ -114,7 +125,7 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, filtered.length]);
+  }, [searchQuery]);
 
   const openAyahResult = async (match: any) => {
     if (match.page) {
@@ -193,10 +204,10 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
   );
 
   const showingSearch = searchQuery.trim().length > 0;
-  const showAyahSection = showingSearch && filtered.length === 0 && searchQuery.trim().length >= 2;
 
   return (
-    <div className="max-w-xl mx-auto p-4 space-y-4">
+    <div className="max-w-xl mx-auto p-4 space-y-4" dir="rtl">
+      {/* سەرەوەی لاپەڕە: ناوی قورئان لەگەڵ دوگمەی گەڕان و ڕێکخستن لە پاڵ یەکدا */}
       <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-2">
           <BookOpen className={`w-6 h-6 ${getAccentText()}`} />
@@ -207,29 +218,48 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
           </h1>
         </div>
 
-        <button
-          onClick={onOpenSettings}
-          className="p-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs transition-all"
-        >
-          <SettingsIcon className="w-5 h-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {/* دوگمەی سێرچی بچووککراوە کە لەپاڵ ڕێکخستنەکاندا دانراوە */}
+          {isSearchActive ? (
+            <div className="relative flex items-center">
+              <input
+                type="text"
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={appLang === 'ku' ? 'گەڕان لە ئایەت و تەفسیر...' : 'Search ayahs & tafsir...'}
+                className="w-44 sm:w-56 text-xs px-3 py-2 pl-7 pr-8 rounded-xl border border-slate-300 bg-white focus:outline-none focus:border-slate-500 shadow-xs"
+              />
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-2.5 pointer-events-none" />
+              <button 
+                onClick={() => { setIsSearchActive(false); setSearchQuery(''); }}
+                className="absolute left-2 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsSearchActive(true)}
+              className="p-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs transition-all flex items-center gap-1.5 px-3"
+              title="گەڕان"
+            >
+              <Search className="w-4 h-4 text-slate-600" />
+              <span className="text-xs font-medium hidden sm:inline">گەڕان</span>
+            </button>
+          )}
+
+          <button
+            onClick={onOpenSettings}
+            className="p-2.5 rounded-2xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs transition-all"
+            title="ڕێکخستنەکان"
+          >
+            <SettingsIcon className="w-5 h-5" />
+          </button>
+        </div>
       </div>
 
-      <div className="relative">
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder={
-            appLang === 'ku' ? 'گەڕان لە ناوی سوورەت، ژمارە، یان دەقی ئایەت...' :
-            appLang === 'ar' ? 'بحث عن اسم السورة أو الرقم أو نص آية...' :
-            'Search surah name, number, or verse text...'
-          }
-          className="w-full text-xs px-4 py-3.5 pr-10 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:border-slate-400 shadow-xs"
-        />
-        <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
-      </div>
-
+      {/* لیستی سەرەکی سورەتەکان یان ئەنجامی گەڕانی ئایەتەکان */}
       <div className="space-y-2 pt-1">
         {!showingSearch && combinedList.map((item) =>
           item.kind === 'juz'
@@ -237,20 +267,18 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
             : renderSurahCard(item.surah)
         )}
 
-        {showingSearch && filtered.length > 0 && filtered.map((s) => renderSurahCard(s))}
-
-        {showAyahSection && (
+        {showingSearch && (
           <div className="space-y-2">
             {loadingAyah && (
-              <div className="flex items-center justify-center gap-2 py-6 text-slate-500 text-xs">
+              <div className="flex items-center justify-center gap-2 py-10 text-slate-500 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>گەڕان بۆ ئایەتەکان...</span>
+                <span>گەڕان لە ئایەتەکان و تەفسیری کوردی...</span>
               </div>
             )}
 
             {!loadingAyah && ayahSearchDone && ayahResults.length === 0 && (
-              <div className="text-center py-8 text-xs text-slate-400">
-                هیچ سوورەت یان ئایەتێک نەدۆزرایەوە
+              <div className="text-center py-12 text-xs text-slate-400">
+                هیچ ئەنجامێک بۆ ئەم وشەیە نەدۆزرایەوە
               </div>
             )}
 
@@ -262,7 +290,7 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
               >
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-600">
-                    سورة {match.surah?.name || match.surah?.englishName} • {match.numberInSurah}
+                    سورة {match.surah?.name || match.surah?.englishName} • ئایەتی {match.numberInSurah}
                   </span>
                 </div>
                 <p className="font-quran text-sm leading-relaxed text-right">{match.text}</p>
