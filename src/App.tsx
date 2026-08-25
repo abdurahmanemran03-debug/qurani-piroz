@@ -1,11 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SURAHS_INDEX } from './data/surahsData';
 import { SurahListView } from './components/SurahListView';
 import { MushafPageView } from './components/MushafPageView';
 
 export default function App() {
-  const [view, setView] = useState<'index' | 'mushaf'>('index');
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [view, setView] = useState<'index' | 'mushaf'>(() => {
+    try {
+      const saved = localStorage.getItem('quran_last_view');
+      return saved === 'mushaf' ? 'mushaf' : 'index';
+    } catch {
+      return 'index';
+    }
+  });
+
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('quran_last_page');
+      const n = saved ? parseInt(saved, 10) : 1;
+      return n >= 1 && n <= 604 ? n : 1;
+    } catch {
+      return 1;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('quran_last_view', view);
+    } catch {}
+  }, [view]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('quran_last_page', String(currentPage));
+    } catch {}
+  }, [currentPage]);
 
   const openSurahPage = (page: number) => {
     setCurrentPage(page);
@@ -15,7 +43,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-slate-200" dir="rtl">
       
-      {/* ١. پێڕستی سەرەکیی سوورەتەکان */}
       {view === 'index' && (
         <SurahListView
           surahs={SURAHS_INDEX}
@@ -29,7 +56,6 @@ export default function App() {
         />
       )}
 
-      {/* ٢. لاپەڕەی ڕاستەقینەی موسحەفی مەدینە */}
       {view === 'mushaf' && (
         <MushafPageView
           currentPage={currentPage}
