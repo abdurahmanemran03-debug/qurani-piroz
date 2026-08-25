@@ -61,7 +61,6 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchActive, setIsSearchActive] = useState(false);
 
-  // لیستی سورەتەکان بە تەواوی وەک خۆیان دەردەکەون کاتێک گەڕان کارا نییە
   const combinedList = useMemo<CombinedItem[]>(() => {
     const list: CombinedItem[] = [];
     let juzIndex = 0;
@@ -79,10 +78,10 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
   const [loadingAyah, setLoadingAyah] = useState(false);
   const [ayahSearchDone, setAyahSearchDone] = useState(false);
 
-  // گەڕان تەنها بۆ ئایەتەکان و تەفسیری کوردی لە سەرجەم سورەتەکاندا
+  // گەڕان بۆ هەموو ئەنجامەکان لە سەرتاسەری قورئاندا بێ سنووردارکردن بە 30 دانە
   useEffect(() => {
     const q = searchQuery.trim();
-    if (!q || q.length < 2) {
+    if (!q || q.length < 1) {
       setAyahResults([]);
       setAyahSearchDone(false);
       setLoadingAyah(false);
@@ -93,7 +92,6 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     setAyahSearchDone(false);
     const timer = setTimeout(async () => {
       try {
-        // گەڕان لە دەقی عەرەبی ئایەتەکان و تەفسیری کوردی پێکەوە
         const [resAr, resKu] = await Promise.all([
           fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(q)}/all/quran-uthmani`),
           fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(q)}/all/ku.asan`)
@@ -107,7 +105,6 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
           combinedMatches = [...dataAr.data.matches];
         }
         if (dataKu.code === 200 && dataKu.data?.matches) {
-          // زیادکردنی ئەنجامی تەفسیری کوردی ئەگەر هەبێت
           dataKu.data.matches.forEach((kuMatch: any) => {
             if (!combinedMatches.some(m => m.number === kuMatch.number)) {
               combinedMatches.push(kuMatch);
@@ -115,14 +112,15 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
           });
         }
 
-        setAyahResults(combinedMatches.slice(0, 40));
+        // لێرەدا کۆتایی بە سنووردارکردن هێنراوە تاوەکو هەموو ئەنجامەکان نیشان بدات
+        setAyahResults(combinedMatches);
       } catch {
         setAyahResults([]);
       } finally {
         setLoadingAyah(false);
         setAyahSearchDone(true);
       }
-    }, 500);
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
@@ -207,7 +205,6 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
 
   return (
     <div className="max-w-xl mx-auto p-4 space-y-4" dir="rtl">
-      {/* سەرەوەی لاپەڕە: ناوی قورئان لەگەڵ دوگمەی گەڕان و ڕێکخستن لە پاڵ یەکدا */}
       <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-2">
           <BookOpen className={`w-6 h-6 ${getAccentText()}`} />
@@ -219,7 +216,6 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
-          {/* دوگمەی سێرچی بچووککراوە کە لەپاڵ ڕێکخستنەکاندا دانراوە */}
           {isSearchActive ? (
             <div className="relative flex items-center">
               <input
@@ -259,7 +255,6 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
         </div>
       </div>
 
-      {/* لیستی سەرەکی سورەتەکان یان ئەنجامی گەڕانی ئایەتەکان */}
       <div className="space-y-2 pt-1">
         {!showingSearch && combinedList.map((item) =>
           item.kind === 'juz'
@@ -272,7 +267,7 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
             {loadingAyah && (
               <div className="flex items-center justify-center gap-2 py-10 text-slate-500 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>گەڕان لە ئایەتەکان و تەفسیری کوردی...</span>
+                <span>گەڕان لە هەموو سورەت و ئایەتەکاندا...</span>
               </div>
             )}
 
