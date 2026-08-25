@@ -52,7 +52,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [pageAyahsData, setPageAyahsData] = useState<any[]>([]);
   const [loadingTafsir, setLoadingTafsir] = useState(false);
 
-  // دۆخی پۆپ-ئاپ و شوێنەکەی
   const [activeAyah, setActiveAyah] = useState<any | null>(null);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
   const [activeAyahTafsir, setActiveAyahTafsir] = useState<any | null>(null);
@@ -203,7 +202,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  // چارەسەری گرنگ: وەرگرتنی شوێنی وردی کلیک لەسەر وێنەکە و نیشاندانی پۆپ-ئاپ
   const handleWrapperClick = (e: React.MouseEvent<HTMLDivElement>) => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
@@ -306,7 +304,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       </header>
 
-      {/* شێوازی وێنەی موسحەف لەگەڵ چینێکی هەستیاری تەواو */}
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
@@ -331,20 +328,26 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                   className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0 relative"
                   style={{ direction: 'rtl' }}
                 >
-                  {/* کانتێنەری وێنەکە کە لەسەری کلیک و دەستکاریکردن کارا دەکات */}
+                  {/* قەدەغەکردنی مینیوی وێنەی براوسەر بە styles ی تایبەت */}
                   <div 
                     className="relative inline-block cursor-pointer"
                     onClick={pageNum === currentPage ? handleWrapperClick : undefined}
+                    style={{ WebkitTouchCallout: 'none', userSelect: 'none' }}
+                    onContextMenu={(e) => e.preventDefault()}
                   >
                     <img
                       src={pageImgUrl(pageNum)}
                       alt={`Page ${pageNum}`}
                       loading="lazy"
-                      className="max-w-full max-h-[76vh] object-contain select-none shadow-xl rounded-lg bg-white border border-stone-300 pointer-events-auto"
-                      style={PAGE_IMG_FILTER}
+                      className="max-w-full max-h-[76vh] object-contain shadow-xl rounded-lg bg-white border border-stone-300 pointer-events-auto"
+                      style={{ 
+                        ...PAGE_IMG_FILTER, 
+                        WebkitTouchCallout: 'none', 
+                        WebkitUserSelect: 'none' 
+                      }}
                     />
 
-                    {/* پۆپ-ئاپەکە لە هەمان شوێنی کلیککراو */}
+                    {/* پۆپ-ئاپەکە لە شوێنی کلیکراو */}
                     {pageNum === currentPage && popupPos && activeAyah && (
                       <div 
                         className="absolute z-50 bg-[#1b2a22] text-white px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2.5 border border-emerald-600/60 backdrop-blur-md -translate-x-1/2 -translate-y-full animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
@@ -412,7 +415,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* دۆخی تەفسیر و دەق */}
       {viewMode === 'tafsir' && (
         <div className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white" dir="rtl">
           {loadingTafsir ? (
@@ -452,7 +454,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* مۆداڵی تەفسیری فراوان */}
       {activeAyahTafsir && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 text-right">
