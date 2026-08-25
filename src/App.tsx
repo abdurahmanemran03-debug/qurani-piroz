@@ -35,6 +35,37 @@ export default function App() {
     } catch {}
   }, [currentPage]);
 
+  // پاراستنی شوێنی سکرۆڵی پێڕستی سوورەتەکان (view === 'index')
+  useEffect(() => {
+    if (view !== 'index') return;
+
+    const raf = requestAnimationFrame(() => {
+      try {
+        const saved = sessionStorage.getItem('quran_index_scroll');
+        if (saved) {
+          window.scrollTo({ top: parseInt(saved, 10), behavior: 'auto' });
+        }
+      } catch {}
+    });
+
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleScroll = () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        try {
+          sessionStorage.setItem('quran_index_scroll', String(window.scrollY));
+        } catch {}
+      }, 150);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', handleScroll);
+      if (saveTimer) clearTimeout(saveTimer);
+    };
+  }, [view]);
+
   const openSurahPage = (page: number) => {
     setCurrentPage(page);
     setView('mushaf');
