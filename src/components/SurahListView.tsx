@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, BookOpen, Settings as SettingsIcon } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, BookOpen, Settings as SettingsIcon, Loader2 } from 'lucide-react';
 import { SurahItem, BgThemeType, AppLangType, AccentColorType } from '../types';
 
 interface SurahListViewProps {
@@ -13,6 +13,16 @@ interface SurahListViewProps {
   showNumbers: boolean;
 }
 
+const JUZ_START_PAGES = [
+  1, 22, 42, 62, 82, 102, 121, 142, 162, 182,
+  201, 222, 242, 262, 282, 302, 322, 342, 362, 382,
+  402, 422, 442, 462, 482, 502, 522, 542, 562, 582,
+];
+
+type CombinedItem =
+  | { kind: 'juz'; juzNumber: number; page: number }
+  | { kind: 'surah'; surah: SurahItem };
+
 export const SurahListView: React.FC<SurahListViewProps> = ({
   surahs,
   onOpenSurah,
@@ -25,12 +35,75 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filtered = surahs.filter(s =>
+  const filtered = useMemo(() => surahs.filter(s =>
     s.nameKu.toLowerCase().includes(searchQuery.toLowerCase()) ||
     s.nameAr.includes(searchQuery) ||
     s.nameEn.toLowerCase().includes(searchQuery.toLowerCase()) ||
     String(s.number).includes(searchQuery)
-  );
+  ), [surahs, searchQuery]);
+
+  const combinedList = useMemo<CombinedItem[]>(() => {
+    if (searchQuery.trim()) return [];
+    const list: CombinedItem[] = [];
+    let juzIndex = 0;
+    for (const s of surahs) {
+      while (juzIndex < JUZ_START_PAGES.length && JUZ_START_PAGES[juzIndex] <= s.startPage) {
+        list.push({ kind: 'juz', juzNumber: juzIndex + 1, page: JUZ_START_PAGES[juzIndex] });
+        juzIndex++;
+      }
+      list.push({ kind: 'surah', surah: s });
+    }
+    return list;
+  }, [surahs, searchQuery]);
+
+  const [ayahResults, setAyahResults] = useState<any[]>([]);
+  const [loadingAyah, setLoadingAyah] = useState(false);
+  const [ayahSearchDone, setAyahSearchDone] = useState(false);
+
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q || q.length < 2 || filtered.length > 0) {
+      setAyahResults([]);
+      setAyahSearchDone(false);
+      setLoadingAyah(false);
+      return;
+    }
+
+    setLoadingAyah(true);
+    setAyahSearchDone(false);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(q)}/all/quran-uthmani`);
+        const data = await res.json();
+        if (data.code === 200 && data.data?.matches) {
+          setAyahResults(data.data.matches.slice(0, 30));
+        } else {
+          setAyahResults([]);
+        }
+      } catch {
+        setAyahResults([]);
+      } finally {
+        setLoadingAyah(false);
+        setAyahSearchDone(true);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, filtered.length]);
+
+  const openAyahResult = async (match: any) => {
+    if (match.page) {
+      onOpenSurah(match.page);
+      return;
+    }
+    try {
+      const res = await fetch(`https://api.alquran.cloud/v1/ayah/${match.surah.number}:${match.numberInSurah}/quran-uthmani`);
+      const data = await res.json();
+      if (data.code === 200 && data.data?.page) {
+        onOpenSurah(data.data.page);
+      }
+    } catch {}
+  };
 
   const getCardStyle = () => {
     if (bgStyle === 'cream') return 'bg-[#fcfaf5] border-[#ebdcb9] hover:bg-[#f4ebd8] text-[#3c2d15]';
@@ -44,9 +117,61 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     return 'text-[#854d0e]';
   };
 
+  const renderSurahCard = (surah: SurahItem) => {
+    const isMeccan = surah.typeKu === 'مەککەیی';
+    return (
+      <div
+        key={surah.number}
+        onClick={() => onOpenSurah(surah.startPage)}
+        className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition-all active:scale-[0.99] ${getCardStyle()}`}
+      >
+        <div className="flex items-center gap-3">
+          {showNumbers && (
+            <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
+              {surah.number}
+            </div>
+          )}
+          <div>
+            <h3 className="font-bold text-sm">سورة {surah.nameAr}</h3>
+            <p className="text-[11px] opacity-75 flex items-center gap-1 flex-wrap">
+              {showKurdishNames && <span>{appLang === 'en' ? surah.nameEn : surah.nameKu} • </span>}
+              <span className="flex items-center gap-1">
+                <span aria-hidden="true">{isMeccan ? '🕋' : '🕌'}</span>
+                <span>{appLang === 'ar' ? surah.typeAr : (appLang === 'en' ? surah.typeEn : surah.typeKu)}</span>
+              </span>
+              <span>• {surah.ayahs} {appLang === 'ar' ? 'آيات' : (appLang === 'en' ? 'verses' : 'ئایەت')}</span>
+            </p>
+          </div>
+        </div>
+
+        {showNumbers && (
+          <div className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 shrink-0">
+            {appLang === 'en' ? `Page ${surah.startPage}` : `لاپەڕەی ${surah.startPage}`}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderJuzHeader = (juzNumber: number, page: number) => (
+    <div
+      key={`juz-${juzNumber}`}
+      className="px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between"
+    >
+      <span className="text-[11px] font-bold text-slate-500">
+        {appLang === 'ar' ? `صفحة ${page}` : (appLang === 'en' ? `Page ${page}` : `لاپەڕەی ${page}`)}
+      </span>
+      <span className="text-xs font-bold text-slate-700">
+        {appLang === 'ar' ? `الجزء ${juzNumber}` : (appLang === 'en' ? `Juz ${juzNumber}` : `جوزئی ${juzNumber}`)}
+      </span>
+    </div>
+  );
+
+  const showingSearch = searchQuery.trim().length > 0;
+  const showAyahSection = showingSearch && filtered.length === 0 && searchQuery.trim().length >= 2;
+
   return (
     <div className="max-w-xl mx-auto p-4 space-y-4">
-      {/* سەرپەڕە */}
       <div className="flex items-center justify-between pt-2">
         <div className="flex items-center gap-2">
           <BookOpen className={`w-6 h-6 ${getAccentText()}`} />
@@ -65,53 +190,61 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
         </button>
       </div>
 
-      {/* سێرچ */}
       <div className="relative">
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           placeholder={
-            appLang === 'ku' ? 'گەڕان لە ناوی سوورەت یان ژمارە (یوسف، ٦٧)...' :
-            appLang === 'ar' ? 'بحث عن اسم السورة أو الرقم...' :
-            'Search surah name or number...'
+            appLang === 'ku' ? 'گەڕان لە ناوی سوورەت، ژمارە، یان دەقی ئایەت...' :
+            appLang === 'ar' ? 'بحث عن اسم السورة أو الرقم أو نص آية...' :
+            'Search surah name, number, or verse text...'
           }
           className="w-full text-xs px-4 py-3.5 pr-10 rounded-2xl border border-slate-200 bg-white focus:outline-none focus:border-slate-400 shadow-xs"
         />
         <Search className="w-4 h-4 text-slate-400 absolute right-3.5 top-3.5" />
       </div>
 
-      {/* پێڕست */}
       <div className="space-y-2 pt-1">
-        {filtered.map((surah) => (
-          <div
-            key={surah.number}
-            onClick={() => onOpenSurah(surah.startPage)}
-            className={`p-3.5 rounded-2xl border cursor-pointer flex items-center justify-between transition-all active:scale-[0.99] ${getCardStyle()}`}
-          >
-            <div className="flex items-center gap-3">
-              {showNumbers && (
-                <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center">
-                  {surah.number}
-                </div>
-              )}
-              <div>
-                <h3 className="font-bold text-sm">سورة {surah.nameAr}</h3>
-                <p className="text-[11px] opacity-75">
-                  {showKurdishNames && <span>{appLang === 'en' ? surah.nameEn : surah.nameKu} • </span>}
-                  <span>{appLang === 'ar' ? surah.typeAr : (appLang === 'en' ? surah.typeEn : surah.typeKu)} • </span>
-                  <span>{surah.ayahs} {appLang === 'ar' ? 'آيات' : (appLang === 'en' ? 'verses' : 'ئایەت')}</span>
-                </p>
-              </div>
-            </div>
+        {!showingSearch && combinedList.map((item) =>
+          item.kind === 'juz'
+            ? renderJuzHeader(item.juzNumber, item.page)
+            : renderSurahCard(item.surah)
+        )}
 
-            {showNumbers && (
-              <div className="text-[11px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-600">
-                {appLang === 'en' ? `Page ${surah.startPage}` : `لاپەڕەی ${surah.startPage}`}
+        {showingSearch && filtered.length > 0 && filtered.map((s) => renderSurahCard(s))}
+
+        {showAyahSection && (
+          <div className="space-y-2">
+            {loadingAyah && (
+              <div className="flex items-center justify-center gap-2 py-6 text-slate-500 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>گەڕان بۆ ئایەتەکان...</span>
               </div>
             )}
+
+            {!loadingAyah && ayahSearchDone && ayahResults.length === 0 && (
+              <div className="text-center py-8 text-xs text-slate-400">
+                هیچ سوورەت یان ئایەتێک نەدۆزرایەوە
+              </div>
+            )}
+
+            {!loadingAyah && ayahResults.map((match, idx) => (
+              <div
+                key={`${match.number}-${idx}`}
+                onClick={() => openAyahResult(match)}
+                className={`p-3.5 rounded-2xl border cursor-pointer transition-all active:scale-[0.99] ${getCardStyle()}`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-600">
+                    سورة {match.surah?.name || match.surah?.englishName} • {match.numberInSurah}
+                  </span>
+                </div>
+                <p className="font-quran text-sm leading-relaxed text-right">{match.text}</p>
+              </div>
+            ))}
           </div>
-        ))}
+        )}
       </div>
     </div>
   );
