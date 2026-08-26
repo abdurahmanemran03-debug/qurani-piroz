@@ -1,4 +1,4 @@
-import React,. useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface MushafPageViewProps {
   pageNumber: number;
@@ -39,7 +39,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({ pageNumber, line
         }
       `}</style>
 
-      {/* باری سەرەوە بۆ نیشاندانی باری فۆنت */}
       <div className="mb-2 text-xs font-bold flex items-center justify-between w-full max-w-md px-2">
         {onBack && (
           <button 
