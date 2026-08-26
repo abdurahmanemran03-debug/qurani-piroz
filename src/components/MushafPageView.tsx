@@ -7,71 +7,67 @@ interface MushafPageViewProps {
 }
 
 export const MushafPageView: React.FC<MushafPageViewProps> = ({ pageNumber, linesData, onBack }) => {
-  const fontName = `qcf-p${pageNumber}`;
-  const fontUrl = `/qurani-piroz/fonts/p${pageNumber}.ttf`;
-  
+  const fontUrl = `${import.meta.env.BASE_URL}fonts/p${pageNumber}.ttf`;
   const [fontStatus, setFontStatus] = useState<'loading' | 'loaded' | 'failed'>('loading');
 
   useEffect(() => {
-    setFontStatus('loading');
-    const font = new FontFace(fontName, `url('${fontUrl}')`);
+    const font = new FontFace('qcf-p1', `url('${fontUrl}')`);
     font.load()
-      .then((loadedFont) => {
-        document.fonts.add(loadedFont);
-        setFontStatus('loaded');
-      })
-      .catch((err) => {
-        console.error(`Font load error for page ${pageNumber}:`, err);
-        setFontStatus('failed');
-      });
-  }, [pageNumber, fontUrl, fontName]);
+      .then(() => setFontStatus('loaded'))
+      .catch(() => setFontStatus('failed'));
+  }, [fontUrl]);
 
   return (
-    <div className="min-h-screen bg-stone-100 flex flex-col items-center justify-center p-4" dir="rtl">
+    <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4" dir="rtl">
       <style>{`
         @font-face {
-          font-family: '${fontName}';
+          font-family: 'qcf-p1';
           src: url('${fontUrl}') format('truetype');
           font-display: swap;
         }
-        .qcf-page-line {
-          font-family: '${fontName}', serif;
+        .qcf-line {
+          font-family: 'qcf-p1', serif;
         }
       `}</style>
-
-      <div className="mb-2 text-xs font-bold flex items-center justify-between w-full max-w-md px-2">
-        {onBack && (
-          <button 
-            onClick={onBack}
-            className="bg-stone-800 text-white px-3 py-1 rounded text-xs hover:bg-stone-700 transition-colors"
-          >
-            گەڕانەوە
-          </button>
-        )}
-        <div>
-          {fontStatus === 'loading' && <span className="text-slate-500">بارکردنی فۆنت...</span>}
-          {fontStatus === 'loaded' && <span className="text-green-600">✓ فۆنت بارکرا</span>}
-          {fontStatus === 'failed' && <span className="text-red-600">✗ فۆنت نەدۆزرایەوە</span>}
-        </div>
-      </div>
 
       <div className="relative bg-[#fdfcf7] border border-stone-300 rounded-lg shadow-xl w-full max-w-md p-6"
            style={{ aspectRatio: '1260 / 1980' }}>
         
-        <div className="flex flex-col items-center gap-3 px-2 mt-6">
+        {onBack && (
+          <button 
+            onClick={onBack}
+            className="mb-4 bg-stone-800 text-white px-3 py-1 rounded text-xs"
+          >
+            گەڕانەوە
+          </button>
+        )}
+
+        <div className="border-2 border-stone-800 rounded px-4 py-2 text-center mb-6 mt-4">
+          <span className="text-lg font-bold text-stone-900" style={{ fontFamily: 'serif' }}>
+            سُورَةُ الْفَاتِحَةِ
+          </span>
+        </div>
+
+        <div className="flex flex-col items-center gap-4 px-2 mt-8">
           {linesData.map((line, i) => (
             <p
               key={i}
-              className="qcf-page-line text-stone-900 select-text"
-              style={{ fontSize: '36px', lineHeight: '2.1', textAlign: line.centered ? 'center' : 'right', width: '100%' }}
+              className="qcf-line text-stone-900 select-text"
+              style={{ fontSize: '38px', lineHeight: '2.2', textAlign: line.centered ? 'center' : 'right', width: '100%' }}
             >
               {line.text}
             </p>
           ))}
         </div>
 
-        <div className="absolute bottom-3 inset-x-0 text-center text-xs text-stone-500 font-mono">
-          {pageNumber}
+        <div className="absolute bottom-3 inset-x-0 text-center text-xs text-stone-500 font-mono">{pageNumber}</div>
+
+        <div className={`absolute top-1 inset-x-0 text-center text-[10px] font-bold ${
+          fontStatus === 'loaded' ? 'text-green-600' : fontStatus === 'failed' ? 'text-red-600' : 'text-slate-400'
+        }`}>
+          {fontStatus === 'loading' && 'فۆنت باردەکرێت...'}
+          {fontStatus === 'loaded' && '✓ فۆنت بە سەرکەوتوویی بارکرا'}
+          {fontStatus === 'failed' && `✗ فۆنت نەدۆزرایەوە لە: ${fontUrl}`}
         </div>
       </div>
     </div>
