@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 // ------------------------------------------------------------------
 // تاقیکردنەوە: لاپەڕەی ١ (سووڕەتی فاتیحە) بە تێکستی ڕاستەقینە
@@ -17,12 +17,22 @@ const PAGE_1_LINES: { text: string; centered: boolean }[] = [
 ];
 
 export const MushafTextPage1Test: React.FC = () => {
+  const fontUrl = `${import.meta.env.BASE_URL}fonts/p1.ttf`;
+  const [fontStatus, setFontStatus] = useState<'loading' | 'loaded' | 'failed'>('loading');
+
+  useEffect(() => {
+    const font = new FontFace('qcf-p1-check', `url('${fontUrl}')`);
+    font.load()
+      .then(() => setFontStatus('loaded'))
+      .catch(() => setFontStatus('failed'));
+  }, [fontUrl]);
+
   return (
     <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4" dir="rtl">
       <style>{`
         @font-face {
           font-family: 'qcf-p1';
-          src: url('/fonts/p1.ttf') format('truetype');
+          src: url('${fontUrl}') format('truetype');
           font-display: swap;
         }
         .qcf-line {
@@ -51,6 +61,14 @@ export const MushafTextPage1Test: React.FC = () => {
         </div>
 
         <div className="absolute bottom-3 inset-x-0 text-center text-xs text-stone-500 font-mono">1</div>
+
+        <div className={`absolute top-1 inset-x-0 text-center text-[10px] font-bold ${
+          fontStatus === 'loaded' ? 'text-green-600' : fontStatus === 'failed' ? 'text-red-600' : 'text-slate-400'
+        }`}>
+          {fontStatus === 'loading' && 'فۆنت باردەکرێت...'}
+          {fontStatus === 'loaded' && '✓ فۆنت بە سەرکەوتوویی بارکرا'}
+          {fontStatus === 'failed' && `✗ فۆنت نەدۆزرایەوە لە: ${fontUrl}`}
+        </div>
       </div>
     </div>
   );
