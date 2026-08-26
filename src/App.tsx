@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { SURAHS_INDEX } from './data/surahsData';
 import { SurahListView } from './components/SurahListView';
 import { MushafPageView } from './components/MushafPageView';
+import { MushafTextPage1Test } from './components/MushafTextPage1Test';
 
 export default function App() {
-  const [view, setView] = useState<'index' | 'mushaf'>(() => {
+  const [view, setView] = useState<'index' | 'mushaf' | 'test'>(() => {
     try {
       const saved = localStorage.getItem('quran_last_view');
       return saved === 'mushaf' ? 'mushaf' : 'index';
@@ -74,6 +75,19 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-slate-200" dir="rtl">
       
+      {/* دوگمەیەکی کاتی بۆ بینینی تاقیکردنەوەی فۆنتەکە */}
+      <div className="bg-amber-100 p-2 text-center text-xs border-b border-amber-300 flex justify-center gap-4">
+        <span>حالەتی ئێستا: {view}</span>
+        <button 
+          onClick={() => setView(view === 'test' ? 'index' : 'test')} 
+          className="bg-amber-600 text-white px-2 py-0.5 rounded shadow hover:bg-amber-700 transition"
+        >
+          {view === 'test' ? 'گەڕانەوە بۆ پڕۆژە' : 'تاقیکردنەوەی فۆنتی لاپەڕەی ١'}
+        </button>
+      </div>
+
+      {view === 'test' && <MushafTextPage1Test />}
+
       {view === 'index' && (
         <SurahListView
           surahs={SURAHS_INDEX}
