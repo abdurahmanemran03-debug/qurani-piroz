@@ -11,27 +11,23 @@ const PAGE_1_LINES: { text: string; centered: boolean }[] = [
 ];
 
 export const MushafTextPage1Test: React.FC = () => {
-  // ڕێڕەوی ڕاستەوخۆ بۆ فۆنتەکە بەپێی ناوی ڕیپۆزیتۆرییەکەت
-  const fontUrl = './fonts/p1.ttf';
+  // بەکارهێنانی ناوی ڕەهای ڕیپۆزیتۆرییەکە بۆ دڵنیابوون لە دۆزینەوەی فۆنتەکە لە GitHub Pages
+  const fontUrl = '/qurani-piroz/fonts/p1.ttf';
   const [fontStatus, setFontStatus] = useState<'loading' | 'loaded' | 'failed'>('loading');
 
   useEffect(() => {
     const font = new FontFace('qcf-p1-check', `url('${fontUrl}')`);
     font.load()
       .then(() => setFontStatus('loaded'))
-      .catch(() => {
-        // هەوڵێکی تاقیکاری تریش ئەگەر ڕێڕەوی سەرەکی نەبوو
-        const altFont = new FontFace('qcf-p1-check', `url('./qurani-piroz/fonts/p1.ttf')`);
-        altFont.load().then(() => setFontStatus('loaded')).catch(() => setFontStatus('failed'));
-      });
-  }, []);
+      .catch(() => setFontStatus('failed'));
+  }, [fontUrl]);
 
   return (
     <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4" dir="rtl">
       <style>{`
         @font-face {
           font-family: 'qcf-p1';
-          src: url('./fonts/p1.ttf'), url('./qurani-piroz/fonts/p1.ttf'), url('/qurani-piroz/fonts/p1.ttf');
+          src: url('/qurani-piroz/fonts/p1.ttf') format('truetype');
           font-display: swap;
         }
         .qcf-line {
@@ -66,7 +62,7 @@ export const MushafTextPage1Test: React.FC = () => {
         }`}>
           {fontStatus === 'loading' && 'فۆنت باردەکرێت...'}
           {fontStatus === 'loaded' && '✓ فۆنت بە سەرکەوتوویی بارکرا'}
-          {fontStatus === 'failed' && '✗ فۆنت نەدۆزرایەوە'}
+          {fontStatus === 'failed' && `✗ فۆنت نەدۆزرایەوە لە: ${fontUrl}`}
         </div>
       </div>
     </div>
