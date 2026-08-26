@@ -21,6 +21,14 @@ interface MushafPageViewProps {
   onJumpToPage?: (page: number) => void;
 }
 
+const formatPageNum = (n: number) => String(n).padStart(3, '0');
+const pageImgUrl = (n: number) => `https://android.quran.com/data/width_1260/page${formatPageNum(n)}.png`;
+
+const PAGE_IMG_FILTER = {
+  filter: 'grayscale(100%) contrast(115%) brightness(102%)',
+  mixBlendMode: 'multiply' as const,
+};
+
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
   currentPage,
   onNextPage,
@@ -42,9 +50,11 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [selectedTafsir, setSelectedTafsir] = useState<TafsirItem>(ALL_TAFSIRS_DIRECTORY[0]);
 
   const [pageAyahsData, setPageAyahsData] = useState<any[]>([]);
-  const [loadingAyahs, setLoadingAyahs] = useState(false);
+  const [loadingTafsir, setLoadingTafsir] = useState(false);
 
   const [activeAyah, setActiveAyah] = useState<any | null>(null);
+  const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
+  const [highlightBox, setHighlightBox] = useState<{ top: number; height: number } | null>(null);
   const [activeAyahTafsir, setActiveAyahTafsir] = useState<any | null>(null);
 
   const [bookmarks, setBookmarks] = useState<number[]>(() => {
@@ -58,6 +68,13 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const isUpdating = useRef(false);
+
+  const pageRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const isFirstScroll = useRef(true);
+  const scrollInitiatedByUser = useRef(false);
 
   const isBookmarked = bookmarks.includes(currentPage);
   const currentJuz = Math.ceil(currentPage / 20);
@@ -77,7 +94,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   useEffect(() => {
     async function loadPageVerses() {
-      setLoadingAyahs(true);
+      setLoadingTafsir(true);
       try {
         const res = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,ku.asan`);
         const data = await res.json();
@@ -90,19 +107,68 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             surahName: a.surah.name,
             numberInSurah: a.numberInSurah,
             arabic: a.text,
-            asanTafsir: ku[i]?.text || 'بە ناوی خودای بەخشندەی میهرەبان...'
+            asanTafsir: ku[i]?.text || 'بە ناو خودای بەخشندەی میهرەبان...'
           }));
           setPageAyahsData(combined);
         }
       } catch (e) {
         console.error(e);
       } finally {
-        setLoadingAyahs(false);
+        setLoadingTafsir(false);
       }
     }
     loadPageVerses();
     setActiveAyah(null);
+    setPopupPos(null);
+    setHighlightBox(null);
   }, [currentPage]);
+
+  useEffect(() => {
+    if (scrollInitiatedByUser.current) {
+      scrollInitiatedByUser.current = false;
+      return;
+    }
+
+    const scrollToTarget = () => {
+      const el = pageRefs.current[currentPage];
+      if (el) {
+        isUpdating.current = true;
+        el.scrollIntoView({
+          behavior: isFirstScroll.current ? 'auto' : 'smooth',
+          inline: 'center',
+          block: 'nearest',
+        });
+        isFirstScroll.current = false;
+        setTimeout(() => {
+          isUpdating.current = false;
+        }, 400);
+      }
+    };
+
+    if (isFirstScroll.current) {
+      const raf1 = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          scrollToTarget();
+        });
+      });
+      return () => cancelAnimationFrame(raf1);
+    } else {
+      scrollToTarget();
+    }
+  }, [currentPage]);
+
+  const togglePageAudio = () => {
+    if (isPlayingAudio) {
+      audioRef.current?.pause();
+      setIsPlayingAudio(false);
+    } else {
+      setIsPlayingAudio(true);
+      if (audioRef.current) {
+        audioRef.current.src = `https://everyayah.com/data/${selectedReciter.serverKey}/PageMp3s/Page${formatPageNum(currentPage)}.mp3`;
+        audioRef.current.play().catch(() => setIsPlayingAudio(false));
+      }
+    }
+  };
 
   const playSingleAyahAudio = (ayah: any) => {
     setIsPlayingAudio(true);
@@ -119,7 +185,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       if (!list.some((item: any) => item.number === ayah.number)) {
         list.push(ayah);
         localStorage.setItem('quran_ayah_bookmarks', JSON.stringify(list));
-        alert('ئایەتەکە خزنکرا!');
+        alert('ئایەتەکە بە سەرکەوتوویی خزنکرا!');
       } else {
         alert('ئەم ئایەتە پێشتر خزنکراوە.');
       }
@@ -129,141 +195,303 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const shareAyah = (ayah: any) => {
     const textToShare = `${ayah.arabic}\n(سورة ${ayah.surahName} - ئایەتی ${ayah.numberInSurah})`;
     if (navigator.share) {
-      navigator.share({ title: 'قورئانی پیرۆز', text: textToShare }).catch(() => {});
+      navigator.share({
+        title: 'قورئانی پیرۆز',
+        text: textToShare,
+      }).catch(() => {});
     } else {
       navigator.clipboard.writeText(textToShare);
       alert('دەقی ئایەت کۆپی کرا!');
     }
   };
 
+  const handleWrapperClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const ratio = y / rect.height;
+    const index = Math.min(
+      Math.floor(ratio * pageAyahsData.length),
+      pageAyahsData.length - 1
+    );
+
+    if (pageAyahsData.length > 0) {
+      const targetAyah = pageAyahsData[index >= 0 ? index : 0];
+      setActiveAyah(targetAyah);
+      
+      const itemHeight = rect.height / pageAyahsData.length;
+      const calculatedTop = (index >= 0 ? index : 0) * itemHeight;
+
+      setHighlightBox({
+        top: calculatedTop,
+        height: Math.max(itemHeight, 35)
+      });
+
+      setPopupPos({
+        x: Math.min(Math.max(x, 90), rect.width - 90),
+        y: Math.max(y - 60, 50)
+      });
+    }
+  };
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    if (isUpdating.current) return;
+    const target = e.currentTarget;
+    const scrollLeft = target.scrollLeft;
+    const pageWidth = target.clientWidth;
+
+    if (pageWidth > 0) {
+      const pageIndex = Math.round(scrollLeft / pageWidth);
+      const targetPage = 604 - pageIndex;
+
+      if (targetPage >= 1 && targetPage <= 604 && targetPage !== currentPage) {
+        isUpdating.current = true;
+        scrollInitiatedByUser.current = true;
+        setActiveAyah(null);
+        setPopupPos(null);
+        setHighlightBox(null);
+        if (onJumpToPage) {
+          onJumpToPage(targetPage);
+        } else if (targetPage > currentPage) {
+          onNextPage();
+        } else {
+          onPrevPage();
+        }
+        setTimeout(() => {
+          isUpdating.current = false;
+        }, 300);
+      }
+    }
+  };
+
   return (
-    <div className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-[#fbf9f1] text-slate-900 overflow-hidden" dir="rtl">
+    <div className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
 
-      {/* سەرپەڕە */}
       <header className={`absolute top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
-        <button onClick={onBackToIndex} className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-700">
+        <button
+          onClick={onBackToIndex}
+          className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-700 transition-colors"
+        >
           <ArrowRight className="w-5 h-5" />
         </button>
 
         <div className="text-center">
-          <h2 className="font-bold text-sm text-slate-800">سووڕه‌تی {currentSurah?.nameAr || 'الفاتحة'}</h2>
-          <p className="text-[11px] text-slate-500 font-medium">په‌ڕه‌ی {currentPage} ، جوزئی {currentJuz}</p>
+          <h2 className="font-bold text-sm text-slate-800">
+            سووڕه‌تی {currentSurah?.nameAr || 'الفاتحة'}
+          </h2>
+          <p className="text-[11px] text-slate-500 font-medium">
+            په‌ڕه‌ی {currentPage} ، جوزئی {currentJuz}
+          </p>
         </div>
 
         <div className="flex items-center gap-1 text-slate-700">
           <button
             onClick={() => setViewMode(prev => prev === 'mushaf' ? 'tafsir' : 'mushaf')}
-            className={`p-2 rounded-xl transition-colors ${viewMode === 'tafsir' ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'hover:bg-slate-100'}`}
+            className={`p-2 rounded-xl transition-colors ${
+              viewMode === 'tafsir' ? 'bg-amber-100 text-amber-900 border border-amber-300' : 'hover:bg-slate-100'
+            }`}
           >
             <BookOpen className="w-4 h-4" />
           </button>
-          <button onClick={toggleBookmark} className="p-2 rounded-xl hover:bg-slate-100">
+
+          <button
+            onClick={toggleBookmark}
+            className={`p-2 rounded-xl transition-colors ${
+              isBookmarked ? 'text-amber-600' : 'hover:bg-slate-100'
+            }`}
+          >
             {isBookmarked ? <BookmarkCheck className="w-4 h-4 fill-amber-500 text-amber-600" /> : <Bookmark className="w-4 h-4" />}
           </button>
-          <button onClick={() => setIsTafsirSelectorOpen(true)} className="p-2 rounded-xl hover:bg-slate-100">
+
+          <button
+            onClick={() => setIsTafsirSelectorOpen(true)}
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-700"
+          >
             <Globe className="w-4 h-4" />
           </button>
         </div>
       </header>
 
-      {/* دیمەنی دەقی قورئان بە فۆنتی مەدینە */}
       {viewMode === 'mushaf' && (
         <div 
-          className="relative flex-1 flex flex-col items-center justify-start p-4 pt-16 overflow-y-auto bg-[#fbf9f1]" 
-          onClick={() => { setShowControls(prev => !prev); setActiveAyah(null); }}
+          className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
+          onClick={() => {
+            setShowControls(prev => !prev);
+            setActiveAyah(null);
+            setPopupPos(null);
+            setHighlightBox(null);
+          }}
         >
-          {loadingAyahs ? (
-            <div className="text-center py-32">
-              <Loader2 className="w-8 h-8 mx-auto text-amber-700 animate-spin" />
-              <p className="text-xs text-slate-500 pt-2">پەڕەکە باردەکرێت...</p>
-            </div>
-          ) : (
-            <div className="w-full max-w-md bg-white p-6 rounded-2xl shadow-md border border-amber-200/60 text-right leading-[2.8] font-quran-mushaf text-2xl sm:text-2xl my-auto">
-              {pageAyahsData.map((ayah) => {
-                const isSelected = activeAyah?.number === ayah.number;
-                return (
-                  <span
-                    key={ayah.number}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActiveAyah(ayah);
-                    }}
-                    className={`inline cursor-pointer transition-colors px-1 rounded ${
-                      isSelected ? 'bg-amber-300/60 text-amber-950 font-bold border-b-2 border-amber-600' : 'hover:bg-amber-100/40 text-slate-900'
-                    }`}
+          <div 
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center"
+            style={{ direction: 'ltr' }}
+          >
+            {Array.from({ length: 604 }, (_, i) => {
+              const pageNum = 604 - i;
+              return (
+                <div 
+                  key={pageNum}
+                  ref={(el) => { pageRefs.current[pageNum] = el; }}
+                  className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0 relative"
+                  style={{ direction: 'rtl' }}
+                >
+                  <div 
+                    className="relative inline-block cursor-pointer"
+                    onClick={pageNum === currentPage ? handleWrapperClick : undefined}
+                    style={{ WebkitTouchCallout: 'none', userSelect: 'none' }}
+                    onContextMenu={(e) => e.preventDefault()}
                   >
-                    {ayah.arabic}{' '}
-                    <span className="text-xs font-sans font-bold text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded-full inline-block mx-1">
-                      {ayah.numberInSurah}
-                    </span>
-                  </span>
-                );
-              })}
-            </div>
-          )}
+                    <img
+                      src={pageImgUrl(pageNum)}
+                      alt={`Page ${pageNum}`}
+                      loading="lazy"
+                      className="max-w-full max-h-[76vh] object-contain shadow-xl rounded-lg bg-white border border-stone-300 pointer-events-auto"
+                      style={{ 
+                        ...PAGE_IMG_FILTER, 
+                        WebkitTouchCallout: 'none', 
+                        WebkitUserSelect: 'none' 
+                      }}
+                    />
 
-          {/* مینیوی چالاک کاتێک ئایەتێک دەستنیشان دەکرێت */}
-          {activeAyah && (
-            <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-[#1b2a22] text-white px-5 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-emerald-600/60 backdrop-blur-md" onClick={(e) => e.stopPropagation()}>
-              <button onClick={() => { saveAyahBookmark(activeAyah); setActiveAyah(null); }} title="خەزنکردن" className="p-1 hover:text-emerald-400">
-                <Bookmark className="w-4 h-4 text-emerald-400" />
-              </button>
-              <div className="w-[1px] h-5 bg-white/20" />
-              <button onClick={() => { shareAyah(activeAyah); setActiveAyah(null); }} title="شەیرکردن" className="p-1 hover:text-blue-400">
-                <Share2 className="w-4 h-4 text-blue-400" />
-              </button>
-              <div className="w-[1px] h-5 bg-white/20" />
-              <button onClick={() => { setActiveAyahTafsir(activeAyah); setActiveAyah(null); }} title="تەفسیر" className="p-1 hover:text-amber-400">
-                <BookOpen className="w-4 h-4 text-amber-400" />
-              </button>
-              <div className="w-[1px] h-5 bg-white/20" />
-              <button onClick={() => { playSingleAyahAudio(activeAyah); setActiveAyah(null); }} title="خوێندنەوە" className="p-1 hover:text-emerald-400">
-                <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
-              </button>
-              <button onClick={() => setActiveAyah(null)} className="mr-2 p-1 hover:bg-white/10 rounded-full text-slate-400">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          )}
+                    {pageNum === currentPage && highlightBox && (
+                      <div 
+                        className="absolute left-0 right-0 bg-amber-400/25 border-y border-amber-500/50 pointer-events-none transition-all duration-150 rounded-sm"
+                        style={{ 
+                          top: `${highlightBox.top}px`, 
+                          height: `${highlightBox.height}px` 
+                        }}
+                      />
+                    )}
+
+                    {pageNum === currentPage && popupPos && activeAyah && (
+                      <div 
+                        className="absolute z-50 bg-[#1b2a22] text-white px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2.5 border border-emerald-600/60 backdrop-blur-md -translate-x-1/2 -translate-y-full animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
+                        style={{ left: popupPos.x, top: popupPos.y }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button
+                          onClick={() => { saveAyahBookmark(activeAyah); setPopupPos(null); setHighlightBox(null); }}
+                          className="p-1 hover:text-emerald-400 transition-colors"
+                          title="خەزنکردن"
+                        >
+                          <Bookmark className="w-4 h-4 text-emerald-400" />
+                        </button>
+
+                        <div className="w-[1px] h-4 bg-white/20" />
+
+                        <button
+                          onClick={() => { shareAyah(activeAyah); setPopupPos(null); setHighlightBox(null); }}
+                          className="p-1 hover:text-blue-400 transition-colors"
+                          title="شەیرکردن"
+                        >
+                          <Share2 className="w-4 h-4 text-blue-400" />
+                        </button>
+
+                        <div className="w-[1px] h-4 bg-white/20" />
+
+                        <button
+                          onClick={() => {
+                            setActiveAyahTafsir(activeAyah);
+                            setPopupPos(null);
+                            setHighlightBox(null);
+                          }}
+                          className="p-1 hover:text-amber-400 transition-colors"
+                          title="تەفسیر"
+                        >
+                          <BookOpen className="w-4 h-4 text-amber-400" />
+                        </button>
+
+                        <div className="w-[1px] h-4 bg-white/20" />
+
+                        <button
+                          onClick={() => { playSingleAyahAudio(activeAyah); setPopupPos(null); setHighlightBox(null); }}
+                          className="p-1 hover:text-emerald-400 transition-colors"
+                          title="خوندنەوە"
+                        >
+                          <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+                        </button>
+
+                        <button
+                          onClick={() => { setPopupPos(null); setHighlightBox(null); }}
+                          className="mr-1 p-0.5 hover:bg-white/10 rounded-full text-slate-400 hover:text-white"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
+                    {pageNum}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 
-      {/* فۆرماتی تەفسیر */}
       {viewMode === 'tafsir' && (
         <div className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white" dir="rtl">
-          {pageAyahsData.map((ayah) => (
-            <div key={ayah.numberInSurah} className="space-y-3 pb-6 border-b border-slate-200 text-right">
-              <div className="flex items-center justify-between">
-                <span className="px-2.5 py-1 rounded-lg bg-slate-100 text-xs font-bold">{ayah.surahNumber}:{ayah.numberInSurah}</span>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => playSingleAyahAudio(ayah)} className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100"><Play className="w-4 h-4" /></button>
-                  <button onClick={() => saveAyahBookmark(ayah)} className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100"><Bookmark className="w-4 h-4" /></button>
-                  <button onClick={() => shareAyah(ayah)} className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100"><Share2 className="w-4 h-4" /></button>
+          {loadingTafsir ? (
+            <div className="text-center py-20">
+              <Loader2 className="w-8 h-8 mx-auto text-amber-600 animate-spin" />
+              <p className="text-xs text-slate-500 pt-2">تەفسیرەکان باردەکرێن...</p>
+            </div>
+          ) : (
+            pageAyahsData.map((ayah) => (
+              <div key={ayah.numberInSurah} className="space-y-3 pb-6 border-b border-slate-200 text-right">
+                <div className="flex items-center justify-between">
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-mono font-bold">
+                    {ayah.surahNumber}:{ayah.numberInSurah}
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => playSingleAyahAudio(ayah)} className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-700">
+                      <Play className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => saveAyahBookmark(ayah)} className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-700">
+                      <Bookmark className="w-4 h-4" />
+                    </button>
+                    <button onClick={() => shareAyah(ayah)} className="p-1.5 rounded-lg bg-slate-100 hover:bg-amber-100 text-slate-700">
+                      <Share2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                <p className="font-quran text-slate-900 text-xl sm:text-2xl leading-loose">
+                  {ayah.arabic}
+                </p>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                  <strong className="text-amber-800 block mb-1">تەفسیری کوردی:</strong>
+                  {ayah.asanTafsir}
                 </div>
               </div>
-              <p className="font-quran-mushaf text-2xl leading-loose">{ayah.arabic}</p>
-              <div className="p-3.5 rounded-2xl bg-slate-50 border text-sm text-slate-700 leading-relaxed">
-                <strong className="text-amber-800 block mb-1">تەفسیری کوردی:</strong>
-                {ayah.asanTafsir}
-              </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       )}
 
-      {/* مۆدالی پیشاندانی تەفسیری تاکەکەسی */}
       {activeAyahTafsir && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border text-right">
-            <div className="flex items-center justify-between border-b pb-3">
-              <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800">ئایەتی {activeAyahTafsir.numberInSurah}</span>
-              <button onClick={() => setActiveAyahTafsir(null)} className="p-1 rounded-full text-slate-500"><X className="w-5 h-5" /></button>
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 text-right">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 text-amber-800 border border-amber-200">
+                ئایەتی {activeAyahTafsir.numberInSurah}
+              </span>
+              <button onClick={() => setActiveAyahTafsir(null)} className="p-1 hover:bg-slate-100 rounded-full text-slate-500">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-            <p className="font-quran-mushaf text-xl leading-relaxed">{activeAyahTafsir.arabic}</p>
-            <div className="bg-slate-50 p-4 rounded-xl border text-sm leading-relaxed text-slate-700">
+            <p className="font-quran text-lg leading-relaxed text-slate-900">
+              {activeAyahTafsir.arabic}
+            </p>
+            <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 text-xs sm:text-sm leading-relaxed text-slate-700">
               <strong className="text-amber-800 block mb-1">تەفسیر:</strong>
               {activeAyahTafsir.asanTafsir}
             </div>
@@ -271,21 +499,39 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* ناویگەیشنی خوارەوە */}
-      <footer className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
+      <footer className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
         showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
       }`} dir="rtl">
-        <div className="flex items-center gap-2">
-          <button onClick={onPrevPage} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold">پەڕەی پێشوو</button>
-          <button onClick={onNextPage} className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded-lg text-xs font-bold">پەڕەی داهاتوو</button>
-        </div>
-        <button onClick={() => setIsRecitersModalOpen(true)} className="text-xs font-bold text-slate-800 hover:text-amber-700">
-          {selectedReciter.name}
+        <button 
+          onClick={() => setIsRecitersModalOpen(true)}
+          className="text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5"
+        >
+          <span>{selectedReciter.name}</span>
         </button>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={togglePageAudio}
+            className="p-2.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-transform active:scale-95 shadow-md"
+          >
+            {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
+          </button>
+        </div>
       </footer>
 
-      <RecitersModal isOpen={isRecitersModalOpen} onClose={() => setIsRecitersModalOpen(false)} selectedReciterId={selectedReciter.id} onSelectReciter={setSelectedReciter} />
-      <TafsirSelectorModal isOpen={isTafsirSelectorOpen} onClose={() => setIsTafsirSelectorOpen(false)} selectedTafsirId={selectedTafsir.id} onSelectTafsir={setSelectedTafsir} />
+      <RecitersModal
+        isOpen={isRecitersModalOpen}
+        onClose={() => setIsRecitersModalOpen(false)}
+        selectedReciterId={selectedReciter.id}
+        onSelectReciter={(r) => setSelectedReciter(r)}
+      />
+
+      <TafsirSelectorModal
+        isOpen={isTafsirSelectorOpen}
+        onClose={() => setIsTafsirSelectorOpen(false)}
+        selectedTafsirId={selectedTafsir.id}
+        onSelectTafsir={(t) => setSelectedTafsir(t)}
+      />
     </div>
   );
 };
