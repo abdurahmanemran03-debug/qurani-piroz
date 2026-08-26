@@ -54,6 +54,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [activeAyah, setActiveAyah] = useState<any | null>(null);
   const [popupPos, setPopupPos] = useState<{ x: number; y: number } | null>(null);
+  const [highlightBox, setHighlightBox] = useState<{ top: number; height: number } | null>(null);
   const [activeAyahTafsir, setActiveAyahTafsir] = useState<any | null>(null);
 
   const [bookmarks, setBookmarks] = useState<number[]>(() => {
@@ -106,7 +107,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             surahName: a.surah.name,
             numberInSurah: a.numberInSurah,
             arabic: a.text,
-            asanTafsir: ku[i]?.text || 'بە ناوی خودای بەخشندەی میهرەبان...'
+            asanTafsir: ku[i]?.text || 'بە ناو خودای بەخشندەی میهرەبان...'
           }));
           setPageAyahsData(combined);
         }
@@ -119,6 +120,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     loadPageVerses();
     setActiveAyah(null);
     setPopupPos(null);
+    setHighlightBox(null);
   }, [currentPage]);
 
   useEffect(() => {
@@ -191,13 +193,14 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   };
 
   const shareAyah = (ayah: any) => {
+    const textToShare = `${ayah.arabic}\n(سورة ${ayah.surahName} - ئایەتی ${ayah.numberInSurah})`;
     if (navigator.share) {
       navigator.share({
         title: 'قورئانی پیرۆز',
-        text: `${ayah.arabic}\n(سورة ${ayah.surahName} - ئایەتی ${ayah.numberInSurah})`,
+        text: textToShare,
       }).catch(() => {});
     } else {
-      navigator.clipboard.writeText(`${ayah.arabic}\n(سورة ${ayah.surahName} - ئایەتی ${ayah.numberInSurah})`);
+      navigator.clipboard.writeText(textToShare);
       alert('دەقی ئایەت کۆپی کرا!');
     }
   };
@@ -217,6 +220,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     if (pageAyahsData.length > 0) {
       const targetAyah = pageAyahsData[index >= 0 ? index : 0];
       setActiveAyah(targetAyah);
+      
+      // دیاریکردنی شوێنی هایلایتەکە بە پێی بەرزی ڕێژەیی ئایەتەکە لەناو وێنەکەدا
+      const itemHeight = rect.height / pageAyahsData.length;
+      const calculatedTop = (index >= 0 ? index : 0) * itemHeight;
+
+      setHighlightBox({
+        top: calculatedTop,
+        height: Math.max(itemHeight, 35) // کەمترین بەرزی بۆ سندوقی هایلایت
+      });
+
       setPopupPos({
         x: Math.min(Math.max(x, 90), rect.width - 90),
         y: Math.max(y - 60, 50)
@@ -239,6 +252,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         scrollInitiatedByUser.current = true;
         setActiveAyah(null);
         setPopupPos(null);
+        setHighlightBox(null);
         if (onJumpToPage) {
           onJumpToPage(targetPage);
         } else if (targetPage > currentPage) {
@@ -311,6 +325,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             setShowControls(prev => !prev);
             setActiveAyah(null);
             setPopupPos(null);
+            setHighlightBox(null);
           }}
         >
           <div 
@@ -328,7 +343,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                   className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0 relative"
                   style={{ direction: 'rtl' }}
                 >
-                  {/* قەدەغەکردنی مینیوی وێنەی براوسەر بە styles ی تایبەت */}
                   <div 
                     className="relative inline-block cursor-pointer"
                     onClick={pageNum === currentPage ? handleWrapperClick : undefined}
@@ -347,7 +361,18 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                       }}
                     />
 
-                    {/* پۆپ-ئاپەکە لە شوێنی کلیکراو */}
+                    {/* سندوقی هایلایت لەسەر ئەو ناوچەیەی کە دەستنیشان کراوە */}
+                    {pageNum === currentPage && highlightBox && (
+                      <div 
+                        className="absolute left-0 right-0 bg-amber-400/25 border-y border-amber-500/50 pointer-events-none transition-all duration-150 rounded-sm"
+                        style={{ 
+                          top: `${highlightBox.top}px`, 
+                          height: `${highlightBox.height}px` 
+                        }}
+                      />
+                    )}
+
+                    {/* مینیوی کارپێکردن (Popup) */}
                     {pageNum === currentPage && popupPos && activeAyah && (
                       <div 
                         className="absolute z-50 bg-[#1b2a22] text-white px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2.5 border border-emerald-600/60 backdrop-blur-md -translate-x-1/2 -translate-y-full animate-in fade-in zoom-in-95 duration-150 pointer-events-auto"
@@ -355,7 +380,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                         onClick={(e) => e.stopPropagation()}
                       >
                         <button
-                          onClick={() => { saveAyahBookmark(activeAyah); setPopupPos(null); }}
+                          onClick={() => { saveAyahBookmark(activeAyah); setPopupPos(null); setHighlightBox(null); }}
                           className="p-1 hover:text-emerald-400 transition-colors"
                           title="خەزنکردن"
                         >
@@ -365,7 +390,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                         <div className="w-[1px] h-4 bg-white/20" />
 
                         <button
-                          onClick={() => { shareAyah(activeAyah); setPopupPos(null); }}
+                          onClick={() => { shareAyah(activeAyah); setPopupPos(null); setHighlightBox(null); }}
                           className="p-1 hover:text-blue-400 transition-colors"
                           title="شەیرکردن"
                         >
@@ -378,6 +403,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                           onClick={() => {
                             setActiveAyahTafsir(activeAyah);
                             setPopupPos(null);
+                            setHighlightBox(null);
                           }}
                           className="p-1 hover:text-amber-400 transition-colors"
                           title="تەفسیر"
@@ -388,15 +414,15 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                         <div className="w-[1px] h-4 bg-white/20" />
 
                         <button
-                          onClick={() => { playSingleAyahAudio(activeAyah); setPopupPos(null); }}
+                          onClick={() => { playSingleAyahAudio(activeAyah); setPopupPos(null); setHighlightBox(null); }}
                           className="p-1 hover:text-emerald-400 transition-colors"
-                          title="خوێندنەوە"
+                          title="خوندنەوە"
                         >
                           <Play className="w-4 h-4 text-emerald-400 fill-emerald-400" />
                         </button>
 
                         <button
-                          onClick={() => setPopupPos(null)}
+                          onClick={() => { setPopupPos(null); setHighlightBox(null); }}
                           className="mr-1 p-0.5 hover:bg-white/10 rounded-full text-slate-400 hover:text-white"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -480,7 +506,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
       }`} dir="rtl">
         <button 
-          onClick={() => setIsRecitersModalOpen(true)}
+          onClick={() => setIsRecitersModalOpten(true)}
           className="text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5"
         >
           <span>{selectedReciter.name}</span>
