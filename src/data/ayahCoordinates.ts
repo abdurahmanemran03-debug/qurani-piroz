@@ -1,11 +1,22 @@
-export interface AyahCoordinate {
-  surah: number;
-  ayah: number;
-  word: number;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
+{
+  "name": "quran-app",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "lucide-react": "^0.475.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-pageflip": "^2.0.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "~5.7.2",
+    "vite": "^6.0.0"
+  }
 }
-
-export const ayahCoordinates: Record<number, AyahCoordinate[]> = {};
