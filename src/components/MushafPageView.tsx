@@ -12,6 +12,48 @@ interface MushafPageViewProps {
   onJumpToPage: (p: number) => void;
 }
 
+// داتای هەموو لاپەڕەکان (نموونەیی - دەتوانیت لە APIـی خۆت بۆ بگۆڕیت)
+const PAGE_AYAHS: Record<number, string[]> = {
+  1: [
+    'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+    'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ',
+    'الرَّحْمَٰنِ الرَّحِيمِ',
+    'مَالِكِ يَوْمِ الدِّينِ',
+    'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ',
+    'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ',
+    'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ',
+  ],
+  2: [
+    'الم',
+    'ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ',
+    'الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ',
+    'وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ',
+    'وَالَّذِينَ يُؤْمِنُونَ بِمَا أُنزِلَ إِلَيْكَ',
+  ],
+  3: [
+    'إِنَّ الَّذِينَ كَفَرُوا سَوَاءٌ عَلَيْهِمْ أَأَنذَرْتَهُمْ أَمْ لَمْ تُنذِرْهُمْ لَا يُؤْمِنُونَ',
+    'خَتَمَ اللَّهُ عَلَىٰ قُلُوبِهِمْ وَعَلَىٰ سَمْعِهِمْ',
+    'وَلَهُمْ عَذَابٌ عَظِيمٌ',
+  ],
+  // زیاد بکە بۆ هەموو لاپەڕەکان
+};
+
+// فانکشن بۆ وەرگرتنی ئایەتەکانی لاپەڕە
+const getAyahsForPage = (page: number): string[] => {
+  // ئەگەر لاپەڕەکە لە داتاکاندا بوو، بیگەڕێنەوە
+  if (PAGE_AYAHS[page]) {
+    return PAGE_AYAHS[page];
+  }
+  
+  // ئەگەر نەبوو، ئایەتی گشتی دروست بکە بە پێی ژمارەی لاپەڕە
+  const count = 5 + (page % 3); // ژمارەی ئایەتەکان دەگۆڕێت
+  const surahName = page < 10 ? 'الفاتحة' : 'البقرة';
+  
+  return Array.from({ length: count }, (_, i) => 
+    `ئایەتی ${i + 1} - لاپەڕە ${page} (سوورەت ${surahName})`
+  );
+};
+
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
   currentPage,
   onNextPage,
@@ -22,40 +64,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [selectedAyah, setSelectedAyah] = useState<string | null>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
-
-  // داتای ئایەتەکان بۆ هەر لاپەڕەیەک (نموونەیی)
-  const getAyahsForPage = (page: number): string[] => {
-    // ئەگەر لاپەڕە ١ بێت، فاتحە نیشان بدە
-    if (page === 1) {
-      return [
-        'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
-        'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ',
-        'الرَّحْمَٰنِ الرَّحِيمِ',
-        'مَالِكِ يَوْمِ الدِّينِ',
-        'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ',
-        'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ',
-        'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ',
-      ];
-    }
-    
-    // لاپەڕە ٢ - دەستپێکی بەقەرە
-    if (page === 2) {
-      return [
-        'الم',
-        'ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ',
-        'الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ',
-      ];
-    }
-
-    // لاپەڕەکانی تر - ئایەتی گشتی
-    return [
-      `ئایەتی ١ لاپەڕەی ${page}`,
-      `ئایەتی ٢ لاپەڕەی ${page}`,
-      `ئایەتی ٣ لاپەڕەی ${page}`,
-      `ئایەتی ٤ لاپەڕەی ${page}`,
-      `ئایەتی ٥ لاپەڕەی ${page}`,
-    ];
-  };
 
   const ayahs = getAyahsForPage(currentPage);
 
@@ -116,9 +124,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
       {/* ناوەڕۆک - ئایەتەکان */}
       <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[60vh]">
-        <h3 className="text-center text-lg font-bold text-amber-800 mb-4 border-b border-amber-100 pb-2">
-          سوورەتەکانی لاپەڕە {currentPage}
-        </h3>
+        <div className="text-center text-sm text-amber-600 mb-4 border-b border-amber-100 pb-3">
+          <span className="font-bold">📖 ژمارەی ئایەتەکان: {ayahs.length}</span>
+        </div>
         
         {ayahs.length === 0 ? (
           <p className="text-center text-slate-400 py-10">هیچ ئایەتێک نییە</p>
