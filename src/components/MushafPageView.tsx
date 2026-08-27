@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface MushafPageViewProps {
   currentPage: number;
@@ -17,144 +17,159 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   onNextPage,
   onPrevPage,
   onBackToIndex,
-  onJumpToPage,
+  showNumbers,
 }) => {
-  const [activeAyah, setActiveAyah] = useState<any>(null);
-  const [highlightStyle, setHighlightStyle] = useState({ top: 0, height: 0 });
-  const [popupStyle, setPopupStyle] = useState({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedAyah, setSelectedAyah] = useState<string | null>(null);
+  const [showPopup, setShowPopup] = useState(false);
+  const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
 
-  // داتای ئایەتەکان بۆ لاپەڕەکە (ئەمە نموونەیە، لە شوێنی خۆی داتاکان دێنن)
-  const pageAyahs = [
-    { id: 1, text: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ' },
-    { id: 2, text: 'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ' },
-    { id: 3, text: 'الرَّحْمَٰنِ الرَّحِيمِ' },
-    { id: 4, text: 'مَالِكِ يَوْمِ الدِّينِ' },
-    { id: 5, text: 'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ' },
-    { id: 6, text: 'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ' },
-    { id: 7, text: 'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ' },
-  ];
-
-  const handleAyahClick = (e: React.MouseEvent, ayah: any, index: number) => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const rect = container.getBoundingClientRect();
-    const total = pageAyahs.length;
-    const padding = 10;
-    const ayahHeight = (rect.height - padding * 2) / total;
-
-    const topPos = padding + index * ayahHeight;
-
-    setActiveAyah(ayah);
-    setHighlightStyle({
-      top: (topPos / rect.height) * 100,
-      height: ((ayahHeight - 4) / rect.height) * 100,
-    });
-
-    const clickX = e.clientX - rect.left;
-    setPopupStyle({
-      x: Math.min(Math.max(clickX - 80, 20), rect.width - 180),
-      y: topPos - 30,
-    });
-  };
-
-  const copyText = (text: string) => {
-    navigator.clipboard.writeText(text);
-    alert('کۆپی کرا! ✅');
-    setActiveAyah(null);
-  };
-
-  const shareText = (text: string) => {
-    if (navigator.share) {
-      navigator.share({ text });
-    } else {
-      copyText(text);
+  // داتای ئایەتەکان بۆ هەر لاپەڕەیەک (نموونەیی)
+  const getAyahsForPage = (page: number): string[] => {
+    // ئەگەر لاپەڕە ١ بێت، فاتحە نیشان بدە
+    if (page === 1) {
+      return [
+        'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+        'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ',
+        'الرَّحْمَٰنِ الرَّحِيمِ',
+        'مَالِكِ يَوْمِ الدِّينِ',
+        'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ',
+        'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ',
+        'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ',
+      ];
     }
-    setActiveAyah(null);
+    
+    // لاپەڕە ٢ - دەستپێکی بەقەرە
+    if (page === 2) {
+      return [
+        'الم',
+        'ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ',
+        'الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ',
+      ];
+    }
+
+    // لاپەڕەکانی تر - ئایەتی گشتی
+    return [
+      `ئایەتی ١ لاپەڕەی ${page}`,
+      `ئایەتی ٢ لاپەڕەی ${page}`,
+      `ئایەتی ٣ لاپەڕەی ${page}`,
+      `ئایەتی ٤ لاپەڕەی ${page}`,
+      `ئایەتی ٥ لاپەڕەی ${page}`,
+    ];
+  };
+
+  const ayahs = getAyahsForPage(currentPage);
+
+  const handleAyahClick = (e: React.MouseEvent, ayah: string) => {
+    setSelectedAyah(ayah);
+    setShowPopup(true);
+    setPopupPos({
+      x: e.clientX - 100,
+      y: e.clientY - 60,
+    });
+  };
+
+  const copyText = () => {
+    if (selectedAyah) {
+      navigator.clipboard.writeText(selectedAyah);
+      alert('✅ کۆپی کرا!');
+      setShowPopup(false);
+    }
+  };
+
+  const shareText = () => {
+    if (selectedAyah) {
+      if (navigator.share) {
+        navigator.share({ text: selectedAyah });
+      } else {
+        copyText();
+      }
+      setShowPopup(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-[#f5f0e8] p-4">
       {/* سەرپەڕە */}
       <div className="flex items-center justify-between mb-4 bg-white/80 p-3 rounded-xl shadow-sm">
-        <button onClick={onBackToIndex} className="text-amber-700 text-sm font-bold">
+        <button 
+          onClick={onBackToIndex} 
+          className="text-amber-700 text-sm font-bold px-3 py-1 hover:bg-amber-50 rounded-lg"
+        >
           ← پێڕست
         </button>
         <span className="text-sm font-bold text-slate-700">لاپەڕە {currentPage}</span>
-        <div className="flex gap-1">
-          <button onClick={onPrevPage} className="px-2 py-1 bg-amber-100 rounded">‹</button>
-          <button onClick={onNextPage} className="px-2 py-1 bg-amber-100 rounded">›</button>
+        <div className="flex gap-2">
+          <button 
+            onClick={onPrevPage} 
+            className="px-3 py-1 bg-amber-100 hover:bg-amber-200 rounded-lg text-sm font-bold"
+          >
+            ‹
+          </button>
+          <button 
+            onClick={onNextPage} 
+            className="px-3 py-1 bg-amber-100 hover:bg-amber-200 rounded-lg text-sm font-bold"
+          >
+            ›
+          </button>
         </div>
       </div>
 
-      {/* ناوەڕۆک */}
-      <div
-        ref={containerRef}
-        className="relative bg-white rounded-2xl shadow-lg p-5 min-h-[70vh]"
-      >
-        {/* هایلایت */}
-        <div
-          className="absolute pointer-events-none transition-all duration-300 bg-amber-200/40 border-r-4 border-amber-500 rounded-r-xl"
-          style={{
-            top: `${highlightStyle.top}%`,
-            height: `${highlightStyle.height}%`,
-            width: '96%',
-            left: '2%',
-            opacity: activeAyah ? 1 : 0,
-          }}
-        />
-
-        {/* ئایەتەکان */}
-        <div className="relative z-10 space-y-2">
-          {pageAyahs.map((ayah, index) => (
-            <div
-              key={ayah.id}
-              className="p-3 cursor-pointer hover:bg-amber-50/50 rounded-xl transition-all"
-              onClick={(e) => handleAyahClick(e, ayah, index)}
-            >
-              <p className="text-right text-xl font-serif leading-loose text-slate-800">
-                {ayah.text}
-              </p>
-              {showNumbers && (
-                <span className="text-xs text-amber-600 font-bold mr-2">
-                  {index + 1}
-                </span>
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* پۆپ-ئەپ */}
-        {activeAyah && (
-          <div
-            className="fixed z-50 bg-white shadow-2xl rounded-2xl p-3 flex gap-2 border border-amber-200/80 backdrop-blur-sm"
-            style={{
-              left: popupStyle.x,
-              top: popupStyle.y,
-            }}
-          >
-            <button
-              onClick={() => copyText(activeAyah.text)}
-              className="px-4 py-2 bg-amber-100 hover:bg-amber-200 rounded-xl text-sm font-bold text-amber-800 transition-all"
-            >
-              📋 کۆپی
-            </button>
-            <button
-              onClick={() => shareText(activeAyah.text)}
-              className="px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded-xl text-sm font-bold text-blue-800 transition-all"
-            >
-              📤 هاوبەش
-            </button>
-            <button
-              onClick={() => setActiveAyah(null)}
-              className="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm text-slate-600"
-            >
-              ✕
-            </button>
+      {/* ناوەڕۆک - ئایەتەکان */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[60vh]">
+        <h3 className="text-center text-lg font-bold text-amber-800 mb-4 border-b border-amber-100 pb-2">
+          سوورەتەکانی لاپەڕە {currentPage}
+        </h3>
+        
+        {ayahs.length === 0 ? (
+          <p className="text-center text-slate-400 py-10">هیچ ئایەتێک نییە</p>
+        ) : (
+          <div className="space-y-2">
+            {ayahs.map((ayah, index) => (
+              <div
+                key={index}
+                onClick={(e) => handleAyahClick(e, ayah)}
+                className={`p-4 rounded-xl cursor-pointer transition-all hover:bg-amber-50 ${
+                  selectedAyah === ayah ? 'bg-amber-100 border-r-4 border-amber-500' : ''
+                }`}
+              >
+                <p className="text-right text-xl font-serif leading-loose text-slate-800">
+                  {ayah}
+                </p>
+                {showNumbers && (
+                  <span className="text-xs text-amber-600 mr-2">({index + 1})</span>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>
+
+      {/* پۆپ-ئەپی کۆپی/هاوبەش */}
+      {showPopup && selectedAyah && (
+        <div
+          className="fixed bg-white shadow-2xl rounded-2xl p-3 flex gap-2 z-50 border border-amber-200"
+          style={{ left: popupPos.x, top: popupPos.y }}
+        >
+          <button
+            onClick={copyText}
+            className="px-4 py-2 bg-amber-100 hover:bg-amber-200 rounded-xl text-sm font-bold text-amber-800 transition-all"
+          >
+            📋 کۆپی
+          </button>
+          <button
+            onClick={shareText}
+            className="px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded-xl text-sm font-bold text-blue-800 transition-all"
+          >
+            📤 هاوبەش
+          </button>
+          <button
+            onClick={() => setShowPopup(false)}
+            className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm text-gray-600"
+          >
+            ✕
+          </button>
+        </div>
+      )}
     </div>
   );
 };
