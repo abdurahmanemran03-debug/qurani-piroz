@@ -12,39 +12,28 @@ interface MushafPageViewProps {
   onJumpToPage: (p: number) => void;
 }
 
-// داتای ئایەتەکان بە شێوازی موسحەفی مەدینە
-const PAGE_AYAHS: Record<number, Array<{ text: string; number: number }>> = {
+// داتای ئایەتەکان
+const PAGE_AYAHS: Record<number, string[]> = {
   1: [
-    { text: 'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ', number: 1 },
-    { text: 'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ', number: 2 },
-    { text: 'الرَّحْمَٰنِ الرَّحِيمِ', number: 3 },
-    { text: 'مَالِكِ يَوْمِ الدِّينِ', number: 4 },
-    { text: 'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ', number: 5 },
-    { text: 'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ', number: 6 },
-    { text: 'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ', number: 7 },
+    'بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ',
+    'الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ',
+    'الرَّحْمَٰنِ الرَّحِيمِ',
+    'مَالِكِ يَوْمِ الدِّينِ',
+    'إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ',
+    'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ',
+    'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ',
   ],
-  2: [
-    { text: 'الم', number: 1 },
-    { text: 'ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ', number: 2 },
-    { text: 'الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ', number: 3 },
-    { text: 'وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ', number: 4 },
-    { text: 'وَالَّذِينَ يُؤْمِنُونَ بِمَا أُنزِلَ إِلَيْكَ', number: 5 },
-  ],
-  // زیاد بکە بۆ هەموو لاپەڕەکان...
+  // زیاد بکە بۆ لاپەڕەکانی تر...
 };
 
-// فانکشن بۆ وەرگرتنی ئایەتەکان
-const getAyahsForPage = (page: number): Array<{ text: string; number: number }> => {
+const getAyahsForPage = (page: number): string[] => {
   if (PAGE_AYAHS[page]) {
     return PAGE_AYAHS[page];
   }
-  
-  // ئەگەر داتا نەبوو، ئایەتی گشتی دروست بکە
   const count = 5 + (page % 3);
-  return Array.from({ length: count }, (_, i) => ({
-    text: `ئایەتی ${i + 1} - لاپەڕە ${page}`,
-    number: i + 1,
-  }));
+  return Array.from({ length: count }, (_, i) => 
+    `ئایەتی ${i + 1} - لاپەڕە ${page}`
+  );
 };
 
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
@@ -54,13 +43,13 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   onBackToIndex,
   showNumbers,
 }) => {
-  const [selectedAyah, setSelectedAyah] = useState<{ text: string; number: number } | null>(null);
+  const [selectedAyah, setSelectedAyah] = useState<string | null>(null);
   const [showPopup, setShowPopup] = useState(false);
   const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
 
   const ayahs = getAyahsForPage(currentPage);
 
-  const handleAyahClick = (e: React.MouseEvent, ayah: { text: string; number: number }) => {
+  const handleAyahClick = (e: React.MouseEvent, ayah: string) => {
     setSelectedAyah(ayah);
     setShowPopup(true);
     setPopupPos({
@@ -71,7 +60,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const copyText = () => {
     if (selectedAyah) {
-      navigator.clipboard.writeText(selectedAyah.text);
+      navigator.clipboard.writeText(selectedAyah);
       alert('✅ کۆپی کرا!');
       setShowPopup(false);
     }
@@ -80,7 +69,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const shareText = () => {
     if (selectedAyah) {
       if (navigator.share) {
-        navigator.share({ text: selectedAyah.text });
+        navigator.share({ text: selectedAyah });
       } else {
         copyText();
       }
@@ -90,44 +79,36 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   return (
     <div className="min-h-screen bg-[#f5f0e8] p-4">
-      {/* سەرپەڕە - بە شێوازی موسحەف */}
-      <div className="flex items-center justify-between mb-4 bg-[#8B7355]/10 p-3 rounded-xl shadow-sm border border-[#8B7355]/20">
+      {/* سەرپەڕە */}
+      <div className="flex items-center justify-between mb-4 bg-white/80 p-3 rounded-xl shadow-sm">
         <button 
           onClick={onBackToIndex} 
-          className="text-[#8B7355] text-sm font-bold px-3 py-1 hover:bg-[#8B7355]/10 rounded-lg"
+          className="text-amber-700 text-sm font-bold px-3 py-1 hover:bg-amber-50 rounded-lg"
         >
           ← فهرهه‌ند
         </button>
-        <div className="text-center">
-          <span className="text-sm font-bold text-[#8B7355]">لاپەڕە {currentPage}</span>
-        </div>
+        <span className="text-sm font-bold text-slate-700">لاپەڕە {currentPage}</span>
         <div className="flex gap-2">
           <button 
             onClick={onPrevPage} 
-            className="px-3 py-1 bg-[#8B7355]/20 hover:bg-[#8B7355]/30 rounded-lg text-sm font-bold text-[#8B7355]"
+            className="px-3 py-1 bg-amber-100 hover:bg-amber-200 rounded-lg text-sm font-bold"
           >
             ‹
           </button>
           <button 
             onClick={onNextPage} 
-            className="px-3 py-1 bg-[#8B7355]/20 hover:bg-[#8B7355]/30 rounded-lg text-sm font-bold text-[#8B7355]"
+            className="px-3 py-1 bg-amber-100 hover:bg-amber-200 rounded-lg text-sm font-bold"
           >
             ›
           </button>
         </div>
       </div>
 
-      {/* ناوەڕۆک - ئایەتەکان بە شێوازی موسحەفی مەدینە */}
-      <div className="bg-[#fcf8f0] rounded-2xl shadow-lg p-6 min-h-[60vh] border border-[#8B7355]/10">
-        {/* ناوی سوورەت */}
-        <div className="text-center mb-6 border-b-2 border-[#8B7355]/20 pb-4">
-          <h3 className="text-2xl font-bold text-[#5C4033]">سوورەتی الفاتحة</h3>
-          <p className="text-sm text-[#8B7355]">بەرەی 1، جوزئی 1</p>
-        </div>
-        
+      {/* ناوەڕۆک - شێوازی موسحەفی مەدینە */}
+      <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[60vh]">
         {/* بسم الله */}
         <div className="text-center mb-6">
-          <p className="text-3xl font-serif text-[#5C4033] font-bold">
+          <p className="text-3xl font-serif text-slate-800 font-bold">
             بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
           </p>
         </div>
@@ -140,17 +121,19 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
               <div
                 key={index}
                 onClick={(e) => handleAyahClick(e, ayah)}
-                className={`group p-3 rounded-xl cursor-pointer transition-all hover:bg-[#8B7355]/10 ${
-                  selectedAyah?.number === ayah.number ? 'bg-[#8B7355]/20 border-r-4 border-[#8B7355]' : ''
+                className={`group p-3 rounded-xl cursor-pointer transition-all hover:bg-amber-50 ${
+                  selectedAyah === ayah ? 'bg-amber-100 border-r-4 border-amber-500' : ''
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  {/* ژمارەی ئایەت بە شێوازی موسحەف (لە ناو دەوری ٢٥دا) */}
-                  <span className="flex-shrink-0 w-8 h-8 flex items-center justify-center bg-[#8B7355] text-white rounded-full text-xs font-bold">
-                    {ayah.number}
-                  </span>
-                  <p className="flex-1 text-right text-2xl font-serif leading-loose text-[#2C1810]">
-                    {ayah.text}
+                  {/* ژمارەی ئایەت وەک موسحەفی مەدینە (لەسەر هێڵ) */}
+                  {showNumbers && (
+                    <span className="flex-shrink-0 text-amber-700 font-bold text-sm mt-1 min-w-[30px]">
+                      {index + 1}.
+                    </span>
+                  )}
+                  <p className="flex-1 text-right text-2xl font-serif leading-loose text-slate-800">
+                    {ayah}
                   </p>
                 </div>
               </div>
@@ -162,12 +145,12 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       {/* پۆپ-ئەپی کۆپی/هاوبەش */}
       {showPopup && selectedAyah && (
         <div
-          className="fixed bg-white shadow-2xl rounded-2xl p-3 flex gap-2 z-50 border border-[#8B7355]/30"
+          className="fixed bg-white shadow-2xl rounded-2xl p-3 flex gap-2 z-50 border border-amber-200"
           style={{ left: popupPos.x, top: popupPos.y }}
         >
           <button
             onClick={copyText}
-            className="px-4 py-2 bg-[#8B7355]/20 hover:bg-[#8B7355]/30 rounded-xl text-sm font-bold text-[#5C4033] transition-all"
+            className="px-4 py-2 bg-amber-100 hover:bg-amber-200 rounded-xl text-sm font-bold text-amber-800 transition-all"
           >
             📋 کۆپی
           </button>
