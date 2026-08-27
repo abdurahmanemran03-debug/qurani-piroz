@@ -65,6 +65,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [selectedAyah, setSelectedAyah] = useState<{ ayah: any; topPercent: number } | null>(null);
+  const [highlightedAyah, setHighlightedAyah] = useState<{ key: string; top: number } | null>(null);
   const [tafsirOpenKey, setTafsirOpenKey] = useState<string | null>(null);
   const [playingAyahKey, setPlayingAyahKey] = useState<string | null>(null);
 
@@ -144,6 +145,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   useEffect(() => {
     setSelectedAyah(null);
+    setHighlightedAyah(null);
     setTafsirOpenKey(null);
   }, [currentPage]);
 
@@ -319,7 +321,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       {viewMode === 'mushaf' && (
         <div 
           className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
-          onClick={() => { setShowControls(prev => !prev); setSelectedAyah(null); setTafsirOpenKey(null); }}
+          onClick={() => { setShowControls(prev => !prev); setSelectedAyah(null); setHighlightedAyah(null); setTafsirOpenKey(null); }}
         >
           <div 
             ref={scrollContainerRef}
@@ -354,7 +356,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                     />
 
                     {isActivePage && ayahsOnThisPage.length > 0 && (
-                      <div className="absolute inset-0 flex flex-col">
+                      <div className="absolute inset-0 flex flex-col z-10">
                         {ayahsOnThisPage.map((a) => {
                           const heightPercent = (a.arabic.length / totalChars) * 100;
                           return (
@@ -366,13 +368,27 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                                 const parentRect = e.currentTarget.parentElement!.getBoundingClientRect();
                                 const topPercent = ((rect.top - parentRect.top) / parentRect.height) * 100;
                                 setSelectedAyah({ ayah: a, topPercent });
+                                setHighlightedAyah({ key: ayahKey(a), top: topPercent });
                                 setTafsirOpenKey(null);
                               }}
                               style={{ height: `${heightPercent}%` }}
-                              className="w-full cursor-pointer"
+                              className="w-full cursor-pointer relative z-10 hover:bg-blue-100/10 transition-all"
                             />
                           );
                         })}
+                      </div>
+                    )}
+
+                    {/* 🎯 هایلایتی شینی کاڵ */}
+                    {isActivePage && highlightedAyah && (
+                      <div
+                        className="absolute inset-x-0 pointer-events-none transition-all duration-300 z-20"
+                        style={{
+                          top: `${Math.max(highlightedAyah.top - 1.5, 0)}%`,
+                          height: '5%',
+                        }}
+                      >
+                        <div className="w-full h-full bg-blue-300/50 rounded-lg shadow-lg shadow-blue-200/30 border border-blue-400/30 animate-pulse" />
                       </div>
                     )}
 
@@ -383,10 +399,10 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                         onClick={(e) => e.stopPropagation()}
                       >
                         <div className="flex flex-col items-center gap-1.5">
-                          <div className="flex items-center gap-1 bg-emerald-800 text-white rounded-2xl shadow-xl px-1.5 py-1.5">
+                          <div className="flex items-center gap-1 bg-blue-600 text-white rounded-2xl shadow-xl px-1.5 py-1.5">
                             <button
                               onClick={() => playAyahAudio(selectedAyah.ayah)}
-                              className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                              className="p-2 rounded-xl hover:bg-blue-500 transition-colors"
                               title="گوێگرتن"
                             >
                               {playingAyahKey === ayahKey(selectedAyah.ayah)
@@ -395,21 +411,21 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                             </button>
                             <button
                               onClick={() => setTafsirOpenKey(prev => prev === ayahKey(selectedAyah.ayah) ? null : ayahKey(selectedAyah.ayah))}
-                              className={`p-2 rounded-xl transition-colors ${tafsirOpenKey === ayahKey(selectedAyah.ayah) ? 'bg-emerald-600' : 'hover:bg-emerald-700'}`}
+                              className={`p-2 rounded-xl transition-colors ${tafsirOpenKey === ayahKey(selectedAyah.ayah) ? 'bg-blue-500' : 'hover:bg-blue-500'}`}
                               title="تەفسیر"
                             >
                               <Globe className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => shareAyah(selectedAyah.ayah)}
-                              className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                              className="p-2 rounded-xl hover:bg-blue-500 transition-colors"
                               title="ناردن"
                             >
                               <Share2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => toggleAyahBookmark(selectedAyah.ayah)}
-                              className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                              className="p-2 rounded-xl hover:bg-blue-500 transition-colors"
                               title="خەزنکردن"
                             >
                               {isAyahBookmarked(selectedAyah.ayah)
@@ -417,8 +433,8 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                                 : <Bookmark className="w-4 h-4" />}
                             </button>
                             <button
-                              onClick={() => { setSelectedAyah(null); setTafsirOpenKey(null); }}
-                              className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                              onClick={() => { setSelectedAyah(null); setHighlightedAyah(null); setTafsirOpenKey(null); }}
+                              className="p-2 rounded-xl hover:bg-blue-500 transition-colors"
                               title="داخستن"
                             >
                               <X className="w-4 h-4" />
