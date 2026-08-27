@@ -23,17 +23,17 @@ const PAGE_AYAHS: Record<number, string[]> = {
     'اهْدِنَا الصِّرَاطَ الْمُسْتَقِيمَ',
     'صِرَاطَ الَّذِينَ أَنْعَمْتَ عَلَيْهِمْ',
   ],
-  // زیاد بکە بۆ لاپەڕەکانی تر...
+  2: [
+    'الم',
+    'ذَٰلِكَ الْكِتَابُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ',
+    'الَّذِينَ يُؤْمِنُونَ بِالْغَيْبِ وَيُقِيمُونَ الصَّلَاةَ',
+    'وَمِمَّا رَزَقْنَاهُمْ يُنفِقُونَ',
+  ],
 };
 
 const getAyahsForPage = (page: number): string[] => {
-  if (PAGE_AYAHS[page]) {
-    return PAGE_AYAHS[page];
-  }
-  const count = 5 + (page % 3);
-  return Array.from({ length: count }, (_, i) => 
-    `ئایەتی ${i + 1} - لاپەڕە ${page}`
-  );
+  if (PAGE_AYAHS[page]) return PAGE_AYAHS[page];
+  return Array.from({ length: 7 }, (_, i) => `ئایەتی ${i + 1}`);
 };
 
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
@@ -43,129 +43,113 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   onBackToIndex,
   showNumbers,
 }) => {
-  const [selectedAyah, setSelectedAyah] = useState<string | null>(null);
-  const [showPopup, setShowPopup] = useState(false);
-  const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
-
   const ayahs = getAyahsForPage(currentPage);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [showCopied, setShowCopied] = useState(false);
 
-  const handleAyahClick = (e: React.MouseEvent, ayah: string) => {
-    setSelectedAyah(ayah);
-    setShowPopup(true);
-    setPopupPos({
-      x: e.clientX - 100,
-      y: e.clientY - 60,
-    });
-  };
-
-  const copyText = () => {
-    if (selectedAyah) {
-      navigator.clipboard.writeText(selectedAyah);
-      alert('✅ کۆپی کرا!');
-      setShowPopup(false);
-    }
-  };
-
-  const shareText = () => {
-    if (selectedAyah) {
-      if (navigator.share) {
-        navigator.share({ text: selectedAyah });
-      } else {
-        copyText();
-      }
-      setShowPopup(false);
-    }
+  const handleAyahClick = (text: string, index: number) => {
+    setSelectedIndex(index);
+    navigator.clipboard.writeText(text);
+    setShowCopied(true);
+    setTimeout(() => {
+      setShowCopied(false);
+      setSelectedIndex(null);
+    }, 1200);
   };
 
   return (
-    <div className="min-h-screen bg-[#f5f0e8] p-4">
-      {/* سەرپەڕە */}
-      <div className="flex items-center justify-between mb-4 bg-white/80 p-3 rounded-xl shadow-sm">
+    <div className="min-h-screen bg-[#f0ebe3] p-4">
+      {/* سەرپەڕە - شیک و جوان */}
+      <div className="flex items-center justify-between mb-5 bg-white/90 backdrop-blur-sm p-3.5 rounded-2xl shadow-md border border-[#d4c5b0]/30">
         <button 
           onClick={onBackToIndex} 
-          className="text-amber-700 text-sm font-bold px-3 py-1 hover:bg-amber-50 rounded-lg"
+          className="text-[#7a6548] text-sm font-bold px-4 py-1.5 hover:bg-[#7a6548]/10 rounded-xl transition-all"
         >
-          ← فهرهه‌ند
+          ← پێڕست
         </button>
-        <span className="text-sm font-bold text-slate-700">لاپەڕە {currentPage}</span>
+        <div className="text-center">
+          <span className="text-sm font-bold text-[#7a6548]">لاپەڕە {currentPage}</span>
+        </div>
         <div className="flex gap-2">
           <button 
             onClick={onPrevPage} 
-            className="px-3 py-1 bg-amber-100 hover:bg-amber-200 rounded-lg text-sm font-bold"
+            className="px-4 py-1.5 bg-[#7a6548]/15 hover:bg-[#7a6548]/25 rounded-xl text-sm font-bold text-[#7a6548] transition-all"
           >
             ‹
           </button>
           <button 
             onClick={onNextPage} 
-            className="px-3 py-1 bg-amber-100 hover:bg-amber-200 rounded-lg text-sm font-bold"
+            className="px-4 py-1.5 bg-[#7a6548]/15 hover:bg-[#7a6548]/25 rounded-xl text-sm font-bold text-[#7a6548] transition-all"
           >
             ›
           </button>
         </div>
       </div>
 
-      {/* ناوەڕۆک - شێوازی موسحەفی مەدینە */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 min-h-[60vh]">
-        {/* بسم الله */}
-        <div className="text-center mb-6">
-          <p className="text-3xl font-serif text-slate-800 font-bold">
-            بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-          </p>
-        </div>
+      {/* 🎯 ناوەڕۆک - وێنە + تێکست + هایلایتی شینی جوان */}
+      <div className="relative bg-white rounded-3xl shadow-xl overflow-hidden border border-[#d4c5b0]/20">
         
-        {ayahs.length === 0 ? (
-          <p className="text-center text-slate-400 py-10">هیچ ئایەتێک نییە</p>
-        ) : (
-          <div className="space-y-3">
+        {/* وێنەی موسحەف */}
+        <img 
+          src="/mushaf-page-1.jpg"
+          alt="موسحەفی مەدینە"
+          className="w-full h-auto"
+          draggable={false}
+        />
+        
+        {/* چینی تێکست - بە هایلایتی شینی جوان */}
+        <div className="absolute inset-0 flex flex-col px-8 py-12">
+          {/* بسم الله */}
+          <div className="text-center mb-3">
+            <p className="text-3xl font-serif text-[#1a2a3a]/80 font-bold select-none tracking-wide">
+              بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+            </p>
+          </div>
+          
+          {/* ئایەتەکان */}
+          <div className="flex-1 flex flex-col justify-center space-y-0.5 px-6">
             {ayahs.map((ayah, index) => (
               <div
                 key={index}
-                onClick={(e) => handleAyahClick(e, ayah)}
-                className={`group p-3 rounded-xl cursor-pointer transition-all hover:bg-amber-50 ${
-                  selectedAyah === ayah ? 'bg-amber-100 border-r-4 border-amber-500' : ''
-                }`}
+                onClick={() => handleAyahClick(ayah, index)}
+                className={`
+                  group flex items-start gap-2.5 cursor-pointer rounded-xl p-1.5 transition-all duration-300
+                  ${selectedIndex === index 
+                    ? 'bg-blue-300/50 shadow-lg shadow-blue-200/30' 
+                    : 'hover:bg-blue-200/20'
+                  }
+                `}
               >
-                <div className="flex items-start gap-3">
-                  {/* ژمارەی ئایەت وەک موسحەفی مەدینە (لەسەر هێڵ) */}
-                  {showNumbers && (
-                    <span className="flex-shrink-0 text-amber-700 font-bold text-sm mt-1 min-w-[30px]">
-                      {index + 1}.
-                    </span>
-                  )}
-                  <p className="flex-1 text-right text-2xl font-serif leading-loose text-slate-800">
-                    {ayah}
-                  </p>
-                </div>
+                {showNumbers && (
+                  <span className={`
+                    text-sm font-bold min-w-[32px] select-none transition-all duration-300
+                    ${selectedIndex === index 
+                      ? 'text-blue-700' 
+                      : 'text-[#7a6548]/60 group-hover:text-[#7a6548]/80'
+                    }
+                  `}>
+                    {index + 1}.
+                  </span>
+                )}
+                <p className={`
+                  text-2xl font-serif leading-loose select-text transition-all duration-300
+                  ${selectedIndex === index 
+                    ? 'text-[#0a1a2a] font-bold' 
+                    : 'text-[#1a2a3a]/85 group-hover:text-[#1a2a3a]'
+                  }
+                `}>
+                  {ayah}
+                </p>
               </div>
             ))}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* پۆپ-ئەپی کۆپی/هاوبەش */}
-      {showPopup && selectedAyah && (
-        <div
-          className="fixed bg-white shadow-2xl rounded-2xl p-3 flex gap-2 z-50 border border-amber-200"
-          style={{ left: popupPos.x, top: popupPos.y }}
-        >
-          <button
-            onClick={copyText}
-            className="px-4 py-2 bg-amber-100 hover:bg-amber-200 rounded-xl text-sm font-bold text-amber-800 transition-all"
-          >
-            📋 کۆپی
-          </button>
-          <button
-            onClick={shareText}
-            className="px-4 py-2 bg-blue-100 hover:bg-blue-200 rounded-xl text-sm font-bold text-blue-800 transition-all"
-          >
-            📤 هاوبەش
-          </button>
-          <button
-            onClick={() => setShowPopup(false)}
-            className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-sm text-gray-600"
-          >
-            ✕
-          </button>
+      {/* پەیامی کۆپی - جوان و شیک */}
+      {showCopied && (
+        <div className="fixed bottom-8 left-1/2 -translate-x-1/2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3.5 rounded-2xl shadow-2xl text-sm font-bold z-50 animate-bounce">
+          ✅ ئایەت کۆپی کرا!
         </div>
       )}
     </div>
