@@ -24,6 +24,11 @@ interface MushafPageViewProps {
 const formatPageNum = (n: number) => String(n).padStart(3, '0');
 const pageImgUrl = (n: number) => `https://android.quran.com/data/width_1260/page${formatPageNum(n)}.png`;
 
+const AYAH_CANVAS_WIDTH = 1260;
+const AYAH_CANVAS_HEIGHT = 2020;
+
+type AyahBox = { s: number; a: number; l: number; x0: number; x1: number; y0: number; y1: number };
+
 const PAGE_IMG_FILTER = {
   filter: 'grayscale(100%) contrast(115%) brightness(102%)',
   mixBlendMode: 'multiply' as const,
@@ -67,6 +72,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [selectedAyah, setSelectedAyah] = useState<{ ayah: any; topPercent: number } | null>(null);
   const [tafsirOpenKey, setTafsirOpenKey] = useState<string | null>(null);
   const [playingAyahKey, setPlayingAyahKey] = useState<string | null>(null);
+
+  const [allAyahData, setAllAyahData] = useState<Record<string, AyahBox[]> | null>(null);
+  const ayahBoxes = allAyahData?.[String(currentPage)] || [];
+
+  useEffect(() => {
+    fetch(`${import.meta.env.BASE_URL}ayahdata.json`)
+      .then(res => res.json())
+      .then(data => setAllAyahData(data))
+      .catch(() => setAllAyahData({}));
+  }, []);
 
   const [ayahBookmarks, setAyahBookmarks] = useState<string[]>(() => {
     try {
@@ -331,9 +346,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
               const pageNum = 604 - i;
               const isActivePage = pageNum === currentPage;
 
-              const ayahsOnThisPage = isActivePage ? pageAyahsData : [];
-              const totalChars = ayahsOnThisPage.reduce((sum, a) => sum + a.arabic.length, 0) || 1;
-
               return (
                 <div 
                   key={pageNum}
@@ -343,7 +355,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                 >
                   <div
                     className="relative max-h-[76vh]"
-                    style={{ aspectRatio: '1260 / 1980' }}
+                    style={{ aspectRatio: `${AYAH_CANVAS_WIDTH} / ${AYAH_CANVAS_HEIGHT}` }}
                   >
                     <img
                       src={pageImgUrl(pageNum)}
@@ -353,23 +365,35 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                       style={PAGE_IMG_FILTER}
                     />
 
-                    {isActivePage && ayahsOnThisPage.length > 0 && (
-                      <div className="absolute inset-0 flex flex-col">
-                        {ayahsOnThisPage.map((a) => {
-                          const heightPercent = (a.arabic.length / totalChars) * 100;
+                    {isActivePage && ayahBoxes.length > 0 && (
+                      <div className="absolute inset-0">
+                        {ayahBoxes.map((box, idx) => {
+                          const matchedAyah = pageAyahsData.find(
+                            (a) => a.surahNumber === box.s && a.numberInSurah === box.a
+                          );
+                          if (!matchedAyah) return null;
+
+                          const leftPct = (box.x0 / AYAH_CANVAS_WIDTH) * 100;
+                          const widthPct = ((box.x1 - box.x0) / AYAH_CANVAS_WIDTH) * 100;
+                          const topPct = (box.y0 / AYAH_CANVAS_HEIGHT) * 100;
+                          const heightPct = ((box.y1 - box.y0) / AYAH_CANVAS_HEIGHT) * 100;
+
                           return (
                             <div
-                              key={ayahKey(a)}
+                              key={`${box.s}-${box.a}-${box.l}-${idx}`}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                                const parentRect = e.currentTarget.parentElement!.getBoundingClientRect();
-                                const topPercent = ((rect.top - parentRect.top) / parentRect.height) * 100;
-                                setSelectedAyah({ ayah: a, topPercent });
+                                setSelectedAyah({ ayah: matchedAyah, topPercent: topPct });
                                 setTafsirOpenKey(null);
                               }}
-                              style={{ height: `${heightPercent}%` }}
-                              className="w-full cursor-pointer"
+                              style={{
+                                position: 'absolute',
+                                left: `${leftPct}%`,
+                                top: `${topPct}%`,
+                                width: `${widthPct}%`,
+                                height: `${heightPct}%`,
+                              }}
+                              className="cursor-pointer"
                             />
                           );
                         })}
