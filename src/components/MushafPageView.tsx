@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   ArrowRight, Loader2, BookOpen, Play, Pause, 
-  Bookmark, BookmarkCheck, Globe, Share2, X
+  Bookmark, BookmarkCheck, Globe, X
 } from 'lucide-react';
 import { BgThemeType, AppLangType, SurahItem } from '../types';
 import { ALL_RECITERS_DIRECTORY, ReciterItem } from '../data/recitersList';
@@ -27,22 +27,10 @@ const pageImgUrl = (n: number) => `https://android.quran.com/data/width_1260/pag
 const AYAH_CANVAS_WIDTH = 1260;
 const AYAH_CANVAS_HEIGHT = 2020;
 
-// نموونەی بۆکسەکانی لاپەڕەی ١ (دەتوانیت بۆ لاپەڕەکانی تریش لێرە داتاکانیان زیاد بکەیت یان فایلی کۆئۆردیناتەکەتی بۆ ڕێک بخەین)
-const PAGE_BOXES_DATA: Record<number, Array<{ s: number; a: number; l: number; x0: number; x1: number; y0: number; y1: number }>> = {
-  1: [
-    { s: 1, a: 1, l: 2, x0: 410, x1: 854, y0: 254, y1: 333 },
-    { s: 1, a: 2, l: 3, x0: 318, x1: 945, y0: 365, y1: 442 },
-    { s: 1, a: 3, l: 4, x0: 648, x1: 1009, y0: 474, y1: 552 },
-    { s: 1, a: 4, l: 4, x0: 254, x1: 649, y0: 474, y1: 548 },
-    { s: 1, a: 5, l: 5, x0: 387, x1: 999, y0: 579, y1: 658 },
-    { s: 1, a: 6, l: 5, x0: 268, x1: 388, y0: 582, y1: 656 },
-    { s: 1, a: 6, l: 6, x0: 598, x1: 1004, y0: 684, y1: 786 },
-    { s: 1, a: 7, l: 6, x0: 267, x1: 599, y0: 680, y1: 767 },
-    { s: 1, a: 7, l: 7, x0: 363, x1: 899, y0: 797, y1: 889 },
-    { s: 1, a: 7, l: 8, x0: 472, x1: 788, y0: 907, y1: 985 },
-  ],
-  // دەتوانیت لێرە لاپەڕەکانی تریش زیاد بکەیت بە هەمان شێواز
-};
+type AyahBoxRaw = [number, number, number, number, number, number, number];
+
+// فایلی چەنکەکان کە داتای هەموو لاپەڕەکانی تێدایە
+const AYAH_DATA_FILES = ['ayahdata-chunk1.json', 'ayahdata-chunk2.json', 'ayahdata-chunk3.json', 'ayahdata-chunk4.json'];
 
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
   currentPage,
@@ -79,7 +67,19 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [isPlayingAudio, setIsPlayingAudio] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  // گۆڕاوە تایبەتەکانی هایلایت و کلیکی ورد کە لە تاقیکردنەوەکەدا هەبوون
+  // هێنانی گشت بۆکسەکانی چەنکەکان بۆ هەموو لاپەڕەکان
+  const [allAyahData, setAllAyahData] = useState<Record<string, AyahBoxRaw[]>>({});
+  useEffect(() => {
+    AYAH_DATA_FILES.forEach((file) => {
+      fetch(`${import.meta.env.BASE_URL}${file}`)
+        .then(res => res.json())
+        .then(data => setAllAyahData(prev => ({ ...prev, ...data })))
+        .catch(() => {});
+    });
+  }, []);
+
+  const currentBoxes: AyahBoxRaw[] = allAyahData[String(currentPage)] || [];
+
   const [selectedAyah, setSelectedAyah] = useState<{ s: number; a: number; top: number; arabic: string; tafsir: string } | null>(null);
 
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
@@ -131,7 +131,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     loadPageVerses();
   }, [currentPage, selectedTafsir]);
 
-  // کۆنتڕۆڵی ئاراستە و سووڕانەوەی لاپەڕەکان
   useEffect(() => {
     if (scrollInitiatedByUser.current) {
       scrollInitiatedByUser.current = false;
@@ -201,8 +200,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     }
   };
 
-  const currentBoxes = PAGE_BOXES_DATA[currentPage] || [];
-
   return (
     <div className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden" dir="rtl">
       <audio ref={audioRef} onEnded={() => setIsPlayingAudio(false)} />
@@ -264,12 +261,13 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                       className="w-full h-full max-h-[76vh] object-contain select-none shadow-xl rounded-lg bg-white border border-stone-300"
                     />
 
-                    {/* بەشی هایلایتەکان و کرتە کردن وەک فایلی تاقیکردنەوەکە */}
+                    {/* خوێندنەوەی بۆکسەکان لە فایلی چەنکەکانەوە بۆ هەموو لاپەڕەیەک */}
                     {isActivePage && currentBoxes.length > 0 && (
                       <div className="absolute inset-0">
                         {currentBoxes.map((box, idx) => {
-                          const matched = pageAyahsData.find(x => x.surahNumber === box.s && x.numberInSurah === box.a);
-                          const isSelected = selectedAyah?.s === box.s && selectedAyah?.a === box.a;
+                          const [s, a, l, x0, x1, y0, y1] = box;
+                          const matched = pageAyahsData.find(x => x.surahNumber === s && x.numberInSurah === a);
+                          const isSelected = selectedAyah?.s === s && selectedAyah?.a === a;
 
                           return (
                             <div
@@ -277,19 +275,19 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedAyah({
-                                  s: box.s,
-                                  a: box.a,
-                                  top: (box.y0 / AYAH_CANVAS_HEIGHT) * 100,
+                                  s: s,
+                                  a: a,
+                                  top: (y0 / AYAH_CANVAS_HEIGHT) * 100,
                                   arabic: matched?.arabic || '',
                                   tafsir: matched?.tafsir || 'تەفسیر بەردەست نییە...'
                                 });
                               }}
                               style={{
                                 position: 'absolute',
-                                left: `${(box.x0 / AYAH_CANVAS_WIDTH) * 100}%`,
-                                top: `${(box.y0 / AYAH_CANVAS_HEIGHT) * 100}%`,
-                                width: `${((box.x1 - box.x0) / AYAH_CANVAS_WIDTH) * 100}%`,
-                                height: `${((box.y1 - box.y0) / AYAH_CANVAS_HEIGHT) * 100}%`,
+                                left: `${(x0 / AYAH_CANVAS_WIDTH) * 100}%`,
+                                top: `${(y0 / AYAH_CANVAS_HEIGHT) * 100}%`,
+                                width: `${((x1 - x0) / AYAH_CANVAS_WIDTH) * 100}%`,
+                                height: `${((y1 - y0) / AYAH_CANVAS_HEIGHT) * 100}%`,
                                 background: isSelected ? 'rgba(56,189,248,0.35)' : 'transparent',
                               }}
                               className="cursor-pointer"
@@ -300,7 +298,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                     )}
                   </div>
 
-                  {/* پەنجەرەی نیشاندانی تفسیری ڕاستەوخۆی ئایەتە هەڵبژێردراوەکە */}
+                  {/* پەنجەرەی تفسیری ڕاستەوخۆ بۆ هەموو سورەت و لاپەڕەیەک */}
                   {isActivePage && selectedAyah && (
                     <div
                       className="absolute inset-x-4 bg-white border border-slate-300 rounded-2xl shadow-2xl p-4 z-40"
@@ -330,7 +328,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         </div>
       )}
 
-      {/* شێوازی بینینی تەفسیر بە شێوەی لیست */}
+      {/* بینینی تەفسیر بە شێوەی لیست */}
       {viewMode === 'tafsir' && (
         <div className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white" dir="rtl">
           {loadingTafsir ? (
