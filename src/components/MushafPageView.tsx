@@ -29,7 +29,8 @@ const AYAH_CANVAS_HEIGHT = 2020;
 
 type AyahBoxRaw = [number, number, number, number, number, number, number];
 
-const AYAH_DATA_FILES = ['ayahdata-part1.json', 'ayahdata-part2.json', 'ayahdata-part3.json', 'ayahdata-part4.json'];
+// لێرە ناوی فایلەکان ڕێکخراون لەگەڵ ناوی چەنکەکانت لە گیتەهەب
+const AYAH_DATA_FILES = ['ayahdata-chunk1.json', 'ayahdata-chunk2.json', 'ayahdata-chunk3.json', 'ayahdata-chunk4.json'];
 
 const LONG_PRESS_MS = 550;
 
