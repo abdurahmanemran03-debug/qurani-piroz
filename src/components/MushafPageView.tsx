@@ -73,18 +73,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [allAyahData, setAllAyahData] = useState<Record<string, AyahBoxObj[]>>({});
-    useEffect(() => {
+      useEffect(() => {
     fetch(`${import.meta.env.BASE_URL}ayahdata/ayahdata.json`)
       .then(res => res.json())
       .then(data => {
-        console.log("داتای ئایەتەکان سەرکەوتوو بوو:", data);
+        console.log("داتای تایبەتمەند بوو:", data);
         console.log("پەڕەی ئێستا:", String(currentPage), "بۆکسەکانی:", data[String(currentPage)]);
         setAllAyahData(data);
       })
-      .catch((err) => console.log("هەڵە ڕوویدا لە خوێندنەوەی فایل:", err));
+      .catch((err) => console.log("هەڵە ڕوویدا لە خوێندنەوەی فایل", err));
   }, [currentPage]);
-
-  }, []);
 
   const ayahBoxes: AyahBoxObj[] = allAyahData[String(currentPage)] || [];
 
