@@ -189,7 +189,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     async function loadPageVerses() {
       setLoadingTafsir(true);
       try {
-        const tafsirEdition = (selectedTafsir as any)?.editionId || (selectedTafsir as any)?.id || 'ku.asan';
+        const tafsirEdition = 'ku.asan';
         const res = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,${tafsirEdition}`);
         const data = await res.json();
         if (data.code === 200 && data.data.length >= 2) {
