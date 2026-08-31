@@ -385,7 +385,14 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                       src={pageImgUrl(pageNum)}
                       alt={`Page ${pageNum}`}
                       loading="lazy"
+                      draggable={false}
+                      onContextMenu={(e) => e.preventDefault()}
                       className="w-full h-full max-h-[76vh] object-contain select-none shadow-xl rounded-lg bg-white border border-stone-300"
+                      style={{
+                        WebkitTouchCallout: 'none',
+                        WebkitUserSelect: 'none',
+                        userSelect: 'none',
+                      } as React.CSSProperties}
                     />
 
                     {isActivePage && ayahBoxes.length > 0 && (
@@ -416,6 +423,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                               onPointerUp={cancelLongPress}
                               onPointerLeave={cancelLongPress}
                               onPointerCancel={cancelLongPress}
+                              onContextMenu={(e) => e.preventDefault()}
                               style={{
                                 position: 'absolute',
                                 left: `${leftPct}%`,
