@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { SURAHS_INDEX } from './data/surahsData';
 import { SurahListView } from './components/SurahListView';
 import { MushafPageView } from './components/MushafPageView';
-import { MushafPreciseTest } from './components/MushafPreciseTest';
 
 export default function App() {
   const [view, setView] = useState<'index' | 'mushaf'>(() => {
@@ -36,6 +35,36 @@ export default function App() {
     } catch {}
   }, [currentPage]);
 
+  useEffect(() => {
+    if (view !== 'index') return;
+
+    const raf = requestAnimationFrame(() => {
+      try {
+        const saved = sessionStorage.getItem('quran_index_scroll');
+        if (saved) {
+          window.scrollTo({ top: parseInt(saved, 10), behavior: 'auto' });
+        }
+      } catch {}
+    });
+
+    let saveTimer: ReturnType<typeof setTimeout> | null = null;
+    const handleScroll = () => {
+      if (saveTimer) clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        try {
+          sessionStorage.setItem('quran_index_scroll', String(window.scrollY));
+        } catch {}
+      }, 150);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener('scroll', handleScroll);
+      if (saveTimer) clearTimeout(saveTimer);
+    };
+  }, [view]);
+
   const openSurahPage = (page: number) => {
     setCurrentPage(page);
     setView('mushaf');
@@ -44,10 +73,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-slate-200" dir="rtl">
       
-      {/* تاقیکردنەوەی کاتی — دوای تاقیکردنەوە ئەم دێڕە بسڕەوە و کۆمێنتەکانی خوارەوە هەڵبگرەوە */}
-      <MushafPreciseTest />
-
-      {/*
       {view === 'index' && (
         <SurahListView
           surahs={SURAHS_INDEX}
@@ -74,7 +99,6 @@ export default function App() {
           onJumpToPage={(p) => setCurrentPage(p)}
         />
       )}
-      */}
 
     </div>
   );
