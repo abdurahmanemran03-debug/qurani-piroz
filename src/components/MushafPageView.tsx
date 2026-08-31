@@ -74,7 +74,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [allAyahData, setAllAyahData] = useState<Record<string, AyahBoxObj[]>>({});
   useEffect(() => {
-    fetch(`${import.meta.env.BASE_URL}ayahdata/ayahdata.json`)
+    fetch(`${import.meta.env.BASE_URL}ayahdata/ayahdata-1.json`)
       .then(res => res.json())
       .then(data => setAllAyahData(data))
       .catch(() => setAllAyahData({}));
