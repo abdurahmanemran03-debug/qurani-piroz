@@ -27,9 +27,7 @@ const pageImgUrl = (n: number) => `https://android.quran.com/data/width_1260/pag
 const AYAH_CANVAS_WIDTH = 1260;
 const AYAH_CANVAS_HEIGHT = 2020;
 
-type AyahBoxRaw = [number, number, number, number, number, number, number];
-
-const AYAH_DATA_FILES = ['ayahdata-part1.json', 'ayahdata-part2.json', 'ayahdata-part3.json', 'ayahdata-part4.json'];
+type AyahBoxObj = { s: number; a: number; l: number; x0: number; x1: number; y0: number; y1: number };
 
 const LONG_PRESS_MS = 550;
 
@@ -74,17 +72,15 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [playingAyahKey, setPlayingAyahKey] = useState<string | null>(null);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const [allAyahData, setAllAyahData] = useState<Record<string, AyahBoxRaw[]>>({});
+  const [allAyahData, setAllAyahData] = useState<Record<string, AyahBoxObj[]>>({});
   useEffect(() => {
-    AYAH_DATA_FILES.forEach((file) => {
-      fetch(`${import.meta.env.BASE_URL}${file}`)
-        .then(res => res.json())
-        .then(data => setAllAyahData(prev => ({ ...prev, ...data })))
-        .catch(() => {});
-    });
+    fetch(`${import.meta.env.BASE_URL}ayahdata/ayahdata.json`)
+      .then(res => res.json())
+      .then(data => setAllAyahData(data))
+      .catch(() => setAllAyahData({}));
   }, []);
 
-  const ayahBoxes: AyahBoxRaw[] = allAyahData[String(currentPage)] || [];
+  const ayahBoxes: AyahBoxObj[] = allAyahData[String(currentPage)] || [];
 
   const [ayahBookmarks, setAyahBookmarks] = useState<string[]>(() => {
     try {
@@ -136,7 +132,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     } catch {}
   };
 
-  const startLongPress = (box: AyahBoxRaw, boxKey: string, ayah: any, topPercent: number) => {
+  const startLongPress = (boxKey: string, ayah: any, topPercent: number) => {
     setPressingBox(boxKey);
     if (longPressTimer.current) clearTimeout(longPressTimer.current);
     longPressTimer.current = setTimeout(() => {
@@ -395,28 +391,27 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                     {isActivePage && ayahBoxes.length > 0 && (
                       <div className="absolute inset-0">
                         {ayahBoxes.map((box, idx) => {
-                          const [s, a, l, x0, x1, y0, y1] = box;
                           const matchedAyah = pageAyahsData.find(
-                            (x) => x.surahNumber === s && x.numberInSurah === a
+                            (x) => x.surahNumber === box.s && x.numberInSurah === box.a
                           );
                           if (!matchedAyah) return null;
 
-                          const boxKey = `${s}-${a}-${l}-${idx}`;
-                          const leftPct = (x0 / AYAH_CANVAS_WIDTH) * 100;
-                          const widthPct = ((x1 - x0) / AYAH_CANVAS_WIDTH) * 100;
-                          const topPct = (y0 / AYAH_CANVAS_HEIGHT) * 100;
-                          const heightPct = ((y1 - y0) / AYAH_CANVAS_HEIGHT) * 100;
+                          const boxKey = `${box.s}-${box.a}-${box.l}-${idx}`;
+                          const leftPct = (box.x0 / AYAH_CANVAS_WIDTH) * 100;
+                          const widthPct = ((box.x1 - box.x0) / AYAH_CANVAS_WIDTH) * 100;
+                          const topPct = (box.y0 / AYAH_CANVAS_HEIGHT) * 100;
+                          const heightPct = ((box.y1 - box.y0) / AYAH_CANVAS_HEIGHT) * 100;
 
                           const isHighlighted = !!highlightedAyah &&
-                            highlightedAyah.ayah.surahNumber === s &&
-                            highlightedAyah.ayah.numberInSurah === a;
+                            highlightedAyah.ayah.surahNumber === box.s &&
+                            highlightedAyah.ayah.numberInSurah === box.a;
 
                           return (
                             <div
                               key={boxKey}
                               onPointerDown={(e) => {
                                 e.stopPropagation();
-                                startLongPress(box, boxKey, matchedAyah, topPct);
+                                startLongPress(boxKey, matchedAyah, topPct);
                               }}
                               onPointerUp={cancelLongPress}
                               onPointerLeave={cancelLongPress}
