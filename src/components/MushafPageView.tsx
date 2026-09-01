@@ -53,6 +53,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
   const [pageAyahsData, setPageAyahsData] = useState<any[]>([]);
   const [loadingTafsir, setLoadingTafsir] = useState(false);
+  const [ayahApiError, setAyahApiError] = useState<string | null>(null);
 
   const [bookmarks, setBookmarks] = useState<number[]>(() => {
     try {
@@ -188,9 +189,15 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   useEffect(() => {
     async function loadPageVerses() {
       setLoadingTafsir(true);
+      setAyahApiError(null);
       try {
         const tafsirEdition = 'ku.asan';
         const res = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,${tafsirEdition}`);
+        if (!res.ok) {
+          setAyahApiError(`HTTP ${res.status}`);
+          setLoadingTafsir(false);
+          return;
+        }
         const data = await res.json();
         if (data.code === 200 && data.data.length >= 2) {
           const ar = data.data[0].ayahs;
@@ -202,8 +209,11 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             tafsir: tf[i]?.text || ''
           }));
           setPageAyahsData(combined);
+        } else {
+          setAyahApiError(`code:${data.code}`);
         }
-      } catch (e) {
+      } catch (e: any) {
+        setAyahApiError(e?.message || 'fetch failed');
         console.error(e);
       } finally {
         setLoadingTafsir(false);
@@ -397,7 +407,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
                     {isActivePage && (
                       <div className="absolute top-1 inset-x-0 text-center text-[10px] font-bold bg-black/70 text-white py-1 z-50 pointer-events-none">
-                        boxes:{ayahBoxes.length} / ayahs:{pageAyahsData.length}
+                        boxes:{ayahBoxes.length} / ayahs:{pageAyahsData.length} {ayahApiError ? `/ err:${ayahApiError}` : ''}
                       </div>
                     )}
 
