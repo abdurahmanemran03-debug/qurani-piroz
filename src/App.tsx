@@ -4,19 +4,17 @@ const CANVAS_W = 1260;
 const CANVAS_H = 2020;
 
 export default function MushafPreciseTest() {
-  const [pageNumber, setPageNumber] = useState<number>(1);
+  const [pageNumber, setPageNumber] = useState<number>(6); // دەستپێکردن بە لاپەڕەی ٦ وەک لە وێنەکەدا دیارە
   const [ayahs, setAyahs] = useState<any[]>([]);
-  const [allBoxesMap, setAllBoxesMap] = useState<Record<number, any[]>>({});
+  const [allBoxesMap, setAllBoxesMap] = useState<any>(null);
   const [selected, setSelected] = useState<{ s: number; a: number; top: number } | null>(null);
-  const [status, setStatus] = useState<string>('loading boxes & ayahs...');
+  const [status, setStatus] = useState<string>('loading...');
 
-  // خوێندنەوەی فایلی ayahdata.json تەنها یەک جار لە سەرەتادا
+  // خوێندنەوەی فایلی ayahdata.json لە ڕێڕەوی ڕاستی خۆی
   useEffect(() => {
-    fetch('/ayahdata.json') // ئەگەر لە public/ayahdata/ بوو، بیگۆڕە بۆ /ayahdata/ayahdata.json
+    fetch('/ayahdata/ayahdata.json')
       .then(r => r.json())
       .then(data => {
-        // لێرەدا دڵنیا دەبینەوە چۆن داتاکە ڕێکخراوە (ئەگەر ئارای هەبوو یان ئۆبۆکت)
-        // لێرەدا گریمانە دەکەین داتاکە نەخشەیەکە یان لستێکە کە بە پێی لاپەڕە پۆلێن کراوە
         setAllBoxesMap(data);
       })
       .catch(err => {
@@ -24,7 +22,7 @@ export default function MushafPreciseTest() {
       });
   }, []);
 
-  // هێنانی داتای لاپەڕە لە APIـی قورئان کاتێک pageNumber دەگۆڕێت
+  // هێنانی داتای لاپەڕە لە APIـی قورئان
   useEffect(() => {
     setSelected(null);
     setStatus('loading api...');
@@ -55,15 +53,20 @@ export default function MushafPreciseTest() {
       });
   }, [pageNumber]);
 
-  // وەرگرتنی بۆکسەکانی ئەم لاپەڕەیە (پشتیوانی بۆ شێوازە جیاوازەکانی هێنانی جەی سەنەکە)
+  // وەرگرتنی بۆکسەکان بە پێی ژمارەی لاپەڕە
   const getBoxesForCurrentPage = () => {
     if (!allBoxesMap) return [];
-    // ئەگەر ئۆبۆکت بێت بە پێی ژمارەی لاپەڕە (بۆ نموونע allBoxesMap[pageNumber])
-    // یان ئەگەر ئارای بێت و بە پێی page فیلتەر بکرێت
+    
+    // ئەگەر فایلەکە ئۆبۆکت بێت و لاپەڕەکان بە کلیلی (page_X یان ژمارە) تێیدا بن
+    if (allBoxesMap[pageNumber]) return allBoxesMap[pageNumber];
+    if (allBoxesMap[String(pageNumber)]) return allBoxesMap[String(pageNumber)];
+    
+    // ئەگەر فایلەکە ئارای (Array) بێت و فیلتەر بکرێت
     if (Array.isArray(allBoxesMap)) {
-      return allBoxesMap.filter((b: any) => b.page === pageNumber || b.p === pageNumber);
+      return allBoxesMap.filter((b: any) => b.page === pageNumber || b.p === pageNumber || b.pageNumber === pageNumber);
     }
-    return allBoxesMap[pageNumber] || allBoxesMap[String(pageNumber)] || [];
+    
+    return [];
   };
 
   const currentBoxes = getBoxesForCurrentPage();
@@ -106,7 +109,7 @@ export default function MushafPreciseTest() {
           style={{ filter: 'grayscale(100%) contrast(115%) brightness(102%)', mixBlendMode: 'multiply' }}
         />
 
-        {/* بۆکسەکان و هایلایت بۆ هەموو لاپەڕەیەک */}
+        {/* بۆکسەکان و هایلایت */}
         <div className="absolute inset-0 mt-6">
           {currentBoxes.map((box: any, i: number) => {
             const sVal = box.s || box.surah;
