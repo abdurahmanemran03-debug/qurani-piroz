@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import ayahData from './ayahdata.json'; // هێنانی فایلی داتاکە
 
 interface AyahCoord {
-  s: number; // ژمارەی سورەت
-  a: number; // ژمارەی ئایەت
-  l: number; // هێڵ / پەڕە
+  s: number;
+  a: number;
+  l: number;
   x0: number;
   y0: number;
   x1: number;
@@ -16,15 +15,22 @@ export default function App() {
   const [selectedAyah, setSelectedAyah] = useState<string | null>(null);
 
   useEffect(() => {
-    // لێرەدا دەتوانیت داتاکە بخەیتە ناو ستەیتەوە یان راستەوخۆ بەکاری بهێنیت
-    setData(ayahData as AyahCoord[]);
+    // ڕێڕەوی ڕاستەقینەی فایلەکە لە ناو بۆخچەی public
+    fetch('/ayahdata/ayahdata.json')
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error('فایلی داتاکە نەدۆزرایەوە!');
+        }
+        return res.json();
+      })
+      .then((jsonData) => setData(jsonData))
+      .catch((err) => console.error('کێشە لە خوێندنەوەی داتا:', err));
   }, []);
 
   return (
     <div style={{ position: 'relative', width: '100%', maxWidth: '600px', margin: '0 auto' }}>
       <h1>پڕۆژەی قورئان - هایلايتکردنی ئایەت</h1>
       
-      {/* نموونەی وێنەی قورئان یان ڕوونما */}
       <div style={{ position: 'relative', border: '1px solid #ccc' }}>
         <img 
           src="/path-to-quran-page.png" 
@@ -32,7 +38,6 @@ export default function App() {
           style={{ width: '100%', display: 'block' }} 
         />
 
-        {/* گەڕان بەدوای مختصاتەکان و دروستکردنی بۆکس بۆ هایلايتکردن */}
         {data.map((item, index) => {
           const isSelected = selectedAyah === `${item.s}-${item.a}`;
 
@@ -55,12 +60,6 @@ export default function App() {
           );
         })}
       </div>
-
-      {selectedAyah && (
-        <div style={{ marginTop: '10px', padding: '10px', background: '#e7f3ff' }}>
-          هەڵبژێردراو - سورەت و ئایەت: {selectedAyah}
-        </div>
-      )}
     </div>
   );
 }
