@@ -3,34 +3,31 @@ import React, { useState, useEffect } from 'react';
 const CANVAS_W = 1260;
 const CANVAS_H = 2020;
 
-// لێرەدا دەتوانین داتای بۆکسەکان بۆ لاپەڕەکانی تریش فراوان بکەین
-// بۆ نموونە نموونەی لاپەڕەی ١:
-const PAGE_BOXES_MAP: Record<number, Array<{ s: number; a: number; l: number; x0: number; x1: number; y0: number; y1: number }>> = {
-  1: [
-    { s: 1, a: 1, l: 2, x0: 410, x1: 854, y0: 254, y1: 333 },
-    { s: 1, a: 2, l: 3, x0: 318, x1: 945, y0: 365, y1: 442 },
-    { s: 1, a: 3, l: 4, x0: 648, x1: 1009, y0: 474, y1: 552 },
-    { s: 1, a: 4, l: 4, x0: 254, x1: 649, y0: 474, y1: 548 },
-    { s: 1, a: 5, l: 5, x0: 387, x1: 999, y0: 579, y1: 658 },
-    { s: 1, a: 6, l: 5, x0: 268, x1: 388, y0: 582, y1: 656 },
-    { s: 1, a: 6, l: 6, x0: 598, x1: 1004, y0: 684, y1: 786 },
-    { s: 1, a: 7, l: 6, x0: 267, x1: 599, y0: 680, y1: 767 },
-    { s: 1, a: 7, l: 7, x0: 363, x1: 899, y0: 797, y1: 889 },
-    { s: 1, a: 7, l: 8, x0: 472, x1: 788, y0: 907, y1: 985 },
-  ],
-  // دەتوانیت بۆ لاپەڕەکانی تریش لێرەدا بۆکسەکان زیاد بکەیت
-};
-
 export default function MushafPreciseTest() {
   const [pageNumber, setPageNumber] = useState<number>(1);
   const [ayahs, setAyahs] = useState<any[]>([]);
+  const [allBoxesMap, setAllBoxesMap] = useState<Record<number, any[]>>({});
   const [selected, setSelected] = useState<{ s: number; a: number; top: number } | null>(null);
-  const [status, setStatus] = useState<string>('loading...');
+  const [status, setStatus] = useState<string>('loading boxes & ayahs...');
 
-  // هێنانی داتای لاپەڕە لە API
+  // خوێندنەوەی فایلی ayahdata.json تەنها یەک جار لە سەرەتادا
+  useEffect(() => {
+    fetch('/ayahdata.json') // ئەگەر لە public/ayahdata/ بوو، بیگۆڕە بۆ /ayahdata/ayahdata.json
+      .then(r => r.json())
+      .then(data => {
+        // لێرەدا دڵنیا دەبینەوە چۆن داتاکە ڕێکخراوە (ئەگەر ئارای هەبوو یان ئۆبۆکت)
+        // لێرەدا گریمانە دەکەین داتاکە نەخشەیەکە یان لستێکە کە بە پێی لاپەڕە پۆلێن کراوە
+        setAllBoxesMap(data);
+      })
+      .catch(err => {
+        console.error('Error loading ayahdata.json:', err);
+      });
+  }, []);
+
+  // هێنانی داتای لاپەڕە لە APIـی قورئان کاتێک pageNumber دەگۆڕێت
   useEffect(() => {
     setSelected(null);
-    setStatus('loading...');
+    setStatus('loading api...');
     Promise.all([
       fetch(`https://api.alquran.cloud/v1/page/${pageNumber}/quran-uthmani`).then(r => r.json()),
       fetch(`https://api.alquran.cloud/v1/page/${pageNumber}/ku.asan`).then(r => r.json())
@@ -58,7 +55,18 @@ export default function MushafPreciseTest() {
       });
   }, [pageNumber]);
 
-  const currentBoxes = PAGE_BOXES_BOXES => PAGE_BOXES_MAP[pageNumber] || [];
+  // وەرگرتنی بۆکسەکانی ئەم لاپەڕەیە (پشتیوانی بۆ شێوازە جیاوازەکانی هێنانی جەی سەنەکە)
+  const getBoxesForCurrentPage = () => {
+    if (!allBoxesMap) return [];
+    // ئەگەر ئۆبۆکت بێت بە پێی ژمارەی لاپەڕە (بۆ نموونע allBoxesMap[pageNumber])
+    // یان ئەگەر ئارای بێت و بە پێی page فیلتەر بکرێت
+    if (Array.isArray(allBoxesMap)) {
+      return allBoxesMap.filter((b: any) => b.page === pageNumber || b.p === pageNumber);
+    }
+    return allBoxesMap[pageNumber] || allBoxesMap[String(pageNumber)] || [];
+  };
+
+  const currentBoxes = getBoxesForCurrentPage();
   const padPageNum = (num: number) => String(num).padStart(3, '0');
 
   return (
@@ -85,12 +93,12 @@ export default function MushafPreciseTest() {
         
         {/* باری زانیاری تاقیکاری */}
         <div className="absolute top-0 inset-x-0 bg-black/75 text-white text-[11px] py-1 px-2 text-center z-20 rounded-t-lg flex justify-around">
-          <span>boxes: {PAGE_BOXES_MAP[pageNumber]?.length || 0}</span>
+          <span>boxes: {currentBoxes.length}</span>
           <span>ayahs: {ayahs.length}</span>
           <span className="truncate max-w-[150px]">{status}</span>
         </div>
 
-        {/* وێنەی لاپەڕەی قورئان بە پێی ژمارەی لاپەڕە */}
+        {/* وێنەی لاپەڕەی قورئان */}
         <img
           src={`https://android.quran.com/data/width_1260/page${padPageNum(pageNumber)}.png`}
           alt={`page ${pageNumber}`}
@@ -98,26 +106,35 @@ export default function MushafPreciseTest() {
           style={{ filter: 'grayscale(100%) contrast(115%) brightness(102%)', mixBlendMode: 'multiply' }}
         />
 
-        {/* بۆکسەکان و هایلایت */}
+        {/* بۆکسەکان و هایلایت بۆ هەموو لاپەڕەیەک */}
         <div className="absolute inset-0 mt-6">
-          {(PAGE_BOXES_MAP[pageNumber] || []).map((box, i) => (
-            <div
-              key={i}
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelected({ s: box.s, a: box.a, top: (box.y0 / CANVAS_H) * 100 });
-              }}
-              style={{
-                position: 'absolute',
-                left: `${(box.x0 / CANVAS_W) * 100}%`,
-                top: `${(box.y0 / CANVAS_H) * 100}%`,
-                width: `${((box.x1 - box.x0) / CANVAS_W) * 100}%`,
-                height: `${((box.y1 - box.y0) / CANVAS_H) * 100}%`,
-                background: selected?.s === box.s && selected?.a === box.a ? 'rgba(56,189,248,0.35)' : 'transparent',
-              }}
-              className="cursor-pointer hover:bg-sky-400/20 transition-colors"
-            />
-          ))}
+          {currentBoxes.map((box: any, i: number) => {
+            const sVal = box.s || box.surah;
+            const aVal = box.a || box.ayah;
+            const x0Val = box.x0;
+            const x1Val = box.x1;
+            const y0Val = box.y0;
+            const y1Val = box.y1;
+
+            return (
+              <div
+                key={i}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelected({ s: sVal, a: aVal, top: (y0Val / CANVAS_H) * 100 });
+                }}
+                style={{
+                  position: 'absolute',
+                  left: `${(x0Val / CANVAS_W) * 100}%`,
+                  top: `${(y0Val / CANVAS_H) * 100}%`,
+                  width: `${((x1Val - x0Val) / CANVAS_W) * 100}%`,
+                  height: `${((y1Val - y0Val) / CANVAS_H) * 100}%`,
+                  background: selected?.s === sVal && selected?.a === aVal ? 'rgba(56,189,248,0.35)' : 'transparent',
+                }}
+                className="cursor-pointer hover:bg-sky-400/20 transition-colors"
+              />
+            );
+          })}
         </div>
 
         {/* پەنجەرەی پیشاندانی تەفسیر / وەرگێڕان */}
