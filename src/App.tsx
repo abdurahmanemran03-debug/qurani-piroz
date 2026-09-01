@@ -1,65 +1,105 @@
 import React, { useState, useEffect } from 'react';
-
-interface AyahCoord {
-  s: number;
-  a: number;
-  l: number;
-  x0: number;
-  y0: number;
-  x1: number;
-  y1: number;
-}
+import { SURAHS_INDEX } from './data/surahsData';
+import { SurahListView } from './components/SurahListView';
+import { MushafPageView } from './components/MushafPageView';
 
 export default function App() {
-  const [data, setData] = useState<AyahCoord[]>([]);
-  const [selectedAyah, setSelectedAyah] = useState<string | null>(null);
+const [view, setView] = useState<'index' | 'mushaf'>(() => {
+try {
+const saved = localStorage.getItem('quran_last_view');
+return saved === 'mushaf' ? 'mushaf' : 'index';
+} catch {
+return 'index';
+}
+});
 
-  useEffect(() => {
-    // ڕێڕەوی ڕاستەقینەی فایلەکە لە ناو بۆخچەی public
-    fetch('/ayahdata/ayahdata.json')
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error('فایلی داتاکە نەدۆزرایەوە!');
-        }
-        return res.json();
-      })
-      .then((jsonData) => setData(jsonData))
-      .catch((err) => console.error('کێشە لە خوێندنەوەی داتا:', err));
-  }, []);
+const [currentPage, setCurrentPage] = useState<number>(() => {
+try {
+const saved = localStorage.getItem('quran_last_page');
+const n = saved ? parseInt(saved, 10) : 1;
+return n >= 1 && n <= 604 ? n : 1;
+} catch {
+return 1;
+}
+});
 
-  return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: '600px', margin: '0 auto' }}>
-      <h1>پڕۆژەی قورئان - هایلايتکردنی ئایەت</h1>
-      
-      <div style={{ position: 'relative', border: '1px solid #ccc' }}>
-        <img 
-          src="/path-to-quran-page.png" 
-          alt="Quran Page" 
-          style={{ width: '100%', display: 'block' }} 
-        />
+useEffect(() => {
+try {
+localStorage.setItem('quran_last_view', view);
+} catch {}
+}, [view]);
 
-        {data.map((item, index) => {
-          const isSelected = selectedAyah === `${item.s}-${item.a}`;
+useEffect(() => {
+try {
+localStorage.setItem('quran_last_page', String(currentPage));
+} catch {}
+}, [currentPage]);
 
-          return (
-            <div
-              key={index}
-              onClick={() => setSelectedAyah(`${item.s}-${item.a}`)}
-              style={{
-                position: 'absolute',
-                left: `${item.x0}%`,
-                top: `${item.y0}%`,
-                width: `${item.x1 - item.x0}%`,
-                height: `${item.y1 - item.y0}%`,
-                backgroundColor: isSelected ? 'rgba(0, 123, 255, 0.4)' : 'transparent',
-                border: isSelected ? '1px solid #007bff' : 'none',
-                cursor: 'pointer',
-              }}
-              title={`سورەت: ${item.s}, ئایەت: ${item.a}`}
-            />
-          );
-        })}
-      </div>
-    </div>
-  );
+useEffect(() => {
+if (view !== 'index') return;
+
+const raf = requestAnimationFrame(() => {
+try {
+const saved = sessionStorage.getItem('quran_index_scroll');
+if (saved) {
+window.scrollTo({ top: parseInt(saved, 10), behavior: 'auto' });
+}
+} catch {}
+});
+
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+const handleScroll = () => {
+if (saveTimer) clearTimeout(saveTimer);
+saveTimer = setTimeout(() => {
+try {
+sessionStorage.setItem('quran_index_scroll', String(window.scrollY));
+} catch {}
+}, 150);
+};
+
+window.addEventListener('scroll', handleScroll, { passive: true });
+return () => {
+cancelAnimationFrame(raf);
+window.removeEventListener('scroll', handleScroll);
+if (saveTimer) clearTimeout(saveTimer);
+};
+}, [view]);
+
+const openSurahPage = (page: number) => {
+setCurrentPage(page);
+setView('mushaf');
+};
+
+return (
+<div className="min-h-screen bg-white text-slate-900 font-sans selection:bg-slate-200" dir="rtl">
+
+{view === 'index' && (
+<SurahListView
+surahs={SURAHS_INDEX}
+onOpenSurah={openSurahPage}
+onOpenSettings={() => {}}
+bgStyle="white"
+appLang="ku"
+accentColor="gold"
+showKurdishNames={true}
+showNumbers={true}
+/>
+)}
+
+{view === 'mushaf' && (
+<MushafPageView
+currentPage={currentPage}
+onNextPage={() => currentPage < 604 && setCurrentPage(p => p + 1)}
+onPrevPage={() => currentPage > 1 && setCurrentPage(p => p - 1)}
+onBackToIndex={() => setView('index')}
+bgStyle="white"
+appLang="ku"
+showNumbers={true}
+surahsList={SURAHS_INDEX}
+onJumpToPage={(p) => setCurrentPage(p)}
+/>
+)}
+
+</div>
+);
 }
