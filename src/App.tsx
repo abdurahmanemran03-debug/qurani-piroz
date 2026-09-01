@@ -16,13 +16,12 @@ const PAGE_1_BOXES = [
 const CANVAS_W = 1260;
 const CANVAS_H = 2020;
 
-export const MushafPreciseTest: React.FC = () => {
+export default function MushafPreciseTest() {
   const [ayahs, setAyahs] = useState<any[]>([]);
   const [selected, setSelected] = useState<{ s: number; a: number; top: number } | null>(null);
   const [status, setStatus] = useState<string>('loading...');
 
   useEffect(() => {
-    // هێنانی داتای عەرەبی و کوردی بە جیا بۆ ئەوەی تووشی هەڵەی 404 نەبین
     Promise.all([
       fetch('https://api.alquran.cloud/v1/page/1/quran-uthmani').then(r => r.json()),
       fetch('https://api.alquran.cloud/v1/page/1/ku.asan').then(r => r.json())
@@ -54,7 +53,6 @@ export const MushafPreciseTest: React.FC = () => {
     <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4" dir="rtl">
       <div className="relative w-full max-w-md" style={{ aspectRatio: `${CANVAS_W} / ${CANVAS_H}` }}>
         
-        {/* بۆشایی زانیاری تاقیکاری لە سەرەوە */}
         <div className="absolute top-0 inset-x-0 bg-black/75 text-white text-[11px] py-1 px-2 text-center z-20 rounded-t-lg flex justify-around">
           <span>boxes: {PAGE_1_BOXES.length}</span>
           <span>ayahs: {ayahs.length}</span>
@@ -106,4 +104,4 @@ export const MushafPreciseTest: React.FC = () => {
       </div>
     </div>
   );
-};
+}
