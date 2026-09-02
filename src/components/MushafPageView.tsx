@@ -190,34 +190,44 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     async function loadPageVerses() {
       setLoadingTafsir(true);
       setAyahApiError(null);
+
+      // ١. دەقی عەرەبی — پێویستە بۆ هایلایتکردن، جیا داوا دەکرێت
+      let arabicAyahs: any[] = [];
       try {
-        const tafsirEdition = 'ku.asan';
-        const res = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,${tafsirEdition}`);
-        if (!res.ok) {
-          setAyahApiError(`HTTP ${res.status}`);
-          setLoadingTafsir(false);
-          return;
-        }
-        const data = await res.json();
-        if (data.code === 200 && data.data.length >= 2) {
-          const ar = data.data[0].ayahs;
-          const tf = data.data[1].ayahs;
-          const combined = ar.map((a: any, i: number) => ({
-            surahNumber: a.surah.number,
-            numberInSurah: a.numberInSurah,
-            arabic: a.text,
-            tafsir: tf[i]?.text || ''
-          }));
-          setPageAyahsData(combined);
+        const resAr = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/quran-uthmani`);
+        const dataAr = await resAr.json();
+        if (dataAr.code === 200) {
+          arabicAyahs = dataAr.data.ayahs;
         } else {
-          setAyahApiError(`code:${data.code}`);
+          setAyahApiError(`arabic code:${dataAr.code}`);
         }
       } catch (e: any) {
-        setAyahApiError(e?.message || 'fetch failed');
-        console.error(e);
-      } finally {
-        setLoadingTafsir(false);
+        setAyahApiError(e?.message || 'arabic fetch failed');
       }
+
+      // ٢. تەفسیر — بەبێ ئەوەی هیچی نەبوو کێشە دروست بکات ئەگەر شکستی هێنا
+      let tafsirAyahs: any[] = [];
+      try {
+        const resTf = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/ku.asan`);
+        if (resTf.ok) {
+          const dataTf = await resTf.json();
+          if (dataTf.code === 200) tafsirAyahs = dataTf.data.ayahs;
+        }
+      } catch {
+        // تەفسیر بەردەست نییە، کێشە نیە — هایلایتکردن هەر کاردەکات
+      }
+
+      if (arabicAyahs.length > 0) {
+        const combined = arabicAyahs.map((a: any, i: number) => ({
+          surahNumber: a.surah.number,
+          numberInSurah: a.numberInSurah,
+          arabic: a.text,
+          tafsir: tafsirAyahs[i]?.text || 'تەفسیر بەردەست نییە ئێستا'
+        }));
+        setPageAyahsData(combined);
+      }
+
+      setLoadingTafsir(false);
     }
     loadPageVerses();
   }, [currentPage, selectedTafsir]);
@@ -405,9 +415,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                       } as React.CSSProperties}
                     />
 
-                    {isActivePage && (
-                      <div className="absolute top-1 inset-x-0 text-center text-[10px] font-bold bg-black/70 text-white py-1 z-50 pointer-events-none">
-                        boxes:{ayahBoxes.length} / ayahs:{pageAyahsData.length} {ayahApiError ? `/ err:${ayahApiError}` : ''}
+                    {isActivePage && ayahApiError && (
+                      <div className="absolute top-1 inset-x-0 text-center text-[10px] font-bold bg-red-700/80 text-white py-1 z-50 pointer-events-none">
+                        هەڵە: {ayahApiError}
                       </div>
                     )}
 
