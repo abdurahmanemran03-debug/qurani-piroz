@@ -187,7 +187,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     cancelLongPress();
   }, [currentPage]);
 
-  // 🎯 بارکردنی دەق و تەفسیری ئایەتەکان بە شێوازی زیرەک و فرە-سێرڤەر
   useEffect(() => {
     let isMounted = true;
 
@@ -198,7 +197,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       const tafsirKey = (selectedTafsir as any).key || (selectedTafsir as any).identifier || 'ku.asan';
 
       try {
-        // ١. داواکردنی دەقی عەرەبی و تەفسیر لە یەک کاتدا
         const res = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,${tafsirKey}`);
         const data = await res.json();
 
@@ -215,11 +213,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
           if (isMounted) setPageAyahsData(combined);
         } else {
-          // ئەگەر هاوبەشەکە سەرکەوتوو نەبوو، بە جیاواز داوایان بکە
           throw new Error("Fallback to separate fetch");
         }
       } catch {
-        // Fallback: داواکردنی جیاواز لەگەڵ سەرچاوەی یەدەگی تەفسیری کوردی
         try {
           const resAr = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/quran-uthmani`);
           const dataAr = await resAr.json();
@@ -347,11 +343,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       }
     }
   };
-
-  // وەرگرتنی نوێترین تەفسیری ئایەتی هەڵبژێردراو
-  const currentHighlightedTafsir = highlightedAyah 
-    ? (pageAyahsData.find(x => x.surahNumber === highlightedAyah.ayah.surahNumber && x.numberInSurah === highlightedAyah.ayah.numberInSurah)?.tafsir || highlightedAyah.ayah.tafsir)
-    : '';
 
   return (
     <div className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden" dir="rtl">
@@ -539,4 +530,97 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                             className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
                             title="خەزنکردن"
                           >
-                            {isAyahBookmarked(highlight
+                            {isAyahBookmarked(highlightedAyah.ayah) ? <BookmarkCheck className="w-4 h-4 fill-white" /> : <Bookmark className="w-4 h-4" />}
+                          </button>
+                          <button
+                            onClick={closeHighlight}
+                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                            title="داخستن"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">{pageNum}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          {highlightedAyah && tafsirSheetOpen && (
+            <div className="absolute bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 rounded-t-3xl shadow-2xl p-5 max-h-[45vh] overflow-y-auto" dir="rtl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
+                  {highlightedAyah.ayah.surahNumber}:{highlightedAyah.ayah.numberInSurah} — {(selectedTafsir as any).nameKu || selectedTafsir.name}
+                </span>
+                <button onClick={() => setTafsirSheetOpen(false)} className="p-1.5 rounded-xl bg-slate-100 text-slate-600">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="font-quran text-lg text-slate-900 leading-relaxed mb-3">{highlightedAyah.ayah.arabic}</p>
+              
+              <p className="text-sm text-slate-700 leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-100">
+                {highlightedAyah 
+                  ? (pageAyahsData.find(x => x.surahNumber === highlightedAyah.ayah.surahNumber && x.numberInSurah === highlightedAyah.ayah.numberInSurah)?.tafsir || highlightedAyah.ayah.tafsir)
+                  : ''}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {viewMode === 'tafsir' && (
+        <div className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white" dir="rtl">
+          {loadingTafsir ? (
+            <div className="text-center py-20">
+              <Loader2 className="w-8 h-8 mx-auto text-amber-600 animate-spin" />
+              <p className="text-xs text-slate-500 pt-2">تەفسیرەکان باردەکرێن...</p>
+            </div>
+          ) : (
+            pageAyahsData.map((ayah) => (
+              <div key={ayah.numberInSurah} className="space-y-3 pb-6 border-b border-slate-200 text-right">
+                <div className="flex items-center justify-between">
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-mono font-bold">
+                    {ayah.surahNumber}:{ayah.numberInSurah}
+                  </span>
+                </div>
+                <p className="font-quran text-slate-900 text-xl sm:text-2xl leading-loose">{ayah.arabic}</p>
+                <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                  <strong className="text-amber-800 block mb-1">{(selectedTafsir as any).nameKu || selectedTafsir.name}:</strong> {ayah.tafsir}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      <footer className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
+        showControls ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0 pointer-events-none'
+      }`} dir="rtl">
+        <button onClick={() => setIsRecitersModalOpen(true)} className="text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5">
+          <span>{selectedReciter.name}</span>
+        </button>
+        <div className="flex items-center gap-3">
+          <button onClick={togglePageAudio} className="p-2.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-transform active:scale-95 shadow-md">
+            {isPlayingAudio ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-white" />}
+          </button>
+        </div>
+      </footer>
+
+      <RecitersModal
+        isOpen={isRecitersModalOpen}
+        onClose={() => setIsRecitersModalOpen(false)}
+        selectedReciterId={selectedReciter.id}
+        onSelectReciter={(r) => setSelectedReciter(r)}
+      />
+      <TafsirSelectorModal
+        isOpen={isTafsirSelectorOpen}
+        onClose={() => setIsTafsirSelectorOpen(false)}
+        selectedTafsirId={selectedTafsir.id}
+        onSelectTafsir={(t) => setSelectedTafsir(t)}
+      />
+    </div>
+  );
+};
