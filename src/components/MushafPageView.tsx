@@ -26,6 +26,9 @@ const AYAH_CANVAS_HEIGHT = 2020;
 type AyahBoxObj = { s: number; a: number; l: number; x0: number; x1: number; y0: number; y1: number };
 const LONG_PRESS_MS = 550;
 
+// دیاریکردنی تەفسیری ئاسان و ڕێبەر لە لیستەکەدا (یان دانانیان وەک سەرەتایی)
+const DEFAULT_TAFSIRS = ALL_TAFSIRS_DIRECTORY.filter(t => t.id === 'ku.asan' || t.id === 'ku.rebar');
+
 export const MushafPageView: React.FC<MushafPageViewProps> = ({
   currentPage,
   onNextPage,
@@ -42,7 +45,12 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [isRecitersModalOpen, setIsRecitersModalOpen] = useState(false);
   const [isTafsirSelectorOpen, setIsTafsirSelectorOpen] = useState(false);
   const [selectedReciter, setSelectedReciter] = useState<ReciterItem>(ALL_RECITERS_DIRECTORY[18]);
-  const [selectedTafsir, setSelectedTafsir] = useState<TafsirItem>(ALL_TAFSIRS_DIRECTORY[0]);
+  
+  // دابینکردنی تەفسیری سەرەتایی (تەفسیری ئاسان وەک یەکەم بژاردە)
+  const [selectedTafsir, setSelectedTafsir] = useState<TafsirItem>(
+    ALL_TAFSIRS_DIRECTORY.find(t => t.id === 'ku.asan') || ALL_TAFSIRS_DIRECTORY[0]
+  );
+
   const [pageAyahsData, setPageAyahsData] = useState<any[]>([]);
   const [loadingTafsir, setLoadingTafsir] = useState(false);
   const [ayahApiError, setAyahApiError] = useState<string | null>(null);
@@ -51,9 +59,9 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [downloadedTafsirs, setDownloadedTafsirs] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('downloaded_tafsirs');
-      return saved ? JSON.parse(saved) : ['ku.asan'];
+      return saved ? JSON.parse(saved) : ['ku.asan', 'ku.rebar'];
     } catch {
-      return ['ku.asan'];
+      return ['ku.asan', 'ku.rebar'];
     }
   });
 
@@ -194,7 +202,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     cancelLongPress();
   }, [currentPage]);
 
-  // بارکردنی دەق و تەفسیر بە پشتبەستن بە داونڵۆد و ئۆفلاین
+  // بارکردنی دەق و تەفسیرەکان (ئاسان و ڕێبەر) بە شێوەی ئۆفلاین و داونڵۆدکراو
   useEffect(() => {
     async function loadPageVerses() {
       setLoadingTafsir(true);
@@ -512,7 +520,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
               <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
                 <button onClick={() => { setTafsirSheetOpen(false); setIsTafsirSelectorOpen(true); }} className="text-xs font-bold text-amber-700 underline">
-                  گۆڕینی تەفسیر
+                  گۆڕینی تەفسیر (ئاسان / ڕێبەر)
                 </button>
                 {isCurrentTafsirDownloaded && (
                   <button onClick={toggleDownloadCurrentTafsir} className="text-xs font-bold text-red-600 underline flex items-center gap-1">
@@ -531,7 +539,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
             <div className="text-center py-16 bg-amber-50 rounded-2xl p-6 border border-amber-200 my-4 max-w-sm mx-auto">
               <Globe className="w-10 h-10 mx-auto text-amber-600 mb-3" />
               <p className="text-sm text-amber-900 font-bold mb-1">ئەم تەفسیرە داونڵۆد نەکراوە</p>
-              <p className="text-xs text-slate-600 mb-4">بۆ پیشاندانی تەفسیرەکان بە شێوەی ئۆفلاین پێویستە ئەم تەفسیرە داونڵۆد بکەیت.</p>
+              <p className="text-xs text-slate-600 mb-4">بۆ پیشاندانی ناوەڕۆکی تەفسیرەکە بە شێوەی ئۆفلاین پێویستە ئەم تەفسیرە داونڵۆد بکەیت.</p>
               <button onClick={toggleDownloadCurrentTafsir} className="px-5 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-amber-700 transition-colors flex items-center justify-center gap-2 mx-auto">
                 <Download className="w-4 h-4" />
                 داونڵۆدکردنی ئەم تەفسیرە
