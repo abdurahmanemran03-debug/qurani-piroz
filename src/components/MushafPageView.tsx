@@ -43,7 +43,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [isTafsirSelectorOpen, setIsTafsirSelectorOpen] = useState(false);
   const [selectedReciter, setSelectedReciter] = useState<ReciterItem>(ALL_RECITERS_DIRECTORY[18]);
   
-  // دیاریکردنی تەفسیری ئاسان وەک سەرەتایی
   const [selectedTafsir, setSelectedTafsir] = useState<TafsirItem>(
     ALL_TAFSIRS_DIRECTORY.find(t => t.id === 'ku.asan') || ALL_TAFSIRS_DIRECTORY[0]
   );
@@ -52,10 +51,17 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [loadingTafsir, setLoadingTafsir] = useState(false);
   const [ayahApiError, setAyahApiError] = useState<string | null>(null);
 
+  // چاککردنەوەی بەشی داونڵۆدکراوەکان بۆ ئەوەی تەفسیری کوردی هەمیشە کاربکات
   const [downloadedTafsirs, setDownloadedTafsirs] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('downloaded_tafsirs');
-      return saved ? JSON.parse(saved) : ['ku.asan', 'ku.rebar'];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (!parsed.includes('ku.asan')) parsed.push('ku.asan');
+        if (!parsed.includes('ku.rebar')) parsed.push('ku.rebar');
+        return parsed;
+      }
+      return ['ku.asan', 'ku.rebar'];
     } catch {
       return ['ku.asan', 'ku.rebar'];
     }
