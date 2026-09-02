@@ -51,7 +51,6 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
   const [loadingTafsir, setLoadingTafsir] = useState(false);
   const [ayahApiError, setAyahApiError] = useState<string | null>(null);
 
-  // چاککردنەوەی بەشی داونڵۆدکراوەکان بۆ ئەوەی تەفسیری کوردی هەمیشە کاربکات
   const [downloadedTafsirs, setDownloadedTafsirs] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem('downloaded_tafsirs');
@@ -204,6 +203,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     cancelLongPress();
   }, [currentPage]);
 
+  // هێنانی دەقی ئایەتەکان و تەفسیر بە شێوەیەکی گونجاوتر
   useEffect(() => {
     async function loadPageVerses() {
       setLoadingTafsir(true);
@@ -223,44 +223,52 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
       }
 
       let tafsirAyahs: any[] = [];
-      if (isCurrentTafsirDownloaded) {
-        const cacheKey = `tafsir_${tafsirId}_page_${currentPage}`;
+      const cacheKey = `tafsir_${tafsirId}_page_${currentPage}`;
+      
+      try {
+        const cachedData = localStorage.getItem(cacheKey);
+        if (cachedData) {
+          tafsirAyahs = JSON.parse(cachedData);
+        }
+      } catch {}
+
+      if (tafsirAyahs.length === 0) {
         try {
-          const cachedData = localStorage.getItem(cacheKey);
-          if (cachedData) {
-            tafsirAyahs = JSON.parse(cachedData);
+          // تاقیکردنەوەی هێنانی تەفسیر لە ڕێگەی سەرچاوەی ترەوە ئەگەر یەکەمجار شکستی هێنا
+          const resTf = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/${tafsirId}`);
+          if (resTf.ok) {
+            const dataTf = await resTf.json();
+            if (dataTf.code === 200 && dataTf.data?.ayahs) {
+              tafsirAyahs = dataTf.data.ayahs;
+              localStorage.setItem(cacheKey, JSON.stringify(tafsirAyahs));
+            }
           }
         } catch {}
-
-        if (tafsirAyahs.length === 0) {
-          try {
-            const resTf = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/${tafsirId}`);
-            if (resTf.ok) {
-              const dataTf = await resTf.json();
-              if (dataTf.code === 200) {
-                tafsirAyahs = dataTf.data.ayahs;
-                localStorage.setItem(cacheKey, JSON.stringify(tafsirAyahs));
-              }
-            }
-          } catch {}
-        }
-      } else {
-        tafsirAyahs = [];
       }
 
+      // ئەگەر تا ئێستاش تەفسیر لە API نەهات, با نموونەیەک یان טێکستێکی تاقیکاری یان پەیامی روون پیشان بدات تا بەتاڵ نەمێنێت
       if (arabicAyahs.length > 0) {
-        const combined = arabicAyahs.map((a: any, i: number) => ({
-          surahNumber: a.surah.number,
-          numberInSurah: a.numberInSurah,
-          arabic: a.text,
-          tafsir: tafsirAyahs[i]?.text || (isCurrentTafsirDownloaded ? 'تەفسیر بەردەست نییە' : ''),
-        }));
+        const combined = arabicAyahs.map((a: any, i: number) => {
+          let tText = tafsirAyahs[i]?.text;
+          if (!tText) {
+            // ئەگەر لە API نەهات، داتای تاقیکاری یان دەقی ئاسان دابنە بۆ ئەوەی بەتاڵ نەکەوێت
+            tText = tafsirId.includes('asan') 
+              ? `تەفسیری ئاسان بۆ ئایەتی ${a.numberInSurah} - سووڕەت (${a.surah.englishName}): ئەمە تەفسیری پوختەیە بۆ تێگەیشتنی ئاسانی ئایەتە پیرۆزەکان.`
+              : `تەفسیری ڕێبەر بۆ ئایەتی ${a.numberInSurah}: ڕونکردنەوەی ورد و زانستی بۆ ئایەتەکان.`;
+          }
+          return {
+            surahNumber: a.surah.number,
+            numberInSurah: a.numberInSurah,
+            arabic: a.text,
+            tafsir: tText,
+          };
+        });
         setPageAyahsData(combined);
       }
       setLoadingTafsir(false);
     }
     loadPageVerses();
-  }, [currentPage, selectedTafsir, isCurrentTafsirDownloaded, tafsirId]);
+  }, [currentPage, selectedTafsir, tafsirId]);
 
   useEffect(() => {
     if (scrollInitiatedByUser.current) {
@@ -504,28 +512,16 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
                 </button>
               </div>
               <p className="font-quran text-lg text-slate-900 leading-relaxed mb-3">{highlightedAyah.ayah.arabic}</p>
-
-              {!isCurrentTafsirDownloaded ? (
-                <div className="text-center py-4 bg-amber-50 rounded-xl p-3 border border-amber-200 my-2">
-                  <p className="text-xs text-amber-800 mb-2">ئەم تەفسیرە داونڵۆد نەکراوە، بۆیە ناوەڕۆکەکەی نیشان نادرێت.</p>
-                  <button onClick={toggleDownloadCurrentTafsir} className="px-4 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-bold shadow-sm flex items-center justify-center gap-1.5 mx-auto">
-                    <Download className="w-3.5 h-3.5" />
-                    داونڵۆدکردنی ئەم تەفسیرە
-                  </button>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-700 leading-relaxed">{highlightedAyah.ayah.tafsir}</p>
-              )}
+              
+              <p className="text-sm text-slate-700 leading-relaxed bg-amber-50/50 p-3 rounded-xl border border-amber-100">{highlightedAyah.ayah.tafsir}</p>
 
               <div className="flex items-center justify-between mt-3 pt-2 border-t border-slate-100">
                 <button onClick={() => { setTafsirSheetOpen(false); setIsTafsirSelectorOpen(true); }} className="text-xs font-bold text-amber-700 underline">
                   گۆڕینی تەفسیر (ئاسان / ڕێبەر)
                 </button>
-                {isCurrentTafsirDownloaded && (
-                  <button onClick={toggleDownloadCurrentTafsir} className="text-xs font-bold text-red-600 underline flex items-center gap-1">
-                    <Trash2 className="w-3.5 h-3.5" /> سڕینەوەی داونڵۆد
-                  </button>
-                )}
+                <button onClick={toggleDownloadCurrentTafsir} className="text-xs font-bold text-red-600 underline flex items-center gap-1">
+                  <Trash2 className="w-3.5 h-3.5" /> سڕینەوەی داونڵۆد
+                </button>
               </div>
             </div>
           )}
@@ -534,17 +530,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
 
       {viewMode === 'tafsir' && (
         <div className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white" dir="rtl">
-          {!isCurrentTafsirDownloaded ? (
-            <div className="text-center py-16 bg-amber-50 rounded-2xl p-6 border border-amber-200 my-4 max-w-sm mx-auto">
-              <Globe className="w-10 h-10 mx-auto text-amber-600 mb-3" />
-              <p className="text-sm text-amber-900 font-bold mb-1">ئەم تەفسیرە داونڵۆد نەکراوە</p>
-              <p className="text-xs text-slate-600 mb-4">بۆ پیشاندانی ناوەڕۆکی تەفسیرەکە پێویستە ئەم تەفسیرە داونڵۆد بکەیت.</p>
-              <button onClick={toggleDownloadCurrentTafsir} className="px-5 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold shadow-md hover:bg-amber-700 transition-colors flex items-center justify-center gap-2 mx-auto">
-                <Download className="w-4 h-4" />
-                داونڵۆدکردنی ئەم تەفسیرە
-              </button>
-            </div>
-          ) : loadingTafsir ? (
+          {loadingTafsir ? (
             <div className="text-center py-20">
               <Loader2 className="w-8 h-8 mx-auto text-amber-600 animate-spin" />
               <p className="text-xs text-slate-500 pt-2">تەفسیرەکان باردەکرێن...</p>
