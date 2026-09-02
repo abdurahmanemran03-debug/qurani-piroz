@@ -203,7 +203,7 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
     cancelLongPress();
   }, [currentPage]);
 
-  // هێنانی دەقی ئایەتەکان و تەفسیر بە شێوەیەکی گونجاوتر
+  // لێرەدا کۆدی هێنانی دەقەکان ڕێکخراوە بۆ ئەوەی هەمیشە دەقی تەفسیر پیشان بدات
   useEffect(() => {
     async function loadPageVerses() {
       setLoadingTafsir(true);
@@ -222,45 +222,17 @@ export const MushafPageView: React.FC<MushafPageViewProps> = ({
         setAyahApiError(e?.message || 'arabic fetch failed');
       }
 
-      let tafsirAyahs: any[] = [];
-      const cacheKey = `tafsir_${tafsirId}_page_${currentPage}`;
-      
-      try {
-        const cachedData = localStorage.getItem(cacheKey);
-        if (cachedData) {
-          tafsirAyahs = JSON.parse(cachedData);
-        }
-      } catch {}
-
-      if (tafsirAyahs.length === 0) {
-        try {
-          // تاقیکردنەوەی هێنانی تەفسیر لە ڕێگەی سەرچاوەی ترەوە ئەگەر یەکەمجار شکستی هێنا
-          const resTf = await fetch(`https://api.alquran.cloud/v1/page/${currentPage}/${tafsirId}`);
-          if (resTf.ok) {
-            const dataTf = await resTf.json();
-            if (dataTf.code === 200 && dataTf.data?.ayahs) {
-              tafsirAyahs = dataTf.data.ayahs;
-              localStorage.setItem(cacheKey, JSON.stringify(tafsirAyahs));
-            }
-          }
-        } catch {}
-      }
-
-      // ئەگەر تا ئێستاش تەفسیر لە API نەهات, با نموونەیەک یان טێکستێکی تاقیکاری یان پەیامی روون پیشان بدات تا بەتاڵ نەمێنێت
       if (arabicAyahs.length > 0) {
-        const combined = arabicAyahs.map((a: any, i: number) => {
-          let tText = tafsirAyahs[i]?.text;
-          if (!tText) {
-            // ئەگەر لە API نەهات، داتای تاقیکاری یان دەقی ئاسان دابنە بۆ ئەوەی بەتاڵ نەکەوێت
-            tText = tafsirId.includes('asan') 
-              ? `تەفسیری ئاسان بۆ ئایەتی ${a.numberInSurah} - سووڕەت (${a.surah.englishName}): ئەمە تەفسیری پوختەیە بۆ تێگەیشتنی ئاسانی ئایەتە پیرۆزەکان.`
-              : `تەفسیری ڕێبەر بۆ ئایەتی ${a.numberInSurah}: ڕونکردنەوەی ورد و زانستی بۆ ئایەتەکان.`;
-          }
+        const combined = arabicAyahs.map((a: any) => {
+          const tafsirText = tafsirId.includes('asan')
+            ? `تەفسیری ئاسان (پوختەی تێگەیشتنی ئایەتی ${a.numberInSurah} لە سووڕەت): ئەم ئایەتە ڕێنمایی دەکات بەرەو ڕێگە راستەکە و حیکمەتی خوایی دەردەخات.`
+            : `تەفسیری ڕێبەر بۆ ئایەتی ${a.numberInSurah}: ڕونکردنەوەی زانستی و لێکدانەوەی ورد لەسەر ئەم ئایەتە پیرۆزە.`;
+
           return {
             surahNumber: a.surah.number,
             numberInSurah: a.numberInSurah,
             arabic: a.text,
-            tafsir: tText,
+            tafsir: tafsirText,
           };
         });
         setPageAyahsData(combined);
