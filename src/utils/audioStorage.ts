@@ -1,13 +1,14 @@
 const DB_NAME = 'quran_audio_db';
 const STORE_NAME = 'audio';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 type AudioRecord = {
   key: string;
   blob: Blob;
   reciterId: string;
   surahNumber: number;
-  ayahNumber: number;
+  ayahNumber?: number;
+  type: 'ayah' | 'surah';
   createdAt: number;
 };
 
@@ -38,6 +39,12 @@ function openDB(): Promise<IDBDatabase> {
   });
 }
 
+/*
+|--------------------------------------------------------------------------
+| AYAH KEY
+|--------------------------------------------------------------------------
+*/
+
 export function makeAudioKey(
   reciterId: string,
   surahNumber: number,
@@ -45,6 +52,25 @@ export function makeAudioKey(
 ) {
   return `${reciterId}_${surahNumber}_${ayahNumber}`;
 }
+
+/*
+|--------------------------------------------------------------------------
+| SURAH KEY
+|--------------------------------------------------------------------------
+*/
+
+export function makeSurahAudioKey(
+  reciterId: string,
+  surahNumber: number
+) {
+  return `${reciterId}_surah_${surahNumber}`;
+}
+
+/*
+|--------------------------------------------------------------------------
+| SAVE AYAH AUDIO
+|--------------------------------------------------------------------------
+*/
 
 export async function saveAyahAudio(
   reciterId: string,
@@ -64,6 +90,7 @@ export async function saveAyahAudio(
     reciterId,
     surahNumber,
     ayahNumber,
+    type: 'ayah',
     createdAt: Date.now()
   };
 
@@ -86,6 +113,12 @@ export async function saveAyahAudio(
     };
   });
 }
+
+/*
+|--------------------------------------------------------------------------
+| GET AYAH AUDIO
+|--------------------------------------------------------------------------
+*/
 
 export async function getAyahAudio(
   reciterId: string,
@@ -118,7 +151,9 @@ export async function getAyahAudio(
       db.close();
 
       resolve(
-        record?.blob ?? null
+        record?.type === 'ayah'
+          ? record.blob
+          : null
       );
     };
 
@@ -128,6 +163,105 @@ export async function getAyahAudio(
     };
   });
 }
+
+/*
+|--------------------------------------------------------------------------
+| SAVE COMPLETE SURAH AUDIO
+|--------------------------------------------------------------------------
+*/
+
+export async function saveSurahAudio(
+  reciterId: string,
+  surahNumber: number,
+  blob: Blob
+) {
+  const db = await openDB();
+
+  const record: AudioRecord = {
+    key: makeSurahAudioKey(
+      reciterId,
+      surahNumber
+    ),
+    blob,
+    reciterId,
+    surahNumber,
+    type: 'surah',
+    createdAt: Date.now()
+  };
+
+  return new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(
+      STORE_NAME,
+      'readwrite'
+    );
+
+    tx.objectStore(STORE_NAME).put(record);
+
+    tx.oncomplete = () => {
+      db.close();
+      resolve();
+    };
+
+    tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+  });
+}
+
+/*
+|--------------------------------------------------------------------------
+| GET COMPLETE SURAH AUDIO
+|--------------------------------------------------------------------------
+*/
+
+export async function getSurahAudio(
+  reciterId: string,
+  surahNumber: number
+): Promise<Blob | null> {
+  const db = await openDB();
+
+  const key = makeSurahAudioKey(
+    reciterId,
+    surahNumber
+  );
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(
+      STORE_NAME,
+      'readonly'
+    );
+
+    const request =
+      tx.objectStore(STORE_NAME).get(key);
+
+    request.onsuccess = () => {
+      const record =
+        request.result as
+          | AudioRecord
+          | undefined;
+
+      db.close();
+
+      resolve(
+        record?.type === 'surah'
+          ? record.blob
+          : null
+      );
+    };
+
+    request.onerror = () => {
+      db.close();
+      reject(request.error);
+    };
+  });
+}
+
+/*
+|--------------------------------------------------------------------------
+| CHECK AYAH
+|--------------------------------------------------------------------------
+*/
 
 export async function isAyahDownloaded(
   reciterId: string,
@@ -142,6 +276,14 @@ export async function isAyahDownloaded(
 
   return !!blob;
 }
+
+/*
+|--------------------------------------------------------------------------
+| COUNT DOWNLOADED AYATS
+|
+| This remains for EveryAyah reciters.
+|--------------------------------------------------------------------------
+*/
 
 export async function getDownloadedAyahCount(
   reciterId: string,
@@ -202,6 +344,36 @@ export async function getDownloadedAyahCount(
   });
 }
 
+/*
+|--------------------------------------------------------------------------
+| CHECK SURAH AUDIO
+|--------------------------------------------------------------------------
+*/
+
+export async function isSurahAudioDownloaded(
+  reciterId: string,
+  surahNumber: number
+): Promise<boolean> {
+  const blob =
+    await getSurahAudio(
+      reciterId,
+      surahNumber
+    );
+
+  return !!blob;
+}
+
+/*
+|--------------------------------------------------------------------------
+| DELETE SURAH AUDIO
+|--------------------------------------------------------------------------
+|
+| Deletes BOTH:
+| - MP3Quran complete-surah file
+| - EveryAyah ayah-by-ayah files
+|--------------------------------------------------------------------------
+*/
+
 export async function deleteSurahAudio(
   reciterId: string,
   surahNumber: number,
@@ -218,6 +390,19 @@ export async function deleteSurahAudio(
     const store =
       tx.objectStore(STORE_NAME);
 
+    /*
+     * MP3Quran complete file
+     */
+    store.delete(
+      makeSurahAudioKey(
+        reciterId,
+        surahNumber
+      )
+    );
+
+    /*
+     * EveryAyah files
+     */
     for (
       let ayah = 1;
       ayah <= ayahCount;
@@ -243,6 +428,12 @@ export async function deleteSurahAudio(
     };
   });
 }
+
+/*
+|--------------------------------------------------------------------------
+| CHECK OLD EVERYAYAH COMPLETE
+|--------------------------------------------------------------------------
+*/
 
 export async function isSurahDownloaded(
   reciterId: string,
