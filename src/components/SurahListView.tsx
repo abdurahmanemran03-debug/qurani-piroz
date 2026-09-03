@@ -45,22 +45,31 @@ interface SurahListViewProps {
 const JUZ_START_PAGES = [
   1, 22, 42, 62, 82, 102, 121, 142, 162, 182,
   201, 222, 242, 262, 282, 302, 322, 342, 362, 382,
-  402, 422, 442, 462, 482, 502, 522, 542, 562, 582,
+  402, 422, 442, 462, 482, 502, 522, 542, 562, 582
 ];
 
 type CombinedItem =
-  | { kind: 'juz'; juzNumber: number; page: number }
-  | { kind: 'surah'; surah: SurahItem };
+  | {
+      kind: 'juz';
+      juzNumber: number;
+      page: number;
+    }
+  | {
+      kind: 'surah';
+      surah: SurahItem;
+    };
 
 interface DownloadState {
   downloaded: number;
   total: number;
   downloading: boolean;
   paused: boolean;
+  error?: boolean;
 }
 
 const DEFAULT_RECITER =
-  ALL_RECITERS_DIRECTORY[18] || ALL_RECITERS_DIRECTORY[0];
+  ALL_RECITERS_DIRECTORY[18] ||
+  ALL_RECITERS_DIRECTORY[0];
 
 const makeAyahUrl = (
   reciter: ReciterItem,
@@ -73,15 +82,30 @@ const makeAyahUrl = (
   return `https://everyayah.com/data/${reciter.serverKey}/${surah}${ayah}.mp3`;
 };
 
-const KaabaIcon: React.FC<{ className?: string }> = ({ className }) => (
+const KaabaIcon: React.FC<{ className?: string }> = ({
+  className
+}) => (
   <svg
     viewBox="0 0 24 24"
     className={className}
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <rect x="3" y="6" width="18" height="15" rx="1" fill="#111111" />
-    <rect x="3" y="6" width="18" height="4.2" fill="#d4af37" />
+    <rect
+      x="3"
+      y="6"
+      width="18"
+      height="15"
+      rx="1"
+      fill="#111111"
+    />
+    <rect
+      x="3"
+      y="6"
+      width="18"
+      height="4.2"
+      fill="#d4af37"
+    />
     <rect
       x="10.2"
       y="12"
@@ -101,20 +125,64 @@ const KaabaIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const MedinaIcon: React.FC<{ className?: string }> = ({ className }) => (
+const MedinaIcon: React.FC<{ className?: string }> = ({
+  className
+}) => (
   <svg
     viewBox="0 0 24 24"
     className={className}
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
   >
-    <rect x="4" y="15" width="16" height="6" rx="0.5" fill="#0f6b4c" />
-    <rect x="2" y="19" width="20" height="2" rx="0.5" fill="#0a4a34" />
-    <circle cx="12" cy="10.5" r="4" fill="#0f6b4c" />
-    <rect x="10.5" y="6" width="3" height="4" fill="#0f6b4c" />
-    <circle cx="12" cy="5" r="1" fill="#d4af37" />
-    <rect x="4.4" y="9" width="1.6" height="10" fill="#0f6b4c" />
-    <rect x="18" y="9" width="1.6" height="10" fill="#0f6b4c" />
+    <rect
+      x="4"
+      y="15"
+      width="16"
+      height="6"
+      rx="0.5"
+      fill="#0f6b4c"
+    />
+    <rect
+      x="2"
+      y="19"
+      width="20"
+      height="2"
+      rx="0.5"
+      fill="#0a4a34"
+    />
+    <circle
+      cx="12"
+      cy="10.5"
+      r="4"
+      fill="#0f6b4c"
+    />
+    <rect
+      x="10.5"
+      y="6"
+      width="3"
+      height="4"
+      fill="#0f6b4c"
+    />
+    <circle
+      cx="12"
+      cy="5"
+      r="1"
+      fill="#d4af37"
+    />
+    <rect
+      x="4.4"
+      y="9"
+      width="1.6"
+      height="10"
+      fill="#0f6b4c"
+    />
+    <rect
+      x="18"
+      y="9"
+      width="1.6"
+      height="10"
+      fill="#0f6b4c"
+    />
     <path
       d="M5.2 9 L5.2 5.5"
       stroke="#0f6b4c"
@@ -127,12 +195,24 @@ const MedinaIcon: React.FC<{ className?: string }> = ({ className }) => (
       strokeWidth="1.6"
       strokeLinecap="round"
     />
-    <circle cx="5.2" cy="5" r="0.9" fill="#d4af37" />
-    <circle cx="18.8" cy="5" r="0.9" fill="#d4af37" />
+    <circle
+      cx="5.2"
+      cy="5"
+      r="0.9"
+      fill="#d4af37"
+    />
+    <circle
+      cx="18.8"
+      cy="5"
+      r="0.9"
+      fill="#d4af37"
+    />
   </svg>
 );
 
-export const SurahListView: React.FC<SurahListViewProps> = ({
+export const SurahListView: React.FC<
+  SurahListViewProps
+> = ({
   surahs,
   onOpenSurah,
   onOpenSettings,
@@ -142,12 +222,14 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
   showKurdishNames,
   showNumbers
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] =
+    useState('');
 
   const [selectedReciter, setSelectedReciter] =
     useState<ReciterItem>(DEFAULT_RECITER);
 
-  const [showReciterPicker, setShowReciterPicker] = useState(false);
+  const [showReciterPicker, setShowReciterPicker] =
+    useState(false);
 
   const [downloadStates, setDownloadStates] =
     useState<Record<number, DownloadState>>({});
@@ -157,18 +239,19 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
   >({});
 
   /*
-   * هەوڵ دەدەین قارییەکە لە localStorage بخوێنینەوە.
-   * دواتر لە MushafPageView ـیش هەمان key بەکار دەهێنین
-   * بۆ ئەوەی هەردوو شوێن هەمان قاری بەکاربهێنن.
+   * هەڵگرتنی قاریی هەڵبژێردراو
    */
   useEffect(() => {
     try {
-      const saved = localStorage.getItem('quran_selected_reciter');
+      const saved = localStorage.getItem(
+        'quran_selected_reciter'
+      );
 
       if (saved) {
-        const found = ALL_RECITERS_DIRECTORY.find(
-          r => r.id === saved
-        );
+        const found =
+          ALL_RECITERS_DIRECTORY.find(
+            r => r.id === saved
+          );
 
         if (found) {
           setSelectedReciter(found);
@@ -177,7 +260,9 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     } catch {}
   }, []);
 
-  const selectReciter = (reciter: ReciterItem) => {
+  const selectReciter = (
+    reciter: ReciterItem
+  ) => {
     setSelectedReciter(reciter);
 
     try {
@@ -190,7 +275,9 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     setShowReciterPicker(false);
   };
 
-  const combinedList = useMemo<CombinedItem[]>(() => {
+  const combinedList = useMemo<
+    CombinedItem[]
+  >(() => {
     if (searchQuery.trim()) return [];
 
     const list: CombinedItem[] = [];
@@ -198,8 +285,10 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
 
     for (const s of surahs) {
       while (
-        juzIndex < JUZ_START_PAGES.length &&
-        JUZ_START_PAGES[juzIndex] <= s.startPage
+        juzIndex <
+          JUZ_START_PAGES.length &&
+        JUZ_START_PAGES[juzIndex] <=
+          s.startPage
       ) {
         list.push({
           kind: 'juz',
@@ -219,12 +308,23 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     return list;
   }, [surahs, searchQuery]);
 
-  const [ayahResults, setAyahResults] = useState<any[]>([]);
-  const [loadingAyah, setLoadingAyah] = useState(false);
-  const [ayahSearchDone, setAyahSearchDone] = useState(false);
-  const [ayahSearchEdition, setAyahSearchEdition] =
-    useState<'ar' | 'ku'>('ar');
+  const [ayahResults, setAyahResults] =
+    useState<any[]>([]);
 
+  const [loadingAyah, setLoadingAyah] =
+    useState(false);
+
+  const [ayahSearchDone, setAyahSearchDone] =
+    useState(false);
+
+  const [
+    ayahSearchEdition,
+    setAyahSearchEdition
+  ] = useState<'ar' | 'ku'>('ar');
+
+  /*
+   * گەڕانی ئایەت
+   */
   useEffect(() => {
     const q = searchQuery.trim();
 
@@ -250,38 +350,47 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     setLoadingAyah(true);
     setAyahSearchDone(false);
 
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `https://api.alquran.cloud/v1/search/${encodeURIComponent(
-            q
-          )}/all/${edition}`
-        );
-
-        const data = await res.json();
-
-        if (
-          data.code === 200 &&
-          data.data?.matches
-        ) {
-          setAyahResults(
-            data.data.matches.slice(0, 40)
+    const timer = setTimeout(
+      async () => {
+        try {
+          const res = await fetch(
+            `https://api.alquran.cloud/v1/search/${encodeURIComponent(
+              q
+            )}/all/${edition}`
           );
-        } else {
-          setAyahResults([]);
-        }
-      } catch {
-        setAyahResults([]);
-      } finally {
-        setLoadingAyah(false);
-        setAyahSearchDone(true);
-      }
-    }, 500);
 
-    return () => clearTimeout(timer);
+          const data = await res.json();
+
+          if (
+            data.code === 200 &&
+            data.data?.matches
+          ) {
+            setAyahResults(
+              data.data.matches.slice(
+                0,
+                40
+              )
+            );
+          } else {
+            setAyahResults([]);
+          }
+        } catch {
+          setAyahResults([]);
+        } finally {
+          setLoadingAyah(false);
+          setAyahSearchDone(true);
+        }
+      },
+      500
+    );
+
+    return () =>
+      clearTimeout(timer);
   }, [searchQuery]);
 
-  const openAyahResult = async (match: any) => {
+  const openAyahResult = async (
+    match: any
+  ) => {
     if (match.page) {
       onOpenSurah(match.page);
       return;
@@ -333,203 +442,290 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
   };
 
   /*
-   * پشکنینی ئەوەی چەند ئایەت پێشتر دابەزێندراوە
+   * ژمارەی ئایەتە دابەزێندراوەکان
    */
-  const refreshDownloadState = async (
-    surah: SurahItem
-  ) => {
-    try {
-      const downloaded =
-        await getDownloadedAyahCount(
-          selectedReciter.id,
-          surah.number,
-          surah.ayahs
-        );
-
-      setDownloadStates(prev => ({
-        ...prev,
-        [surah.number]: {
-          downloaded,
-          total: surah.ayahs,
-          downloading:
-            prev[surah.number]?.downloading ?? false,
-          paused:
-            prev[surah.number]?.paused ?? false
-        }
-      }));
-    } catch {}
-  };
-
-  useEffect(() => {
-    const loadStates = async () => {
-      for (const surah of surahs) {
-        await refreshDownloadState(surah);
-      }
-    };
-
-    loadStates();
-  }, [surahs, selectedReciter]);
-
-  /*
-   * دابەزاندنی یەک سورەت
-   */
-  const downloadSurah = async (
-    surah: SurahItem
-  ) => {
-    if (
-      downloadStates[surah.number]?.downloading
-    ) {
-      return;
-    }
-
-    const controller = new AbortController();
-
-    abortControllers.current[
-      surah.number
-    ] = controller;
-
-    try {
-      const existing =
-        await getDownloadedAyahCount(
-          selectedReciter.id,
-          surah.number,
-          surah.ayahs
-        );
-
-      setDownloadStates(prev => ({
-        ...prev,
-        [surah.number]: {
-          downloaded: existing,
-          total: surah.ayahs,
-          downloading: true,
-          paused: false
-        }
-      }));
-
-      for (
-        let ayah = existing + 1;
-        ayah <= surah.ayahs;
-        ayah++
-      ) {
-        if (controller.signal.aborted) {
-          break;
-        }
-
-        const already =
-          await isAyahDownloaded(
+  const refreshDownloadState =
+    async (surah: SurahItem) => {
+      try {
+        const downloaded =
+          await getDownloadedAyahCount(
             selectedReciter.id,
             surah.number,
-            ayah
+            surah.ayahs
           );
 
-        if (already) {
-          setDownloadStates(prev => ({
+        setDownloadStates(prev => ({
+          ...prev,
+          [surah.number]: {
+            downloaded,
+            total: surah.ayahs,
+            downloading:
+              prev[surah.number]
+                ?.downloading ?? false,
+            paused:
+              prev[surah.number]
+                ?.paused ?? false,
+            error:
+              prev[surah.number]?.error ??
+              false
+          }
+        }));
+      } catch {}
+    };
+
+  /*
+   * کاتێک قاری دەگۆڕدرێت،
+   * دۆخی Download ـەکان نوێ دەکەینەوە.
+   */
+  useEffect(() => {
+    const loadStates =
+      async () => {
+        for (const surah of surahs) {
+          await refreshDownloadState(
+            surah
+          );
+        }
+      };
+
+    loadStates();
+  }, [
+    surahs,
+    selectedReciter
+  ]);
+
+  /*
+   * دابەزاندنی سورەت
+   */
+  const downloadSurah =
+    async (
+      surah: SurahItem
+    ) => {
+      if (
+        downloadStates[
+          surah.number
+        ]?.downloading
+      ) {
+        return;
+      }
+
+      const controller =
+        new AbortController();
+
+      abortControllers.current[
+        surah.number
+      ] = controller;
+
+      try {
+        /*
+         * دەستپێکردن لە یەکەم ئایەتی
+         * نەک تەنها existing + 1،
+         * بۆ ئەوەی ئەگەر gap هەبوو
+         * بتوانێت پڕی بکاتەوە.
+         */
+        const existing =
+          await getDownloadedAyahCount(
+            selectedReciter.id,
+            surah.number,
+            surah.ayahs
+          );
+
+        setDownloadStates(
+          prev => ({
             ...prev,
             [surah.number]: {
-              downloaded: ayah,
-              total: surah.ayahs,
-              downloading: true,
-              paused: false
+              downloaded:
+                existing,
+              total:
+                surah.ayahs,
+              downloading:
+                true,
+              paused:
+                false,
+              error:
+                false
             }
-          }));
-
-          continue;
-        }
-
-        const url = makeAyahUrl(
-          selectedReciter,
-          surah.number,
-          ayah
+          })
         );
 
-        const response = await fetch(url, {
-          signal: controller.signal
-        });
+        let currentCount =
+          existing;
 
-        if (!response.ok) {
-          throw new Error(
-            `HTTP ${response.status}`
+        for (
+          let ayah = 1;
+          ayah <= surah.ayahs;
+          ayah++
+        ) {
+          if (
+            controller.signal.aborted
+          ) {
+            break;
+          }
+
+          const already =
+            await isAyahDownloaded(
+              selectedReciter.id,
+              surah.number,
+              ayah
+            );
+
+          if (already) {
+            continue;
+          }
+
+          const url =
+            makeAyahUrl(
+              selectedReciter,
+              surah.number,
+              ayah
+            );
+
+          const response =
+            await fetch(
+              url,
+              {
+                signal:
+                  controller.signal
+              }
+            );
+
+          if (!response.ok) {
+            throw new Error(
+              `HTTP ${response.status}`
+            );
+          }
+
+          const blob =
+            await response.blob();
+
+          await saveAyahAudio(
+            selectedReciter.id,
+            surah.number,
+            ayah,
+            blob
+          );
+
+          currentCount++;
+
+          setDownloadStates(
+            prev => ({
+              ...prev,
+              [surah.number]: {
+                downloaded:
+                  currentCount,
+                total:
+                  surah.ayahs,
+                downloading:
+                  true,
+                paused:
+                  false,
+                error:
+                  false
+              }
+            })
           );
         }
 
-        const blob = await response.blob();
+        const finalCount =
+          await getDownloadedAyahCount(
+            selectedReciter.id,
+            surah.number,
+            surah.ayahs
+          );
 
-        await saveAyahAudio(
-          selectedReciter.id,
-          surah.number,
-          ayah,
-          blob
+        setDownloadStates(
+          prev => ({
+            ...prev,
+            [surah.number]: {
+              downloaded:
+                finalCount,
+              total:
+                surah.ayahs,
+              downloading:
+                false,
+              paused:
+                false,
+              error:
+                false
+            }
+          })
         );
+      } catch (
+        error: any
+      ) {
+        if (
+          error?.name ===
+          'AbortError'
+        ) {
+          const current =
+            await getDownloadedAyahCount(
+              selectedReciter.id,
+              surah.number,
+              surah.ayahs
+            ).catch(
+              () => 0
+            );
 
-        setDownloadStates(prev => ({
-          ...prev,
-          [surah.number]: {
-            downloaded: ayah,
-            total: surah.ayahs,
-            downloading: true,
-            paused: false
-          }
-        }));
-      }
+          setDownloadStates(
+            prev => ({
+              ...prev,
+              [surah.number]: {
+                downloaded:
+                  current,
+                total:
+                  surah.ayahs,
+                downloading:
+                  false,
+                paused:
+                  true,
+                error:
+                  false
+              }
+            })
+          );
+        } else {
+          console.error(
+            'Audio download error:',
+            error
+          );
 
-      const finalCount =
-        await getDownloadedAyahCount(
-          selectedReciter.id,
-          surah.number,
-          surah.ayahs
-        );
+          const current =
+            await getDownloadedAyahCount(
+              selectedReciter.id,
+              surah.number,
+              surah.ayahs
+            ).catch(
+              () => 0
+            );
 
-      setDownloadStates(prev => ({
-        ...prev,
-        [surah.number]: {
-          downloaded: finalCount,
-          total: surah.ayahs,
-          downloading: false,
-          paused: false
+          setDownloadStates(
+            prev => ({
+              ...prev,
+              [surah.number]: {
+                downloaded:
+                  current,
+                total:
+                  surah.ayahs,
+                downloading:
+                  false,
+                paused:
+                  false,
+                error:
+                  true
+              }
+            })
+          );
+
+          alert(
+            'دابەزاندنی دەنگ سەرکەوتوو نەبوو.\n\nئەگەر ئینتەرنێتەکەت باشە، ئەوا لەوانەیە سەرچاوەی دەنگ ڕێگەی دابەزاندنی ڕاستەوخۆ نەدات.'
+          );
         }
-      }));
-
-    } catch (error: any) {
-      if (error?.name === 'AbortError') {
-        setDownloadStates(prev => ({
-          ...prev,
-          [surah.number]: {
-            ...(prev[surah.number] || {
-              downloaded: 0,
-              total: surah.ayahs
-            }),
-            downloading: false,
-            paused: true
-          }
-        }));
-      } else {
-        console.error(
-          'Audio download error:',
-          error
-        );
-
-        setDownloadStates(prev => ({
-          ...prev,
-          [surah.number]: {
-            ...(prev[surah.number] || {
-              downloaded: 0,
-              total: surah.ayahs
-            }),
-            downloading: false,
-            paused: false
-          }
-        }));
-
-        alert(
-          'دابەزاندنی دەنگ سەرکەوتوو نەبوو.\n\nتکایە دڵنیابە لە پەیوەندی ئینتەرنێت.'
-        );
+      } finally {
+        delete abortControllers
+          .current[
+          surah.number
+        ];
       }
-    } finally {
-      delete abortControllers.current[
-        surah.number
-      ];
-    }
-  };
+    };
 
   /*
    * وەستاندنی Download
@@ -538,7 +734,9 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
     surahNumber: number
   ) => {
     const controller =
-      abortControllers.current[surahNumber];
+      abortControllers.current[
+        surahNumber
+      ];
 
     if (controller) {
       controller.abort();
@@ -546,300 +744,419 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
   };
 
   /*
-   * سڕینەوەی هەموو دەنگی سورەت
+   * سڕینەوەی دەنگی سورەت
    */
-  const removeSurahAudio = async (
-    surah: SurahItem
-  ) => {
-    const state =
-      downloadStates[surah.number];
+  const removeSurahAudio =
+    async (
+      surah: SurahItem
+    ) => {
+      const state =
+        downloadStates[
+          surah.number
+        ];
 
-    if (!state || state.downloaded === 0) {
-      return;
-    }
+      if (
+        !state ||
+        state.downloaded === 0
+      ) {
+        return;
+      }
 
-    const confirmed = window.confirm(
-      appLang === 'ar'
-        ? 'هل تريد حذف صوت هذه السورة؟'
-        : appLang === 'en'
-          ? 'Delete downloaded audio for this surah?'
-          : 'دڵنیایت دەتەوێت دەنگی ئەم سورەتە بسڕیتەوە؟'
-    );
+      const confirmed =
+        window.confirm(
+          appLang === 'ar'
+            ? 'هل تريد حذف صوت هذه السورة؟'
+            : appLang === 'en'
+              ? 'Delete downloaded audio for this surah?'
+              : 'دڵنیایت دەتەوێت دەنگی ئەم سورەتە بسڕیتەوە؟'
+        );
 
-    if (!confirmed) {
-      return;
-    }
+      if (!confirmed) {
+        return;
+      }
 
-    try {
-      await deleteSurahAudio(
-        selectedReciter.id,
-        surah.number,
-        surah.ayahs
-      );
+      try {
+        await deleteSurahAudio(
+          selectedReciter.id,
+          surah.number,
+          surah.ayahs
+        );
 
-      setDownloadStates(prev => ({
-        ...prev,
-        [surah.number]: {
-          downloaded: 0,
-          total: surah.ayahs,
-          downloading: false,
-          paused: false
-        }
-      }));
-    } catch (error) {
-      console.error(
-        'Delete audio error:',
+        setDownloadStates(
+          prev => ({
+            ...prev,
+            [surah.number]: {
+              downloaded: 0,
+              total:
+                surah.ayahs,
+              downloading:
+                false,
+              paused:
+                false,
+              error:
+                false
+            }
+          })
+        );
+      } catch (
         error
-      );
+      ) {
+        console.error(
+          'Delete audio error:',
+          error
+        );
 
-      alert(
-        'سڕینەوەی دەنگ سەرکەوتوو نەبوو.'
-      );
-    }
-  };
+        alert(
+          'سڕینەوەی دەنگ سەرکەوتوو نەبوو.'
+        );
+      }
+    };
 
-  const renderDownloadButton = (
-    surah: SurahItem
-  ) => {
-    const state =
-      downloadStates[surah.number] || {
-        downloaded: 0,
-        total: surah.ayahs,
-        downloading: false,
-        paused: false
-      };
+  /*
+   * دوگمەی Download
+   */
+  const renderDownloadButton =
+    (
+      surah: SurahItem
+    ) => {
+      const state =
+        downloadStates[
+          surah.number
+        ] || {
+          downloaded: 0,
+          total:
+            surah.ayahs,
+          downloading:
+            false,
+          paused: false,
+          error: false
+        };
 
-    const isComplete =
-      state.downloaded >= state.total;
+      const isComplete =
+        state.downloaded >=
+        state.total;
 
-    const progress =
-      state.total > 0
-        ? Math.round(
-            (state.downloaded /
-              state.total) *
-              100
-          )
-        : 0;
+      const progress =
+        state.total > 0
+          ? Math.round(
+              (state.downloaded /
+                state.total) *
+                100
+            )
+          : 0;
 
-    if (state.downloading) {
-      return (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            pauseDownload(surah.number);
-          }}
-          className="shrink-0 w-10 h-10 rounded-xl bg-amber-100 border border-amber-200 text-amber-700 flex items-center justify-center"
-          title="وەستاندن"
-        >
-          <Pause className="w-4 h-4" />
-        </button>
-      );
-    }
+      /*
+       * Download ـی خەریکە
+       */
+      if (
+        state.downloading
+      ) {
+        return (
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
+                pauseDownload(
+                  surah.number
+                );
+              }}
+              className="min-w-[92px] h-10 px-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+            >
+              <Pause className="w-4 h-4" />
 
-    if (isComplete) {
-      return (
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              removeSurahAudio(surah);
-            }}
-            className="shrink-0 w-10 h-10 rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center"
-            title="سڕینەوە"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+              <span className="text-[11px] font-bold">
+                وەستاندن
+              </span>
+            </button>
 
-          <div
-            className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-600 flex items-center justify-center"
-            title="دابەزێندراوە"
-          >
-            <Check className="w-4 h-4" />
+            <span className="text-[9px] font-bold text-amber-700">
+              {state.downloaded}/
+              {state.total} (
+              {progress}%)
+            </span>
           </div>
-        </div>
-      );
-    }
+        );
+      }
 
-    if (state.downloaded > 0) {
-      return (
-        <div className="flex flex-col items-center gap-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              downloadSurah(surah);
-            }}
-            className="shrink-0 w-10 h-10 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 flex items-center justify-center"
-            title="بەردەوامکردن"
-          >
-            <Play className="w-4 h-4" />
-          </button>
+      /*
+       * تەواو بووە
+       */
+      if (
+        isComplete
+      ) {
+        return (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
+                removeSurahAudio(
+                  surah
+                );
+              }}
+              className="h-10 px-3 rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+            >
+              <Trash2 className="w-4 h-4" />
 
-          <span className="text-[8px] font-bold text-blue-600">
-            {progress}%
-          </span>
-        </div>
-      );
-    }
+              <span className="text-[10px] font-bold">
+                سڕینەوە
+              </span>
+            </button>
 
-    return (
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          downloadSurah(surah);
-        }}
-        className="shrink-0 w-10 h-10 rounded-xl bg-slate-100 border border-slate-200 text-slate-600 hover:bg-slate-200 flex items-center justify-center"
-        title="دابەزاندن"
-      >
-        <Download className="w-4 h-4" />
-      </button>
-    );
-  };
+            <div className="h-10 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center gap-1.5">
+              <Check className="w-4 h-4" />
 
-  const renderSurahCard = (
-    surah: SurahItem
-  ) => {
-    const isMeccan =
-      surah.typeKu === 'مەککەیی';
-
-    const state =
-      downloadStates[surah.number];
-
-    const progress =
-      state && state.total > 0
-        ? Math.round(
-            (state.downloaded /
-              state.total) *
-              100
-          )
-        : 0;
-
-    return (
-      <div
-        key={surah.number}
-        onClick={() =>
-          onOpenSurah(surah.startPage)
-        }
-        className={`p-3.5 rounded-2xl border cursor-pointer transition-all active:scale-[0.99] ${getCardStyle()}`}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            {showNumbers && (
-              <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
-                {surah.number}
-              </div>
-            )}
-
-            <div className="min-w-0">
-              <h3 className="font-bold text-sm truncate">
-                سورة {surah.nameAr}
-              </h3>
-
-              <p className="text-[11px] opacity-75 flex items-center gap-1 flex-wrap">
-                {showKurdishNames && (
-                  <span>
-                    {appLang === 'en'
-                      ? surah.nameEn
-                      : surah.nameKu}
-                    {' • '}
-                  </span>
-                )}
-
-                <span className="flex items-center gap-1">
-                  {isMeccan ? (
-                    <KaabaIcon className="w-4 h-4 shrink-0" />
-                  ) : (
-                    <MedinaIcon className="w-4 h-4 shrink-0" />
-                  )}
-
-                  <span>
-                    {appLang === 'ar'
-                      ? surah.typeAr
-                      : appLang === 'en'
-                        ? surah.typeEn
-                        : surah.typeKu}
-                  </span>
-                </span>
-
-                <span>
-                  • {surah.ayahs}{' '}
-                  {appLang === 'ar'
-                    ? 'آيات'
-                    : appLang === 'en'
-                      ? 'verses'
-                      : 'ئایەت'}
-                </span>
-              </p>
-
-              {state &&
-                state.downloaded > 0 &&
-                state.downloaded <
-                  state.total && (
-                  <div className="mt-2 w-full max-w-[180px]">
-                    <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-amber-500 transition-all"
-                        style={{
-                          width: `${progress}%`
-                        }}
-                      />
-                    </div>
-
-                    <div className="flex justify-between mt-1">
-                      <span className="text-[8px] text-slate-500">
-                        {state.downloaded}/
-                        {state.total}
-                      </span>
-
-                      <span className="text-[8px] text-slate-500">
-                        {progress}%
-                      </span>
-                    </div>
-                  </div>
-                )}
+              <span className="text-[10px] font-bold">
+                دابەزێندراوە
+              </span>
             </div>
           </div>
+        );
+      }
 
-          <div className="flex items-center gap-2 shrink-0">
-            {renderDownloadButton(surah)}
+      /*
+       * بەشێک دابەزیوە
+       */
+      if (
+        state.downloaded > 0
+      ) {
+        return (
+          <div className="flex flex-col items-center gap-1.5">
+            <button
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
+                downloadSurah(
+                  surah
+                );
+              }}
+              className="min-w-[112px] h-10 px-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+            >
+              <Play className="w-4 h-4" />
 
-            {showNumbers && (
-              <div className="hidden sm:block text-[11px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-600">
-                {appLang === 'en'
-                  ? `Page ${surah.startPage}`
-                  : `لاپەڕەی ${surah.startPage}`}
+              <span className="text-[10px] font-bold">
+                بەردەوامکردن
+              </span>
+            </button>
+
+            <span className="text-[9px] font-bold text-blue-600">
+              {state.downloaded}/
+              {state.total} (
+              {progress}%)
+            </span>
+          </div>
+        );
+      }
+
+      /*
+       * هیچ شتێک دابەزیوە نییە
+       */
+      return (
+        <button
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
+            downloadSurah(
+              surah
+            );
+          }}
+          className="min-w-[112px] h-10 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
+        >
+          <Download className="w-4 h-4" />
+
+          <span className="text-[11px] font-bold">
+            دابەزاندن
+          </span>
+        </button>
+      );
+    };
+
+  const renderSurahCard =
+    (
+      surah: SurahItem
+    ) => {
+      const isMeccan =
+        surah.typeKu ===
+        'مەککەیی';
+
+      const state =
+        downloadStates[
+          surah.number
+        ];
+
+      const progress =
+        state &&
+        state.total > 0
+          ? Math.round(
+              (state.downloaded /
+                state.total) *
+                100
+            )
+          : 0;
+
+      return (
+        <div
+          key={surah.number}
+          onClick={() =>
+            onOpenSurah(
+              surah.startPage
+            )
+          }
+          className={`p-3.5 rounded-2xl border cursor-pointer transition-all active:scale-[0.99] ${getCardStyle()}`}
+        >
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              {showNumbers && (
+                <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
+                  {surah.number}
+                </div>
+              )}
+
+              <div className="min-w-0 flex-1">
+                <h3 className="font-bold text-sm truncate">
+                  سورة{' '}
+                  {surah.nameAr}
+                </h3>
+
+                <p className="text-[11px] opacity-75 flex items-center gap-1 flex-wrap">
+                  {showKurdishNames && (
+                    <span>
+                      {appLang ===
+                      'en'
+                        ? surah.nameEn
+                        : surah.nameKu}
+                      {' • '}
+                    </span>
+                  )}
+
+                  <span className="flex items-center gap-1">
+                    {isMeccan ? (
+                      <KaabaIcon className="w-4 h-4 shrink-0" />
+                    ) : (
+                      <MedinaIcon className="w-4 h-4 shrink-0" />
+                    )}
+
+                    <span>
+                      {appLang ===
+                      'ar'
+                        ? surah.typeAr
+                        : appLang ===
+                            'en'
+                          ? surah.typeEn
+                          : surah.typeKu}
+                    </span>
+                  </span>
+
+                  <span>
+                    • {surah.ayahs}{' '}
+                    {appLang ===
+                    'ar'
+                      ? 'آيات'
+                      : appLang ===
+                          'en'
+                        ? 'verses'
+                        : 'ئایەت'}
+                  </span>
+                </p>
+
+                {state &&
+                  state.downloaded >
+                    0 &&
+                  state.downloaded <
+                    state.total && (
+                    <div className="mt-2 w-full max-w-[180px]">
+                      <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-amber-500 transition-all"
+                          style={{
+                            width: `${progress}%`
+                          }}
+                        />
+                      </div>
+
+                      <div className="flex justify-between mt-1">
+                        <span className="text-[8px] text-slate-500">
+                          {
+                            state.downloaded
+                          }
+                          /
+                          {
+                            state.total
+                          }
+                        </span>
+
+                        <span className="text-[8px] text-slate-500">
+                          {
+                            progress
+                          }
+                          %
+                        </span>
+                      </div>
+                    </div>
+                  )}
               </div>
-            )}
+            </div>
+
+            {/*
+             * ئەم wrapper ـە زۆر گرنگە:
+             * کلیکی کارتی سورەت نابێت
+             * کلیکی دوگمەی Download بخوات.
+             */}
+            <div
+              className="flex items-center gap-2 shrink-0"
+              onClick={e =>
+                e.stopPropagation()
+              }
+            >
+              {renderDownloadButton(
+                surah
+              )}
+
+              {showNumbers && (
+                <div className="hidden sm:block text-[11px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-600">
+                  {appLang ===
+                  'en'
+                    ? `Page ${surah.startPage}`
+                    : `لاپەڕەی ${surah.startPage}`}
+                </div>
+              )}
+            </div>
           </div>
         </div>
+      );
+    };
+
+  const renderJuzHeader =
+    (
+      juzNumber: number,
+      page: number
+    ) => (
+      <div
+        key={`juz-${juzNumber}`}
+        className="px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between"
+      >
+        <span className="text-[11px] font-bold text-slate-500">
+          {appLang ===
+          'ar'
+            ? `صفحة ${page}`
+            : appLang ===
+                'en'
+              ? `Page ${page}`
+              : `لاپەڕەی ${page}`}
+        </span>
+
+        <span className="text-xs font-bold text-slate-700">
+          {appLang ===
+          'ar'
+            ? `الجزء ${juzNumber}`
+            : appLang ===
+                'en'
+              ? `Juz ${juzNumber}`
+              : `جوزئی ${juzNumber}`}
+        </span>
       </div>
     );
-  };
-
-  const renderJuzHeader = (
-    juzNumber: number,
-    page: number
-  ) => (
-    <div
-      key={`juz-${juzNumber}`}
-      className="px-3.5 py-2 rounded-xl bg-slate-100 border border-slate-200 flex items-center justify-between"
-    >
-      <span className="text-[11px] font-bold text-slate-500">
-        {appLang === 'ar'
-          ? `صفحة ${page}`
-          : appLang === 'en'
-            ? `Page ${page}`
-            : `لاپەڕەی ${page}`}
-      </span>
-
-      <span className="text-xs font-bold text-slate-700">
-        {appLang === 'ar'
-          ? `الجزء ${juzNumber}`
-          : appLang === 'en'
-            ? `Juz ${juzNumber}`
-            : `جوزئی ${juzNumber}`}
-      </span>
-    </div>
-  );
 
   const showingSearch =
     searchQuery.trim().length >= 2;
@@ -857,13 +1174,16 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
           <h1
             className={`text-xl sm:text-2xl font-bold font-serif ${getAccentText()}`}
           >
-            {appLang === 'ku' &&
+            {appLang ===
+              'ku' &&
               'قورئانی پیرۆز'}
 
-            {appLang === 'ar' &&
+            {appLang ===
+              'ar' &&
               'القرآن الكريم'}
 
-            {appLang === 'en' &&
+            {appLang ===
+              'en' &&
               'The Noble Quran'}
           </h1>
         </div>
@@ -879,13 +1199,18 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
             </p>
 
             <p className="text-xs font-bold text-slate-800 truncate">
-              {selectedReciter.name}
+              {
+                selectedReciter.name
+              }
             </p>
           </div>
 
           <button
+            type="button"
             onClick={() =>
-              setShowReciterPicker(true)
+              setShowReciterPicker(
+                true
+              )
             }
             className="px-3 py-2 rounded-xl bg-slate-100 border border-slate-200 text-[10px] font-bold text-slate-700 shrink-0"
           >
@@ -900,13 +1225,17 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
           <input
             type="text"
             value={searchQuery}
-            onChange={(e) =>
-              setSearchQuery(e.target.value)
+            onChange={e =>
+              setSearchQuery(
+                e.target.value
+              )
             }
             placeholder={
-              appLang === 'ku'
+              appLang ===
+              'ku'
                 ? 'گەڕان بۆ دەقی ئایەت...'
-                : appLang === 'ar'
+                : appLang ===
+                    'ar'
                   ? 'بحث عن نص آية...'
                   : 'Search verse text...'
             }
@@ -917,7 +1246,10 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
         </div>
 
         <button
-          onClick={onOpenSettings}
+          type="button"
+          onClick={
+            onOpenSettings
+          }
           className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs transition-all shrink-0"
         >
           <SettingsIcon className="w-4 h-4" />
@@ -928,15 +1260,17 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
       <div className="space-y-2 pt-1">
 
         {!showingSearch &&
-          combinedList.map(item =>
-            item.kind === 'juz'
-              ? renderJuzHeader(
-                  item.juzNumber,
-                  item.page
-                )
-              : renderSurahCard(
-                  item.surah
-                )
+          combinedList.map(
+            item =>
+              item.kind ===
+              'juz'
+                ? renderJuzHeader(
+                    item.juzNumber,
+                    item.page
+                  )
+                : renderSurahCard(
+                    item.surah
+                  )
           )}
 
         {showingSearch && (
@@ -945,6 +1279,7 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
             {loadingAyah && (
               <div className="flex items-center justify-center gap-2 py-6 text-slate-500 text-xs">
                 <Loader2 className="w-4 h-4 animate-spin" />
+
                 <span>
                   گەڕان بۆ ئایەتەکان...
                 </span>
@@ -953,7 +1288,8 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
 
             {!loadingAyah &&
               ayahSearchDone &&
-              ayahResults.length === 0 && (
+              ayahResults.length ===
+                0 && (
                 <div className="text-center py-8 text-xs text-slate-400">
                   هیچ ئایەتێک نەدۆزرایەوە
                 </div>
@@ -961,7 +1297,10 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
 
             {!loadingAyah &&
               ayahResults.map(
-                (match, idx) => (
+                (
+                  match,
+                  idx
+                ) => (
                   <div
                     key={`${match.number}-${idx}`}
                     onClick={() =>
@@ -974,8 +1313,11 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
                     <div className="flex items-center justify-between mb-1.5">
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-slate-100 border border-slate-200 text-slate-600">
                         سورة{' '}
-                        {match.surah?.name ||
-                          match.surah
+                        {match
+                          .surah
+                          ?.name ||
+                          match
+                            .surah
                             ?.englishName}{' '}
                         •{' '}
                         {
@@ -992,7 +1334,9 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
                           : ''
                       }`}
                     >
-                      {match.text}
+                      {
+                        match.text
+                      }
                     </p>
                   </div>
                 )
@@ -1006,7 +1350,9 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
         <div
           className="fixed inset-0 z-[100] bg-black/40 flex items-end sm:items-center justify-center p-3"
           onClick={() =>
-            setShowReciterPicker(false)
+            setShowReciterPicker(
+              false
+            )
           }
         >
           <div
@@ -1015,7 +1361,6 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
             }
             className="w-full max-w-xl max-h-[80vh] overflow-hidden bg-white rounded-3xl shadow-2xl"
           >
-
             <div className="p-4 border-b border-slate-200 flex items-center justify-between">
               <div>
                 <h2 className="font-bold text-sm text-slate-800">
@@ -1028,8 +1373,11 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
               </div>
 
               <button
+                type="button"
                 onClick={() =>
-                  setShowReciterPicker(false)
+                  setShowReciterPicker(
+                    false
+                  )
                 }
                 className="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center"
               >
@@ -1041,7 +1389,10 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
               {ALL_RECITERS_DIRECTORY.map(
                 reciter => (
                   <button
-                    key={reciter.id}
+                    type="button"
+                    key={
+                      reciter.id
+                    }
                     onClick={() =>
                       selectReciter(
                         reciter
@@ -1058,11 +1409,15 @@ export const SurahListView: React.FC<SurahListViewProps> = ({
 
                       <div className="min-w-0">
                         <p className="text-xs font-bold text-slate-800">
-                          {reciter.name}
+                          {
+                            reciter.name
+                          }
                         </p>
 
                         <p className="text-[9px] text-slate-400 mt-1">
-                          {reciter.riwayah}
+                          {
+                            reciter.riwayah
+                          }
                         </p>
                       </div>
 
