@@ -239,7 +239,7 @@ export const SurahListView: React.FC<
   >({});
 
   /*
-   * هەڵگرتنی قاریی هەڵبژێردراو
+   * قاریی هەڵبژێردراو لە LocalStorage
    */
   useEffect(() => {
     try {
@@ -261,8 +261,7 @@ export const SurahListView: React.FC<
   }, []);
 
   /*
-   * ئەگەر قاری لە شوێنێکی تری ئەپەکە بگۆڕدرێت،
-   * ئەم بەشەش خۆکارانە نوێ دەبێتەوە.
+   * هاوکاتکردنی قاری لەگەڵ بەشەکانی تری ئەپ
    */
   useEffect(() => {
     const handleReciterChanged = (
@@ -299,13 +298,12 @@ export const SurahListView: React.FC<
     };
   }, []);
 
+  /*
+   * هەڵبژاردنی قاری
+   */
   const selectReciter = (
     reciter: ReciterItem
   ) => {
-    /*
-     * هەموو download ـە کۆنەکان وەستێنین
-     * پێش گۆڕینی قاری.
-     */
     Object.values(
       abortControllers.current
     ).forEach(controller => {
@@ -323,10 +321,6 @@ export const SurahListView: React.FC<
       );
     } catch {}
 
-    /*
-     * ئاگادارکردنەوەی MushafPageView
-     * بۆ ئەوەی هەمان قاری بەکاربهێنێت.
-     */
     window.dispatchEvent(
       new CustomEvent(
         'quran-reciter-changed',
@@ -337,7 +331,6 @@ export const SurahListView: React.FC<
     );
 
     setDownloadStates({});
-
     setShowReciterPicker(false);
   };
 
@@ -508,7 +501,7 @@ export const SurahListView: React.FC<
   };
 
   /*
-   * ژمارەی ئایەتە دابەزێندراوەکان
+   * نوێکردنەوەی دۆخی Download
    */
   const refreshDownloadState =
     async (surah: SurahItem) => {
@@ -540,8 +533,7 @@ export const SurahListView: React.FC<
     };
 
   /*
-   * کاتێک قاری دەگۆڕدرێت،
-   * دۆخی Download ـەکان نوێ دەکەینەوە.
+   * کاتێک قاری دەگۆڕێت
    */
   useEffect(() => {
     const loadStates =
@@ -560,7 +552,7 @@ export const SurahListView: React.FC<
   ]);
 
   /*
-   * پاککردنەوەی دۆخی download ـی سورەتێک
+   * Reset
    */
   const resetDownloadState = (
     surah: SurahItem
@@ -578,7 +570,7 @@ export const SurahListView: React.FC<
   };
 
   /*
-   * دابەزاندنی سورەت
+   * Download ـی تەواوی سورەت
    */
   const downloadSurah =
     async (
@@ -678,11 +670,6 @@ export const SurahListView: React.FC<
           const blob =
             await response.blob();
 
-          /*
-           * ئەگەر لە کاتی download ـەکەدا
-           * قاری گۆڕدرابێت، ئەم فایلە
-           * هەر بە قاریی سەرەتاییەکە پاشەکەوت دەکرێت.
-           */
           await saveAyahAudio(
             reciterAtStart.id,
             surah.number,
@@ -718,10 +705,6 @@ export const SurahListView: React.FC<
             surah.ayahs
           );
 
-        /*
-         * تەنها ئەگەر هێشتا هەمان قارییە
-         * دۆخی UI نوێ دەکەینەوە.
-         */
         if (
           selectedReciter.id ===
           reciterAtStart.id
@@ -839,7 +822,7 @@ export const SurahListView: React.FC<
     };
 
   /*
-   * وەستاندنی Download
+   * وەستاندن
    */
   const pauseDownload = (
     surahNumber: number
@@ -855,7 +838,7 @@ export const SurahListView: React.FC<
   };
 
   /*
-   * سڕینەوەی دەنگی سورەت
+   * سڕینەوەی دەنگ
    */
   const removeSurahAudio =
     async (
@@ -911,7 +894,8 @@ export const SurahListView: React.FC<
     };
 
   /*
-   * دوگمەی Download
+   * دوگمەی Download ـی نوێ
+   * بەشی تایبەتی و دیار بۆ هەر سورەت
    */
   const renderDownloadButton =
     (
@@ -950,29 +934,46 @@ export const SurahListView: React.FC<
         state.downloading
       ) {
         return (
-          <div className="flex flex-col items-center gap-1.5">
-            <button
-              type="button"
-              onClick={e => {
-                e.stopPropagation();
-                pauseDownload(
-                  surah.number
-                );
-              }}
-              className="min-w-[92px] h-10 px-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
-            >
-              <Pause className="w-4 h-4" />
+          <div className="w-full">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
 
-              <span className="text-[11px] font-bold">
-                وەستاندن
-              </span>
-            </button>
+                  pauseDownload(
+                    surah.number
+                  );
+                }}
+                className="flex-1 h-11 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
+              >
+                <Pause className="w-4 h-4" />
 
-            <span className="text-[9px] font-bold text-amber-700">
-              {state.downloaded}/
-              {state.total} (
-              {progress}%)
-            </span>
+                <span className="text-xs font-bold">
+                  وەستاندن
+                </span>
+              </button>
+
+              <div className="px-3 text-center">
+                <div className="text-xs font-bold text-amber-700">
+                  {progress}%
+                </div>
+
+                <div className="text-[9px] text-slate-500">
+                  {state.downloaded}/
+                  {state.total}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-amber-500 transition-all duration-300"
+                style={{
+                  width: `${progress}%`
+                }}
+              />
+            </div>
           </div>
         );
       }
@@ -984,16 +985,25 @@ export const SurahListView: React.FC<
         isComplete
       ) {
         return (
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-2 w-full">
+            <div className="flex-1 h-11 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center gap-2">
+              <Check className="w-4 h-4" />
+
+              <span className="text-xs font-bold">
+                دەنگ دابەزێندراوە
+              </span>
+            </div>
+
             <button
               type="button"
               onClick={e => {
                 e.stopPropagation();
+
                 removeSurahAudio(
                   surah
                 );
               }}
-              className="h-10 px-3 rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
+              className="h-11 px-4 rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
             >
               <Trash2 className="w-4 h-4" />
 
@@ -1001,14 +1011,6 @@ export const SurahListView: React.FC<
                 سڕینەوە
               </span>
             </button>
-
-            <div className="h-10 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center gap-1.5">
-              <Check className="w-4 h-4" />
-
-              <span className="text-[10px] font-bold">
-                دابەزێندراوە
-              </span>
-            </div>
           </div>
         );
       }
@@ -1020,56 +1022,77 @@ export const SurahListView: React.FC<
         state.downloaded > 0
       ) {
         return (
-          <div className="flex flex-col items-center gap-1.5">
-            <button
-              type="button"
-              onClick={e => {
-                e.stopPropagation();
-                downloadSurah(
-                  surah
-                );
-              }}
-              className="min-w-[112px] h-10 px-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all"
-            >
-              <Play className="w-4 h-4" />
+          <div className="w-full">
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
 
-              <span className="text-[10px] font-bold">
-                بەردەوامکردن
-              </span>
-            </button>
+                  downloadSurah(
+                    surah
+                  );
+                }}
+                className="flex-1 h-11 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
+              >
+                <Play className="w-4 h-4" />
 
-            <span className="text-[9px] font-bold text-blue-600">
-              {state.downloaded}/
-              {state.total} (
-              {progress}%)
-            </span>
+                <span className="text-xs font-bold">
+                  بەردەوامکردنی دابەزاندن
+                </span>
+              </button>
+
+              <div className="text-center px-2">
+                <div className="text-xs font-bold text-blue-700">
+                  {progress}%
+                </div>
+
+                <div className="text-[9px] text-slate-500">
+                  {state.downloaded}/
+                  {state.total}
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-blue-500 transition-all duration-300"
+                style={{
+                  width: `${progress}%`
+                }}
+              />
+            </div>
           </div>
         );
       }
 
       /*
-       * هیچ شتێک دابەزیوە نییە
+       * هیچ دەنگێک نییە
        */
       return (
         <button
           type="button"
           onClick={e => {
             e.stopPropagation();
+
             downloadSurah(
               surah
             );
           }}
-          className="min-w-[112px] h-10 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 flex items-center justify-center gap-2 shadow-sm active:scale-95 transition-all"
+          className="w-full h-11 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-700 hover:bg-emerald-100 flex items-center justify-center gap-2 shadow-sm active:scale-[0.98] transition-all"
         >
-          <Download className="w-4 h-4" />
+          <Download className="w-5 h-5" />
 
-          <span className="text-[11px] font-bold">
-            دابەزاندن
+          <span className="text-xs font-bold">
+            دابەزاندنی دەنگی سورەت
           </span>
         </button>
       );
     };
 
+  /*
+   * کارتێکی سورەت
+   */
   const renderSurahCard =
     (
       surah: SurahItem
@@ -1103,118 +1126,121 @@ export const SurahListView: React.FC<
           }
           className={`p-3.5 rounded-2xl border cursor-pointer transition-all active:scale-[0.99] ${getCardStyle()}`}
         >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              {showNumbers && (
-                <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
-                  {surah.number}
-                </div>
-              )}
+          {/* سەرەوەی کارت */}
+          <div className="flex items-center gap-3 min-w-0">
 
-              <div className="min-w-0 flex-1">
-                <h3 className="font-bold text-sm truncate">
-                  سورة{' '}
-                  {surah.nameAr}
-                </h3>
+            {showNumbers && (
+              <div className="w-9 h-9 rounded-xl bg-slate-100 border border-slate-200 text-slate-700 font-bold text-xs flex items-center justify-center shrink-0">
+                {surah.number}
+              </div>
+            )}
 
-                <p className="text-[11px] opacity-75 flex items-center gap-1 flex-wrap">
-                  {showKurdishNames && (
-                    <span>
-                      {appLang ===
-                      'en'
-                        ? surah.nameEn
-                        : surah.nameKu}
-                      {' • '}
-                    </span>
-                  )}
+            <div className="min-w-0 flex-1">
+              <h3 className="font-bold text-sm truncate">
+                سورة{' '}
+                {surah.nameAr}
+              </h3>
 
-                  <span className="flex items-center gap-1">
-                    {isMeccan ? (
-                      <KaabaIcon className="w-4 h-4 shrink-0" />
-                    ) : (
-                      <MedinaIcon className="w-4 h-4 shrink-0" />
-                    )}
-
-                    <span>
-                      {appLang ===
-                      'ar'
-                        ? surah.typeAr
-                        : appLang ===
-                            'en'
-                          ? surah.typeEn
-                          : surah.typeKu}
-                    </span>
+              <p className="text-[11px] opacity-75 flex items-center gap-1 flex-wrap mt-1">
+                {showKurdishNames && (
+                  <span>
+                    {appLang ===
+                    'en'
+                      ? surah.nameEn
+                      : surah.nameKu}
+                    {' • '}
                   </span>
+                )}
+
+                <span className="flex items-center gap-1">
+                  {isMeccan ? (
+                    <KaabaIcon className="w-4 h-4 shrink-0" />
+                  ) : (
+                    <MedinaIcon className="w-4 h-4 shrink-0" />
+                  )}
 
                   <span>
-                    • {surah.ayahs}{' '}
                     {appLang ===
                     'ar'
-                      ? 'آيات'
+                      ? surah.typeAr
                       : appLang ===
                           'en'
-                        ? 'verses'
-                        : 'ئایەت'}
+                        ? surah.typeEn
+                        : surah.typeKu}
                   </span>
+                </span>
+
+                <span>
+                  • {surah.ayahs}{' '}
+                  {appLang ===
+                  'ar'
+                    ? 'آيات'
+                    : appLang ===
+                        'en'
+                      ? 'verses'
+                      : 'ئایەت'}
+                </span>
+
+                {showNumbers && (
+                  <span>
+                    •{' '}
+                    {appLang ===
+                    'en'
+                      ? `Page ${surah.startPage}`
+                      : `لاپەڕەی ${surah.startPage}`}
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+
+          {/* بەشی تایبەتی دەنگ */}
+          <div
+            className="mt-3 pt-3 border-t border-slate-200/70"
+            onClick={e =>
+              e.stopPropagation()
+            }
+          >
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
+                <span className="text-sm">
+                  🎧
+                </span>
+              </div>
+
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-700">
+                  دەنگی سورەت
                 </p>
 
-                {state &&
-                  state.downloaded >
-                    0 &&
-                  state.downloaded <
-                    state.total && (
-                    <div className="mt-2 w-full max-w-[180px]">
-                      <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-amber-500 transition-all"
-                          style={{
-                            width: `${progress}%`
-                          }}
-                        />
-                      </div>
-
-                      <div className="flex justify-between mt-1">
-                        <span className="text-[8px] text-slate-500">
-                          {
-                            state.downloaded
-                          }
-                          /
-                          {
-                            state.total
-                          }
-                        </span>
-
-                        <span className="text-[8px] text-slate-500">
-                          {
-                            progress
-                          }
-                          %
-                        </span>
-                      </div>
-                    </div>
-                  )}
+                <p className="text-[8px] text-slate-400 truncate">
+                  {selectedReciter.name}
+                </p>
               </div>
             </div>
 
-            <div
-              className="flex items-center gap-2 shrink-0"
-              onClick={e =>
-                e.stopPropagation()
-              }
-            >
-              {renderDownloadButton(
-                surah
-              )}
+            {renderDownloadButton(
+              surah
+            )}
 
-              {showNumbers && (
-                <div className="hidden sm:block text-[11px] font-bold px-2.5 py-1 rounded-xl bg-slate-100 border border-slate-200 text-slate-600">
-                  {appLang ===
-                  'en'
-                    ? `Page ${surah.startPage}`
-                    : `لاپەڕەی ${surah.startPage}`}
+            {state &&
+              state.downloaded > 0 &&
+              state.downloaded <
+                state.total && (
+                <div className="mt-2 flex items-center justify-between text-[8px] text-slate-500">
+                  <span>
+                    دابەزێندراوە:
+                    {' '}
+                    {state.downloaded}
+                    /
+                    {state.total}
+                  </span>
+
+                  <span>
+                    {progress}%
+                  </span>
                 </div>
               )}
-            </div>
           </div>
         </div>
       );
