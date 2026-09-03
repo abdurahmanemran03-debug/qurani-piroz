@@ -24,12 +24,6 @@ import {
 import { RecitersModal } from './RecitersModal';
 import { TafsirSelectorModal } from './TafsirSelectorModal';
 
-/*
-|--------------------------------------------------------------------------
-| OFFLINE AUDIO STORAGE
-|--------------------------------------------------------------------------
-*/
-
 import { getAyahAudio } from '../utils/audioStorage';
 
 interface MushafPageViewProps {
@@ -65,94 +59,50 @@ type AyahBoxObj = {
 
 const LONG_PRESS_MS = 550;
 
-/*
-|--------------------------------------------------------------------------
-| Tafsir API mapping
-|--------------------------------------------------------------------------
-*/
-
 const TAFSIR_API_EDITION: Record<string, string> = {
   ku_asan: 'ku.asan',
-
   ar_muyassar: 'ar.muyassar',
   ar_jalalayn: 'ar.jalalayn',
-
   en_sahih: 'en.sahih',
   en_pickthall: 'en.pickthall',
   en_yusuf_ali: 'en.yusufali',
   en_hilali_khan: 'en.hilali',
   en_maududi: 'en.maududi',
   en_transliteration: 'en.transliteration',
-
   fa_ahsan_kalam: 'fa.ansarian',
-
   tr_diyanet: 'tr.diyanet',
   tr_elmali: 'tr.yazir',
-
   de_bubenheim: 'de.bubenheim',
-
   fr_hamidullah: 'fr.hamidullah',
-
   ru_kuliev: 'ru.kuliev',
   ru_abu_adel: 'ru.abuadel',
-
   es_cortes: 'es.cortes',
-
   ur_maududi: 'ur.maududi',
   ur_junagarhi: 'ur.junagarhi',
-
   id_sabeq: 'id.indonesian',
-
   ms_basmeih: 'ms.basmeih',
-
   sq_nahi: 'sq.nahi',
-
   am_sadiq: 'am.sadiq',
-
   az_musayev: 'az.musayev',
-
   bn_zakaria: 'bn.bengali',
-
   bs_korkut: 'bs.korkut',
-
   zh_majian: 'zh.jian',
-
   nl_abdalsalaam: 'nl.keyzer',
-
   ha_gumi: 'ha.gumi',
-
   hi_umari: 'hi.hindi',
-
   it_piccardo: 'it.piccardo',
-
   ja_mita: 'ja.japanese',
-
   ko_choi: 'ko.korean',
-
   ml_parappoor: 'ml.abdulhameed',
-
   ps_abdulsalam: 'ps.abdulsalam',
-
   so_abduh: 'so.abduh',
-
   sw_barwani: 'sw.barwani',
-
   sv_bernstrom: 'sv.bernstrom',
-
   tg_rowwad: 'tg.ayati',
-
   th_kingfahad: 'th.thai',
-
   ug_saleh: 'ug.saleh',
-
   uz_yusuf: 'uz.sodik'
 };
-
-/*
-|--------------------------------------------------------------------------
-| Get saved reciter
-|--------------------------------------------------------------------------
-*/
 
 const getInitialReciter = (): ReciterItem => {
   try {
@@ -170,7 +120,7 @@ const getInitialReciter = (): ReciterItem => {
       }
     }
   } catch {
-    // Ignore localStorage errors
+    // Ignore
   }
 
   return ALL_RECITERS_DIRECTORY[18];
@@ -201,15 +151,6 @@ export const MushafPageView: React.FC<
   const [isTafsirSelectorOpen, setIsTafsirSelectorOpen] =
     useState(false);
 
-  /*
-  |--------------------------------------------------------------------------
-  | SELECTED RECITER
-  |--------------------------------------------------------------------------
-  |
-  | لە یەکەم جاردا قاریی خەزنکراو لە localStorage دەخوێنینەوە.
-  |
-  */
-
   const [selectedReciter, setSelectedReciter] =
     useState<ReciterItem>(
       getInitialReciter
@@ -232,12 +173,6 @@ export const MushafPageView: React.FC<
   const [tafsirApiError, setTafsirApiError] =
     useState<string | null>(null);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Page bookmarks
-  |--------------------------------------------------------------------------
-  */
-
   const [bookmarks, setBookmarks] =
     useState<number[]>(() => {
       try {
@@ -254,12 +189,6 @@ export const MushafPageView: React.FC<
       }
     });
 
-  /*
-  |--------------------------------------------------------------------------
-  | Audio state
-  |--------------------------------------------------------------------------
-  */
-
   const [isPlayingAudio, setIsPlayingAudio] =
     useState(false);
 
@@ -269,37 +198,11 @@ export const MushafPageView: React.FC<
   const [playingAyahKey, setPlayingAyahKey] =
     useState<string | null>(null);
 
-  /*
-  |--------------------------------------------------------------------------
-  | OFFLINE AUDIO OBJECT URL
-  |--------------------------------------------------------------------------
-  |
-  | کاتێک MP3 لە IndexedDB دەهێنین،
-  | Blob ـەکە دەکەینە Object URL.
-  |
-  */
-
   const audioObjectUrlRef =
     useRef<string | null>(null);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Audio request ID
-  |--------------------------------------------------------------------------
-  |
-  | ئەگەر دوو داواکاریی دەنگ لە یەک کاتدا دروست بوون،
-  | داواکاریی کۆن نابێت دەنگی نوێ تێک بدات.
-  |
-  */
-
   const audioRequestIdRef =
     useRef(0);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Clear local Blob URL
-  |--------------------------------------------------------------------------
-  */
 
   const clearAudioObjectUrl = () => {
     if (
@@ -314,26 +217,11 @@ export const MushafPageView: React.FC<
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Play source:
-  |
-  | 1. IndexedDB / Offline
-  | 2. EveryAyah / Online
-  |--------------------------------------------------------------------------
-  */
-
   const getAudioSource = async (
     reciter: ReciterItem,
     surahNumber: number,
     ayahNumber: number
   ): Promise<string> => {
-    /*
-    |--------------------------------------------------------------------------
-    | First: local downloaded audio
-    |--------------------------------------------------------------------------
-    */
-
     try {
       const localBlob =
         await getAyahAudio(
@@ -356,17 +244,8 @@ export const MushafPageView: React.FC<
         return localUrl;
       }
     } catch {
-      /*
-      | ئەگەر IndexedDB هەڵەی هەبوو،
-      | بە online playback دەچین.
-      */
+      // Fall back to online audio
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Second: Online EveryAyah
-    |--------------------------------------------------------------------------
-    */
 
     const surahPadded =
       String(
@@ -385,24 +264,11 @@ export const MushafPageView: React.FC<
     );
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | NEW:
-  | Page audio index
-  |--------------------------------------------------------------------------
-  */
-
   const [pageAudioIndex, setPageAudioIndex] =
     useState(-1);
 
   const pageAudioIndexRef =
     useRef(-1);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Long press / highlight
-  |--------------------------------------------------------------------------
-  */
 
   const [pressingBox, setPressingBox] =
     useState<string | null>(null);
@@ -420,12 +286,6 @@ export const MushafPageView: React.FC<
     useRef<ReturnType<typeof setTimeout> | null>(
       null
     );
-
-  /*
-  |--------------------------------------------------------------------------
-  | Ayah coordinates
-  |--------------------------------------------------------------------------
-  */
 
   const [allAyahData, setAllAyahData] =
     useState<Record<string, AyahBoxObj[]>>(
@@ -456,12 +316,6 @@ export const MushafPageView: React.FC<
   const ayahBoxes: AyahBoxObj[] =
     allAyahData[String(currentPage)] ||
     [];
-
-  /*
-  |--------------------------------------------------------------------------
-  | Ayah bookmarks
-  |--------------------------------------------------------------------------
-  */
 
   const [ayahBookmarks, setAyahBookmarks] =
     useState<string[]>(() => {
@@ -531,9 +385,46 @@ export const MushafPageView: React.FC<
 
   /*
   |--------------------------------------------------------------------------
-  | Get API edition
+  | Sync selected reciter between MushafPageView and SurahListView
   |--------------------------------------------------------------------------
   */
+
+  useEffect(() => {
+    const handleReciterChanged = (
+      event: Event
+    ) => {
+      const customEvent =
+        event as CustomEvent<string>;
+
+      const reciterId =
+        customEvent.detail;
+
+      if (!reciterId) {
+        return;
+      }
+
+      const reciter =
+        ALL_RECITERS_DIRECTORY.find(
+          (r) => r.id === reciterId
+        );
+
+      if (reciter) {
+        setSelectedReciter(reciter);
+      }
+    };
+
+    window.addEventListener(
+      'quran-reciter-changed',
+      handleReciterChanged
+    );
+
+    return () => {
+      window.removeEventListener(
+        'quran-reciter-changed',
+        handleReciterChanged
+      );
+    };
+  }, []);
 
   const getTafsirApiEdition = (
     tafsir: TafsirItem
@@ -545,22 +436,10 @@ export const MushafPageView: React.FC<
     );
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Single ayah audio
-  |--------------------------------------------------------------------------
-  */
-
   const playAyahAudio = async (
     a: any
   ) => {
     const key = ayahKey(a);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Same ayah = Pause
-    |--------------------------------------------------------------------------
-    */
 
     if (
       playingAyahKey === key
@@ -580,31 +459,13 @@ export const MushafPageView: React.FC<
       return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | New request
-    |--------------------------------------------------------------------------
-    */
-
     const requestId =
       ++audioRequestIdRef.current;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Stop page sequence
-    |--------------------------------------------------------------------------
-    */
 
     pageAudioIndexRef.current =
       -1;
 
     setPageAudioIndex(-1);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Highlight
-    |--------------------------------------------------------------------------
-    */
 
     const ayahBox =
       ayahBoxes.find(
@@ -631,20 +492,8 @@ export const MushafPageView: React.FC<
       return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Stop old audio
-    |--------------------------------------------------------------------------
-    */
-
     audioRef.current.pause();
     audioRef.current.currentTime = 0;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Find local or online source
-    |--------------------------------------------------------------------------
-    */
 
     try {
       const source =
@@ -653,11 +502,6 @@ export const MushafPageView: React.FC<
           a.surahNumber,
           a.numberInSurah
         );
-
-      /*
-      | ئەگەر لە نێوانەکەدا داواکاریی نوێ هات،
-      | ئەمە بەجێی مەهێڵە.
-      */
 
       if (
         requestId !==
@@ -690,21 +534,9 @@ export const MushafPageView: React.FC<
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Play page ayah by index
-  |--------------------------------------------------------------------------
-  */
-
   const playPageAyahAtIndex = async (
     index: number
   ) => {
-    /*
-    |--------------------------------------------------------------------------
-    | End of page
-    |--------------------------------------------------------------------------
-    */
-
     if (
       index < 0 ||
       index >= pageAyahsData.length
@@ -729,42 +561,18 @@ export const MushafPageView: React.FC<
       return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Request ID
-    |--------------------------------------------------------------------------
-    */
-
     const requestId =
       ++audioRequestIdRef.current;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Current index
-    |--------------------------------------------------------------------------
-    */
 
     pageAudioIndexRef.current =
       index;
 
     setPageAudioIndex(index);
 
-    /*
-    |--------------------------------------------------------------------------
-    | Ayah key
-    |--------------------------------------------------------------------------
-    */
-
     const key =
       ayahKey(ayah);
 
     setPlayingAyahKey(key);
-
-    /*
-    |--------------------------------------------------------------------------
-    | Highlight
-    |--------------------------------------------------------------------------
-    */
 
     const ayahBox =
       ayahBoxes.find(
@@ -791,20 +599,8 @@ export const MushafPageView: React.FC<
       return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Stop previous audio
-    |--------------------------------------------------------------------------
-    */
-
     audioRef.current.pause();
     audioRef.current.currentTime = 0;
-
-    /*
-    |--------------------------------------------------------------------------
-    | Get Offline / Online source
-    |--------------------------------------------------------------------------
-    */
 
     try {
       const source =
@@ -813,10 +609,6 @@ export const MushafPageView: React.FC<
           ayah.surahNumber,
           ayah.numberInSurah
         );
-
-      /*
-      | Prevent stale playback
-      */
 
       if (
         requestId !==
@@ -832,7 +624,7 @@ export const MushafPageView: React.FC<
 
       if (
         requestId ===
-        audioRequestIdRef.current &&
+          audioRequestIdRef.current &&
         pageAudioIndexRef.current ===
           index
       ) {
@@ -848,12 +640,6 @@ export const MushafPageView: React.FC<
       }
     }
   };
-
-  /*
-  |--------------------------------------------------------------------------
-  | Share ayah
-  |--------------------------------------------------------------------------
-  */
 
   const shareAyah = async (
     a: any
@@ -874,15 +660,9 @@ export const MushafPageView: React.FC<
         );
       }
     } catch {
-      // User cancelled share
+      // User cancelled
     }
   };
-
-  /*
-  |--------------------------------------------------------------------------
-  | Long press
-  |--------------------------------------------------------------------------
-  */
 
   const startLongPress = (
     boxKey: string,
@@ -935,12 +715,6 @@ export const MushafPageView: React.FC<
     setHighlightedAyah(null);
     setTafsirSheetOpen(false);
   };
-
-  /*
-  |--------------------------------------------------------------------------
-  | Page / scroll
-  |--------------------------------------------------------------------------
-  */
 
   const scrollContainerRef =
     useRef<HTMLDivElement | null>(
@@ -1013,12 +787,6 @@ export const MushafPageView: React.FC<
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Load Arabic + selected tafsir
-  |--------------------------------------------------------------------------
-  */
-
   useEffect(() => {
     let cancelled = false;
 
@@ -1027,12 +795,6 @@ export const MushafPageView: React.FC<
 
       setAyahApiError(null);
       setTafsirApiError(null);
-
-      /*
-      |--------------------------------------------------------------------------
-      | Arabic
-      |--------------------------------------------------------------------------
-      */
 
       let arabicAyahs: any[] = [];
 
@@ -1062,12 +824,6 @@ export const MushafPageView: React.FC<
             'arabic fetch failed'
         );
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | Tafsir / translation
-      |--------------------------------------------------------------------------
-      */
 
       let tafsirAyahs: any[] = [];
 
@@ -1105,19 +861,13 @@ export const MushafPageView: React.FC<
         }
       } else {
         setTafsirApiError(
-          'ئەم تەفسیرە هێشتا سەرچاوەی API ـی نییە.'
+          'ئەم تەفسیرە هێشتا سەرچاوەی API ـی ئەپەکە نییە.'
         );
       }
 
       if (cancelled) {
         return;
       }
-
-      /*
-      |--------------------------------------------------------------------------
-      | Combine by Surah + Ayah
-      |--------------------------------------------------------------------------
-      */
 
       if (
         arabicAyahs.length > 0
@@ -1175,12 +925,6 @@ export const MushafPageView: React.FC<
     selectedTafsir.id
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Keep highlighted ayah updated
-  |--------------------------------------------------------------------------
-  */
-
   useEffect(() => {
     if (!highlightedAyah) {
       return;
@@ -1210,12 +954,6 @@ export const MushafPageView: React.FC<
     }
   }, [pageAyahsData]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Reset audio when page changes
-  |--------------------------------------------------------------------------
-  */
-
   useEffect(() => {
     audioRequestIdRef.current++;
 
@@ -1240,12 +978,6 @@ export const MushafPageView: React.FC<
     cancelLongPress();
   }, [currentPage]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Reset audio when reciter changes
-  |--------------------------------------------------------------------------
-  */
-
   useEffect(() => {
     audioRequestIdRef.current++;
 
@@ -1265,12 +997,6 @@ export const MushafPageView: React.FC<
     setIsPlayingAudio(false);
     setPlayingAyahKey(null);
   }, [selectedReciter.id]);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Cleanup audio on unmount
-  |--------------------------------------------------------------------------
-  */
 
   useEffect(() => {
     return () => {
@@ -1292,12 +1018,6 @@ export const MushafPageView: React.FC<
       }
     };
   }, []);
-
-  /*
-  |--------------------------------------------------------------------------
-  | Scroll to current page
-  |--------------------------------------------------------------------------
-  */
 
   useEffect(() => {
     if (
@@ -1410,19 +1130,7 @@ export const MushafPageView: React.FC<
     scrollToTarget();
   }, [currentPage]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | Page audio
-  |--------------------------------------------------------------------------
-  */
-
   const togglePageAudio = () => {
-    /*
-    |--------------------------------------------------------------------------
-    | Playing → Pause
-    |--------------------------------------------------------------------------
-    */
-
     if (isPlayingAudio) {
       audioRef.current?.pause();
 
@@ -1430,12 +1138,6 @@ export const MushafPageView: React.FC<
 
       return;
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | Resume current ayah
-    |--------------------------------------------------------------------------
-    */
 
     if (
       pageAudioIndexRef.current >=
@@ -1473,12 +1175,6 @@ export const MushafPageView: React.FC<
       return;
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | Start from first ayah
-    |--------------------------------------------------------------------------
-    */
-
     if (
       pageAyahsData.length > 0
     ) {
@@ -1490,13 +1186,20 @@ export const MushafPageView: React.FC<
 
   /*
   |--------------------------------------------------------------------------
-  | Audio ended
+  | FIXED:
+  | Single ayah playback must NOT automatically start page sequence.
   |--------------------------------------------------------------------------
   */
 
   const handleAudioEnded = () => {
     const currentIndex =
       pageAudioIndexRef.current;
+
+    if (currentIndex < 0) {
+      setIsPlayingAudio(false);
+      setPlayingAyahKey(null);
+      return;
+    }
 
     const nextIndex =
       currentIndex + 1;
@@ -1508,50 +1211,46 @@ export const MushafPageView: React.FC<
       void playPageAyahAtIndex(
         nextIndex
       );
-    } else {
-      pageAudioIndexRef.current =
-        -1;
 
-      setPageAudioIndex(-1);
+      return;
+    }
 
-      setIsPlayingAudio(false);
-      setPlayingAyahKey(null);
+    pageAudioIndexRef.current =
+      -1;
 
-      if (
-        pageAyahsData.length > 0
-      ) {
-        const lastAyah =
-          pageAyahsData[
-            pageAyahsData.length - 1
-          ];
+    setPageAudioIndex(-1);
 
-        const lastBox =
-          ayahBoxes.find(
-            (b) =>
-              b.s ===
-                lastAyah.surahNumber &&
-              b.a ===
-                lastAyah.numberInSurah
-          );
+    setIsPlayingAudio(false);
+    setPlayingAyahKey(null);
 
-        if (lastBox) {
-          setHighlightedAyah({
-            ayah: lastAyah,
-            topPercent:
-              (lastBox.y0 /
-                AYAH_CANVAS_HEIGHT) *
-              100
-          });
-        }
+    if (
+      pageAyahsData.length > 0
+    ) {
+      const lastAyah =
+        pageAyahsData[
+          pageAyahsData.length - 1
+        ];
+
+      const lastBox =
+        ayahBoxes.find(
+          (b) =>
+            b.s ===
+              lastAyah.surahNumber &&
+            b.a ===
+              lastAyah.numberInSurah
+        );
+
+      if (lastBox) {
+        setHighlightedAyah({
+          ayah: lastAyah,
+          topPercent:
+            (lastBox.y0 /
+              AYAH_CANVAS_HEIGHT) *
+            100
+        });
       }
     }
   };
-
-  /*
-  |--------------------------------------------------------------------------
-  | Horizontal page scrolling
-  |--------------------------------------------------------------------------
-  */
 
   const handleScroll = (
     e: React.UIEvent<HTMLDivElement>
@@ -1593,10 +1292,6 @@ export const MushafPageView: React.FC<
         scrollInitiatedByUser.current =
           true;
 
-        /*
-        | Stop page audio
-        */
-
         audioRequestIdRef.current++;
 
         if (
@@ -1637,12 +1332,6 @@ export const MushafPageView: React.FC<
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | Selected tafsir name
-  |--------------------------------------------------------------------------
-  */
-
   const selectedTafsirName =
     (selectedTafsir as any)
       .nameKu ||
@@ -1664,10 +1353,6 @@ export const MushafPageView: React.FC<
           setIsPlayingAudio(true);
         }}
       />
-
-      {/* ============================================================
-          HEADER
-      ============================================================ */}
 
       <header
         className={`absolute top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
@@ -1753,10 +1438,6 @@ export const MushafPageView: React.FC<
         </div>
       </header>
 
-      {/* ============================================================
-          MUSHAF VIEW
-      ============================================================ */}
-
       {viewMode ===
         'mushaf' && (
         <div
@@ -1840,8 +1521,6 @@ export const MushafPageView: React.FC<
                         }}
                       />
 
-                      {/* API error */}
-
                       {isActivePage &&
                         ayahApiError && (
                           <div className="absolute top-1 inset-x-0 text-center text-[10px] font-bold bg-red-700/80 text-white py-1 z-50 pointer-events-none">
@@ -1851,8 +1530,6 @@ export const MushafPageView: React.FC<
                             }
                           </div>
                         )}
-
-                      {/* Ayah coordinate boxes */}
 
                       {isActivePage &&
                         ayahBoxes.length >
@@ -1974,8 +1651,6 @@ export const MushafPageView: React.FC<
                           </div>
                         )}
 
-                      {/* Highlight toolbar */}
-
                       {isActivePage &&
                         highlightedAyah && (
                           <div
@@ -2081,10 +1756,6 @@ export const MushafPageView: React.FC<
             )}
           </div>
 
-          {/* ============================================================
-              Tafsir bottom sheet
-          ============================================================ */}
-
           {highlightedAyah &&
             tafsirSheetOpen && (
               <div
@@ -2180,10 +1851,6 @@ export const MushafPageView: React.FC<
         </div>
       )}
 
-      {/* ============================================================
-          FULL TAFSIR VIEW
-      ============================================================ */}
-
       {viewMode ===
         'tafsir' && (
         <div
@@ -2271,10 +1938,6 @@ export const MushafPageView: React.FC<
         </div>
       )}
 
-      {/* ============================================================
-          FOOTER
-      ============================================================ */}
-
       <footer
         className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-4 py-3 flex items-center justify-between shadow-lg transition-all duration-300 ${
           showControls
@@ -2314,10 +1977,6 @@ export const MushafPageView: React.FC<
         </div>
       </footer>
 
-      {/* ============================================================
-          MODALS
-      ============================================================ */}
-
       <RecitersModal
         isOpen={
           isRecitersModalOpen
@@ -2333,10 +1992,6 @@ export const MushafPageView: React.FC<
         onSelectReciter={(r) => {
           setSelectedReciter(r);
 
-          /*
-          | هەمان قارییە بۆ SurahListView ـیش خەزن دەکەین.
-          */
-
           try {
             localStorage.setItem(
               'quran_selected_reciter',
@@ -2345,6 +2000,21 @@ export const MushafPageView: React.FC<
           } catch {
             // Ignore
           }
+
+          /*
+          |--------------------------------------------------------------------------
+          | Sync reciter with SurahListView
+          |--------------------------------------------------------------------------
+          */
+
+          window.dispatchEvent(
+            new CustomEvent(
+              'quran-reciter-changed',
+              {
+                detail: r.id
+              }
+            )
+          );
         }}
       />
 
