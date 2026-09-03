@@ -50,7 +50,7 @@ export function makeAudioKey(
   surahNumber: number,
   ayahNumber: number
 ) {
-  return `ayah_${reciterId}_${surahNumber}_${ayahNumber}`;
+  return `ayah::${reciterId}_${surahNumber}_${ayahNumber}`;
 }
 
 /*
@@ -63,7 +63,7 @@ export function makeSurahAudioKey(
   reciterId: string,
   surahNumber: number
 ) {
-  return `surah_${reciterId}_${surahNumber}`;
+  return `surah::${reciterId}_${surahNumber}`;
 }
 
 /*
@@ -111,6 +111,11 @@ export async function saveAyahAudio(
       db.close();
       reject(tx.error);
     };
+
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error);
+    };
   });
 }
 
@@ -151,7 +156,9 @@ export async function getAyahAudio(
       db.close();
 
       resolve(
-        record?.blob ?? null
+        record?.type === 'ayah'
+          ? record.blob
+          : null
       );
     };
 
@@ -164,7 +171,28 @@ export async function getAyahAudio(
 
 /*
 |--------------------------------------------------------------------------
-| SAVE WHOLE SURAH AUDIO
+| IS AYAH DOWNLOADED
+|--------------------------------------------------------------------------
+*/
+
+export async function isAyahDownloaded(
+  reciterId: string,
+  surahNumber: number,
+  ayahNumber: number
+): Promise<boolean> {
+  const blob =
+    await getAyahAudio(
+      reciterId,
+      surahNumber,
+      ayahNumber
+    );
+
+  return !!blob;
+}
+
+/*
+|--------------------------------------------------------------------------
+| SAVE WHOLE SURAH
 |--------------------------------------------------------------------------
 */
 
@@ -204,12 +232,17 @@ export async function saveSurahAudio(
       db.close();
       reject(tx.error);
     };
+
+    tx.onabort = () => {
+      db.close();
+      reject(tx.error);
+    };
   });
 }
 
 /*
 |--------------------------------------------------------------------------
-| GET WHOLE SURAH AUDIO
+| GET WHOLE SURAH
 |--------------------------------------------------------------------------
 */
 
@@ -219,10 +252,11 @@ export async function getSurahAudio(
 ): Promise<Blob | null> {
   const db = await openDB();
 
-  const key = makeSurahAudioKey(
-    reciterId,
-    surahNumber
-  );
+  const key =
+    makeSurahAudioKey(
+      reciterId,
+      surahNumber
+    );
 
   return new Promise((resolve, reject) => {
     const tx = db.transaction(
@@ -242,7 +276,9 @@ export async function getSurahAudio(
       db.close();
 
       resolve(
-        record?.blob ?? null
+        record?.type === 'surah'
+          ? record.blob
+          : null
       );
     };
 
@@ -250,96 +286,6 @@ export async function getSurahAudio(
       db.close();
       reject(request.error);
     };
-  });
-}
-
-/*
-|--------------------------------------------------------------------------
-| IS AYAH DOWNLOADED
-|--------------------------------------------------------------------------
-*/
-
-export async function isAyahDownloaded(
-  reciterId: string,
-  surahNumber: number,
-  ayahNumber: number
-): Promise<boolean> {
-  const blob =
-    await getAyahAudio(
-      reciterId,
-      surahNumber,
-      ayahNumber
-    );
-
-  return !!blob;
-}
-
-/*
-|--------------------------------------------------------------------------
-| GET DOWNLOADED AYAH COUNT
-|--------------------------------------------------------------------------
-*/
-
-export async function getDownloadedAyahCount(
-  reciterId: string,
-  surahNumber: number,
-  ayahCount: number
-): Promise<number> {
-  const db = await openDB();
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(
-      STORE_NAME,
-      'readonly'
-    );
-
-    const store =
-      tx.objectStore(STORE_NAME);
-
-    let checked = 0;
-    let count = 0;
-
-    if (ayahCount === 0) {
-      db.close();
-      resolve(0);
-      return;
-    }
-
-    for (
-      let ayah = 1;
-      ayah <= ayahCount;
-      ayah++
-    ) {
-      const request =
-        store.get(
-          makeAudioKey(
-            reciterId,
-            surahNumber,
-            ayah
-          )
-        );
-
-      request.onsuccess = () => {
-        checked++;
-
-        if (request.result) {
-          count++;
-        }
-
-        if (
-          checked ===
-          ayahCount
-        ) {
-          db.close();
-          resolve(count);
-        }
-      };
-
-      request.onerror = () => {
-        db.close();
-        reject(request.error);
-      };
-    }
   });
 }
 
@@ -364,11 +310,112 @@ export async function isSurahAudioDownloaded(
 
 /*
 |--------------------------------------------------------------------------
+| COUNT DOWNLOADED AYAHS
+|--------------------------------------------------------------------------
+*/
+
+export async function getDownloadedAyahCount(
+  reciterId: string,
+  surahNumber: number,
+  ayahCount: number
+): Promise<number> {
+  if (ayahCount <= 0) {
+    return 0;
+  }
+
+  const db = await openDB();
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(
+      STORE_NAME,
+      'readonly'
+    );
+
+    const store =
+      tx.objectStore(STORE_NAME);
+
+    let checked = 0;
+    let count = 0;
+    let finished = false;
+
+    const finish = (
+      value: number
+    ) => {
+      if (finished) {
+        return;
+      }
+
+      finished = true;
+      db.close();
+      resolve(value);
+    };
+
+    for (
+      let ayah = 1;
+      ayah <= ayahCount;
+      ayah++
+    ) {
+      const request =
+        store.get(
+          makeAudioKey(
+            reciterId,
+            surahNumber,
+            ayah
+          )
+        );
+
+      request.onsuccess = () => {
+        checked++;
+
+        const record =
+          request.result as
+            | AudioRecord
+            | undefined;
+
+        if (
+          record &&
+          record.type === 'ayah' &&
+          record.blob
+        ) {
+          count++;
+        }
+
+        if (
+          checked ===
+          ayahCount
+        ) {
+          finish(count);
+        }
+      };
+
+      request.onerror = () => {
+        if (!finished) {
+          finished = true;
+          db.close();
+          reject(
+            request.error
+          );
+        }
+      };
+    }
+
+    tx.onerror = () => {
+      if (!finished) {
+        finished = true;
+        db.close();
+        reject(tx.error);
+      }
+    };
+  });
+}
+
+/*
+|--------------------------------------------------------------------------
 | DELETE SURAH AUDIO
 |
 | Deletes:
-| - EveryAyah individual ayahs
-| - MP3Quran whole-surah file
+| 1. Whole-surah MP3
+| 2. EveryAyah individual MP3 files
 |--------------------------------------------------------------------------
 */
 
@@ -389,9 +436,18 @@ export async function deleteSurahAudio(
       tx.objectStore(STORE_NAME);
 
     /*
+     * Delete whole-surah file
+     */
+    store.delete(
+      makeSurahAudioKey(
+        reciterId,
+        surahNumber
+      )
+    );
+
+    /*
      * Delete EveryAyah files
      */
-
     for (
       let ayah = 1;
       ayah <= ayahCount;
@@ -406,23 +462,17 @@ export async function deleteSurahAudio(
       );
     }
 
-    /*
-     * Delete MP3Quran whole-surah file
-     */
-
-    store.delete(
-      makeSurahAudioKey(
-        reciterId,
-        surahNumber
-      )
-    );
-
     tx.oncomplete = () => {
       db.close();
       resolve();
     };
 
     tx.onerror = () => {
+      db.close();
+      reject(tx.error);
+    };
+
+    tx.onabort = () => {
       db.close();
       reject(tx.error);
     };
@@ -447,5 +497,7 @@ export async function isSurahDownloaded(
       ayahCount
     );
 
-  return count === ayahCount;
+  return (
+    count === ayahCount
+  );
 }
