@@ -100,6 +100,13 @@ type Mp3QuranTiming = {
   end_time: number;
 };
 
+type Mp3QuranRead = {
+  id: number;
+  server: string;
+  surah_total?: number;
+  surah_list?: string;
+};
+
 const LONG_PRESS_MS = 550;
 
 const TAFSIR_API_EDITION: Record<
@@ -114,75 +121,45 @@ const TAFSIR_API_EDITION: Record<
   en_yusuf_ali: 'en.yusufali',
   en_hilali_khan: 'en.hilali',
   en_maududi: 'en.maududi',
-  en_transliteration:
-    'en.transliteration',
-  fa_ahsan_kalam:
-    'fa.ansarian',
-  tr_diyanet:
-    'tr.diyanet',
-  tr_elmali:
-    'tr.yazir',
-  de_bubenheim:
-    'de.bubenheim',
-  fr_hamidullah:
-    'fr.hamidullah',
-  ru_kuliev:
-    'ru.kuliev',
-  ru_abu_adel:
-    'ru.abuadel',
-  es_cortes:
-    'es.cortes',
-  ur_maududi:
-    'ur.maududi',
-  ur_junagarhi:
-    'ur.junagarhi',
-  id_sabeq:
-    'id.indonesian',
-  ms_basmeih:
-    'ms.basmeih',
-  sq_nahi:
-    'sq.nahi',
-  am_sadiq:
-    'am.sadiq',
-  az_musayev:
-    'az.musayev',
-  bn_zakaria:
-    'bn.bengali',
-  bs_korkut:
-    'bs.korkut',
-  zh_majian:
-    'zh.jian',
-  nl_abdalsalaam:
-    'nl.keyzer',
-  ha_gumi:
-    'ha.gumi',
-  hi_umari:
-    'hi.hindi',
-  it_piccardo:
-    'it.piccardo',
-  ja_mita:
-    'ja.japanese',
-  ko_choi:
-    'ko.korean',
-  ml_parappoor:
-    'ml.abdulhameed',
-  ps_abdulsalam:
-    'ps.abdulsalam',
-  so_abduh:
-    'so.abduh',
-  sw_barwani:
-    'sw.barwani',
-  sv_bernstrom:
-    'sv.bernstrom',
-  tg_rowwad:
-    'tg.ayati',
-  th_kingfahad:
-    'th.thai',
-  ug_saleh:
-    'ug.saleh',
-  uz_yusuf:
-    'uz.sodik'
+  en_transliteration: 'en.transliteration',
+  fa_ahsan_kalam: 'fa.ansarian',
+  tr_diyanet: 'tr.diyanet',
+  tr_elmali: 'tr.yazir',
+  de_bubenheim: 'de.bubenheim',
+  fr_hamidullah: 'fr.hamidullah',
+  ru_kuliev: 'ru.kuliev',
+  ru_abu_adel: 'ru.abuadel',
+  es_cortes: 'es.cortes',
+  ur_maududi: 'ur.maududi',
+  ur_junagarhi: 'ur.junagarhi',
+  id_sabeq: 'id.indonesian',
+  ms_basmeih: 'ms.basmeih',
+  sq_nahi: 'sq.nahi',
+  am_sadiq: 'am.sadiq',
+  az_musayev: 'az.musayev',
+  bn_zakaria: 'bn.bengali',
+  bs_korkut: 'bs.korkut',
+  zh_majian: 'zh.jian',
+  nl_abdalsalaam: 'nl.keyzer',
+  ha_gumi: 'ha.gumi',
+  hi_umari: 'hi.hindi',
+  it_piccardo: 'it.piccardo',
+  ja_mita: 'ja.japanese',
+  ko_choi: 'ko.korean',
+  ml_parappoor: 'ml.abdulhameed',
+  ps_abdulsalam: 'ps.abdulsalam',
+  so_abduh: 'so.abduh',
+  sw_barwani: 'sw.barwani',
+  sv_bernstrom: 'sv.bernstrom',
+  tg_rowwad: 'tg.ayati',
+  th_kingfahad: 'th.thai',
+  ug_saleh: 'ug.saleh',
+  uz_yusuf: 'uz.sodik'
 };
+
+/* =========================================================
+   INITIAL RECITER
+========================================================= */
 
 const getInitialReciter =
   (): ReciterItem => {
@@ -212,11 +189,21 @@ const getInitialReciter =
     );
   };
 
-/*
-|--------------------------------------------------------------------------
-| EVERYAYAH URL
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   NORMALIZE
+========================================================= */
+
+const normalizeUrl = (
+  value: string
+) =>
+  value
+    .trim()
+    .replace(/\/+$/, '')
+    .toLowerCase();
+
+/* =========================================================
+   EVERYAYAH
+========================================================= */
 
 const makeEveryAyahUrl = (
   reciter: ReciterItem,
@@ -224,16 +211,10 @@ const makeEveryAyahUrl = (
   ayahNumber: number
 ) => {
   const surah =
-    String(surahNumber).padStart(
-      3,
-      '0'
-    );
+    String(surahNumber).padStart(3, '0');
 
   const ayah =
-    String(ayahNumber).padStart(
-      3,
-      '0'
-    );
+    String(ayahNumber).padStart(3, '0');
 
   return (
     `https://everyayah.com/data/` +
@@ -242,26 +223,20 @@ const makeEveryAyahUrl = (
   );
 };
 
-/*
-|--------------------------------------------------------------------------
-| MP3QURAN SURAH URL
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   MP3QURAN SURAH
+========================================================= */
 
 const makeMp3QuranSurahUrl = (
   reciter: ReciterItem,
   surahNumber: number
 ) => {
-  if (
-    !reciter.audioBaseUrl
-  ) {
+  if (!reciter.audioBaseUrl) {
     return null;
   }
 
   const base =
-    reciter.audioBaseUrl.endsWith(
-      '/'
-    )
+    reciter.audioBaseUrl.endsWith('/')
       ? reciter.audioBaseUrl
       : `${reciter.audioBaseUrl}/`;
 
@@ -272,28 +247,34 @@ const makeMp3QuranSurahUrl = (
   );
 };
 
-/*
-|--------------------------------------------------------------------------
-| NORMALIZE URL
-|--------------------------------------------------------------------------
-*/
+/* =========================================================
+   TIME NORMALIZER
+========================================================= */
 
-const normalizeUrl = (
-  value: string
-) =>
-  value
-    .trim()
-    .replace(
-      /\/+$/,
-      ''
-    )
-    .toLowerCase();
+const normalizeTimingValue = (
+  value: number
+) => {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
 
-/*
-|--------------------------------------------------------------------------
-| COMPONENT
-|--------------------------------------------------------------------------
-*/
+  /*
+   * MP3Quran usually returns milliseconds.
+   * Some endpoints/versions may return seconds.
+   *
+   * Large values => milliseconds.
+   * Small values => seconds.
+   */
+  if (value > 10000) {
+    return value / 1000;
+  }
+
+  return value;
+};
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export const MushafPageView: React.FC<
   MushafPageViewProps
@@ -308,10 +289,12 @@ export const MushafPageView: React.FC<
   surahsList = [],
   onJumpToPage
 }) => {
-  const [viewMode, setViewMode] =
-    useState<
-      'mushaf' | 'tafsir'
-    >('mushaf');
+  const [
+    viewMode,
+    setViewMode
+  ] = useState<
+    'mushaf' | 'tafsir'
+  >('mushaf');
 
   const [
     showControls,
@@ -355,16 +338,12 @@ export const MushafPageView: React.FC<
   const [
     ayahApiError,
     setAyahApiError
-  ] = useState<string | null>(
-    null
-  );
+  ] = useState<string | null>(null);
 
   const [
     tafsirApiError,
     setTafsirApiError
-  ] = useState<string | null>(
-    null
-  );
+  ] = useState<string | null>(null);
 
   const [
     bookmarks,
@@ -404,18 +383,14 @@ export const MushafPageView: React.FC<
   );
 
   const audioObjectUrlRef =
-    useRef<string | null>(
-      null
-    );
+    useRef<string | null>(null);
 
   const audioRequestIdRef =
     useRef(0);
 
-  /*
-  |--------------------------------------------------------------------------
-  | MP3QURAN TIMING CACHE
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     MP3QURAN CACHE
+  ========================================================= */
 
   const mp3TimingCacheRef =
     useRef<
@@ -425,11 +400,11 @@ export const MushafPageView: React.FC<
       >
     >({});
 
-  const mp3ReadIdCacheRef =
+  const mp3ReadCacheRef =
     useRef<
       Record<
         string,
-        number | null
+        Mp3QuranRead | null
       >
     >({});
 
@@ -439,77 +414,118 @@ export const MushafPageView: React.FC<
       requestId: number;
     } | null>(null);
 
-  /*
-  |--------------------------------------------------------------------------
-  | DOWNLOAD STATE
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     DOWNLOAD
+  ========================================================= */
 
   const [
     surahDownloadState,
     setSurahDownloadState
-  ] = useState<SurahDownloadState>(
-    {
-      downloaded: 0,
-      total: 0,
-      downloading: false,
-      paused: false,
-      error: false
-    }
-  );
+  ] = useState<SurahDownloadState>({
+    downloaded: 0,
+    total: 0,
+    downloading: false,
+    paused: false,
+    error: false
+  });
 
   const downloadAbortControllerRef =
-    useRef<AbortController | null>(
-      null
-    );
+    useRef<AbortController | null>(null);
 
   const downloadSessionRef =
     useRef(0);
 
-  /*
-  |--------------------------------------------------------------------------
-  | OBJECT URL CLEANUP
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     AUDIO URL CLEANUP
+  ========================================================= */
 
   const clearAudioObjectUrl =
     () => {
       if (
         audioObjectUrlRef.current
       ) {
-        URL.revokeObjectURL(
-          audioObjectUrlRef.current
-        );
+        try {
+          URL.revokeObjectURL(
+            audioObjectUrlRef.current
+          );
+        } catch {
+          // Ignore
+        }
 
         audioObjectUrlRef.current =
           null;
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | GET MP3QURAN READ ID
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     STOP AUDIO COMPLETELY
+  ========================================================= */
 
-  const getMp3QuranReadId =
+  const stopAudioCompletely =
+    () => {
+      audioRequestIdRef.current++;
+
+      activeSegmentRef.current =
+        null;
+
+      if (
+        audioRef.current
+      ) {
+        try {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          audioRef.current.removeAttribute(
+            'src'
+          );
+          audioRef.current.load();
+        } catch {
+          // Ignore
+        }
+      }
+
+      clearAudioObjectUrl();
+
+      setIsPlayingAudio(false);
+      setPlayingAyahKey(null);
+
+      pageAudioIndexRef.current =
+        -1;
+
+      setPageAudioIndex(-1);
+    };
+
+  /* =========================================================
+     GET MP3QURAN READ
+  ========================================================= */
+
+  const getMp3QuranRead =
     async (
       reciter: ReciterItem
-    ): Promise<number | null> => {
+    ): Promise<Mp3QuranRead | null> => {
       const cacheKey =
         reciter.id;
 
       if (
         Object.prototype.hasOwnProperty.call(
-          mp3ReadIdCacheRef.current,
+          mp3ReadCacheRef.current,
           cacheKey
         )
       ) {
         return (
-          mp3ReadIdCacheRef.current[
+          mp3ReadCacheRef.current[
             cacheKey
           ]
         );
+      }
+
+      if (
+        !reciter.audioBaseUrl
+      ) {
+        mp3ReadCacheRef.current[
+          cacheKey
+        ] = null;
+
+        return null;
       }
 
       try {
@@ -520,7 +536,7 @@ export const MushafPageView: React.FC<
 
         if (!response.ok) {
           throw new Error(
-            `HTTP ${response.status}`
+            `MP3Quran API HTTP ${response.status}`
           );
         }
 
@@ -536,12 +552,11 @@ export const MushafPageView: React.FC<
 
         const localBase =
           normalizeUrl(
-            reciter.audioBaseUrl ||
-              ''
+            reciter.audioBaseUrl
           );
 
-        let foundReadId:
-          | number
+        let found:
+          | Mp3QuranRead
           | null = null;
 
         for (
@@ -557,62 +572,78 @@ export const MushafPageView: React.FC<
           for (
             const moshaf of moshafs
           ) {
-            const remoteServer =
-              normalizeUrl(
-                moshaf?.server ||
-                  ''
+            const server =
+              String(
+                moshaf?.server || ''
               );
 
-            if (
-              localBase &&
-              remoteServer &&
-              (
-                localBase ===
-                  remoteServer ||
-                localBase.includes(
-                  remoteServer
-                ) ||
-                remoteServer.includes(
-                  localBase
-                )
-              )
-            ) {
-              const id =
-                Number(
-                  moshaf?.id
-                );
+            const remoteServer =
+              normalizeUrl(server);
 
-              if (
-                Number.isFinite(
-                  id
-                )
-              ) {
-                foundReadId =
-                  id;
-                break;
-              }
+            if (
+              !remoteServer ||
+              !localBase
+            ) {
+              continue;
             }
+
+            const matches =
+              localBase ===
+                remoteServer ||
+              localBase.includes(
+                remoteServer
+              ) ||
+              remoteServer.includes(
+                localBase
+              );
+
+            if (!matches) {
+              continue;
+            }
+
+            const id =
+              Number(moshaf?.id);
+
+            if (
+              !Number.isFinite(id)
+            ) {
+              continue;
+            }
+
+            found = {
+              id,
+              server,
+              surah_total:
+                Number(
+                  moshaf?.surah_total
+                ),
+              surah_list:
+                String(
+                  moshaf?.surah_list ||
+                    ''
+                )
+            };
+
+            break;
           }
 
-          if (
-            foundReadId !== null
-          ) {
+          if (found) {
             break;
           }
         }
 
-        mp3ReadIdCacheRef.current[
+        mp3ReadCacheRef.current[
           cacheKey
-        ] = foundReadId;
+        ] = found;
 
-        return foundReadId;
+        return found;
       } catch (error) {
         console.error(
-          'MP3Quran read ID error:',
+          'MP3Quran read lookup failed:',
           error
         );
 
-        mp3ReadIdCacheRef.current[
+        mp3ReadCacheRef.current[
           cacheKey
         ] = null;
 
@@ -620,11 +651,9 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | GET MP3QURAN TIMING
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     GET MP3QURAN TIMING
+  ========================================================= */
 
   const getMp3QuranTiming =
     async (
@@ -636,70 +665,111 @@ export const MushafPageView: React.FC<
       const cacheKey =
         `${reciter.id}_${surahNumber}`;
 
-      const cached =
+      if (
         mp3TimingCacheRef.current[
           cacheKey
-        ];
-
-      if (cached) {
-        return cached;
+        ]
+      ) {
+        return (
+          mp3TimingCacheRef.current[
+            cacheKey
+          ]
+        );
       }
 
-      const readId =
-        await getMp3QuranReadId(
+      const read =
+        await getMp3QuranRead(
           reciter
         );
 
-      if (
-        readId === null
-      ) {
+      if (!read) {
         return [];
       }
 
       try {
         const response =
           await fetch(
-            `https://mp3quran.net/api/v3/ayat_timing?surah=${surahNumber}&read=${readId}`
+            `https://mp3quran.net/api/v3/ayat_timing?surah=${surahNumber}&read=${read.id}`
           );
 
         if (!response.ok) {
           throw new Error(
-            `HTTP ${response.status}`
+            `MP3Quran timing HTTP ${response.status}`
           );
         }
 
         const data =
           await response.json();
 
-        const raw =
+        /*
+         * Different API responses can expose
+         * the timing array under different names.
+         */
+        let raw: any[] = [];
+
+        if (
+          Array.isArray(data)
+        ) {
+          raw = data;
+        } else if (
+          Array.isArray(data?.ayat)
+        ) {
+          raw = data.ayat;
+        } else if (
+          Array.isArray(data?.data)
+        ) {
+          raw = data.data;
+        } else if (
           Array.isArray(
-            data?.ayat
+            data?.timing
           )
-            ? data.ayat
-            : Array.isArray(
-                data?.data
-              )
-              ? data.data
-              : [];
+        ) {
+          raw = data.timing;
+        } else if (
+          Array.isArray(
+            data?.ayahs
+          )
+        ) {
+          raw = data.ayahs;
+        }
 
         const timings =
           raw
             .map(
-              (
-                item: any
-              ) => ({
-                ayah: Number(
-                  item?.ayah
-                ),
-                start_time:
+              (item: any) => {
+                const ayah =
                   Number(
-                    item?.start_time
-                  ),
-                end_time:
+                    item?.ayah ??
+                      item?.ayah_number ??
+                      item?.number
+                  );
+
+                const startRaw =
                   Number(
-                    item?.end_time
-                  )
-              })
+                    item?.start_time ??
+                      item?.start ??
+                      item?.startTime
+                  );
+
+                const endRaw =
+                  Number(
+                    item?.end_time ??
+                      item?.end ??
+                      item?.endTime
+                  );
+
+                return {
+                  ayah,
+                  start_time:
+                    normalizeTimingValue(
+                      startRaw
+                    ),
+                  end_time:
+                    normalizeTimingValue(
+                      endRaw
+                    )
+                };
+              }
             )
             .filter(
               (
@@ -730,15 +800,17 @@ export const MushafPageView: React.FC<
           error
         );
 
+        mp3TimingCacheRef.current[
+          cacheKey
+        ] = [];
+
         return [];
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | GET AUDIO SOURCE
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     GET AUDIO SOURCE
+  ========================================================= */
 
   const getAudioSource =
     async (
@@ -747,7 +819,9 @@ export const MushafPageView: React.FC<
       ayahNumber: number
     ): Promise<AudioSource> => {
       /*
-       * MP3Quran
+       * ===============================================
+       * MP3QURAN
+       * ===============================================
        */
 
       if (
@@ -767,6 +841,21 @@ export const MushafPageView: React.FC<
               ayahNumber
           );
 
+        /*
+         * VERY IMPORTANT:
+         *
+         * If timing does not exist, DO NOT
+         * play the whole surah from second 0.
+         */
+        if (!timing) {
+          throw new Error(
+            `Timing بۆ ${surahNumber}:${ayahNumber} نەدۆزرایەوە`
+          );
+        }
+
+        /*
+         * First try offline audio.
+         */
         try {
           const localSurah =
             await getSurahAudio(
@@ -788,21 +877,21 @@ export const MushafPageView: React.FC<
             return {
               url: localUrl,
               startTime:
-                timing
-                  ? timing.start_time /
-                    1000
-                  : undefined,
+                timing.start_time,
               endTime:
-                timing
-                  ? timing.end_time /
-                    1000
-                  : undefined
+                timing.end_time
             };
           }
-        } catch {
-          // Fall through to online
+        } catch (error) {
+          console.warn(
+            'Local MP3Quran audio unavailable:',
+            error
+          );
         }
 
+        /*
+         * Online MP3Quran.
+         */
         const onlineUrl =
           makeMp3QuranSurahUrl(
             reciter,
@@ -811,70 +900,71 @@ export const MushafPageView: React.FC<
 
         if (!onlineUrl) {
           throw new Error(
-            'MP3Quran URL نەدۆزرایەوە'
+            `URL ـی MP3Quran بۆ ${reciter.name} نەدۆزرایەوە`
           );
         }
 
         return {
           url: onlineUrl,
           startTime:
-            timing
-              ? timing.start_time /
-                1000
-              : undefined,
+            timing.start_time,
           endTime:
-            timing
-              ? timing.end_time /
-                1000
-              : undefined
+            timing.end_time
         };
       }
 
       /*
-       * EveryAyah
+       * ===============================================
+       * EVERYAYAH
+       * ===============================================
        */
 
-      try {
-        const localBlob =
-          await getAyahAudio(
-            reciter.id,
-            surahNumber,
-            ayahNumber
+      const localBlob =
+        await getAyahAudio(
+          reciter.id,
+          surahNumber,
+          ayahNumber
+        ).catch(
+          () => null
+        );
+
+      if (localBlob) {
+        clearAudioObjectUrl();
+
+        const localUrl =
+          URL.createObjectURL(
+            localBlob
           );
 
-        if (localBlob) {
-          clearAudioObjectUrl();
+        audioObjectUrlRef.current =
+          localUrl;
 
-          const localUrl =
-            URL.createObjectURL(
-              localBlob
-            );
-
-          audioObjectUrlRef.current =
-            localUrl;
-
-          return {
-            url: localUrl
-          };
-        }
-      } catch {
-        // Fall back online
+        return {
+          url: localUrl
+        };
       }
 
-      return {
-        url: makeEveryAyahUrl(
+      const onlineUrl =
+        makeEveryAyahUrl(
           reciter,
           surahNumber,
           ayahNumber
-        )
+        );
+
+      if (!onlineUrl) {
+        throw new Error(
+          `EveryAyah URL نەدروست بوو بۆ ${reciter.name}`
+        );
+      }
+
+      return {
+        url: onlineUrl
       };
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | PAGE AUDIO STATE
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     PAGE AUDIO
+  ========================================================= */
 
   const [
     pageAudioIndex,
@@ -921,11 +1011,9 @@ export const MushafPageView: React.FC<
     >
   >({});
 
-  /*
-  |--------------------------------------------------------------------------
-  | AYAH DATA
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     AYAH DATA
+  ========================================================= */
 
   useEffect(() => {
     fetch(
@@ -953,11 +1041,9 @@ export const MushafPageView: React.FC<
       String(currentPage)
     ] || [];
 
-  /*
-  |--------------------------------------------------------------------------
-  | AYAH BOOKMARKS
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     AYAH BOOKMARKS
+  ========================================================= */
 
   const [
     ayahBookmarks,
@@ -1018,20 +1104,12 @@ export const MushafPageView: React.FC<
       )
     );
 
-    if (
-      navigator.vibrate
-    ) {
-      navigator.vibrate(
-        35
-      );
-    }
+    navigator.vibrate?.(35);
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | SAVE RECITER
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     SAVE RECITER
+  ========================================================= */
 
   useEffect(() => {
     try {
@@ -1046,11 +1124,9 @@ export const MushafPageView: React.FC<
     selectedReciter.id
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | RECITER SYNC
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     RECITER SYNC
+  ========================================================= */
 
   useEffect(() => {
     const handleReciterChanged =
@@ -1094,11 +1170,9 @@ export const MushafPageView: React.FC<
     };
   }, []);
 
-  /*
-  |--------------------------------------------------------------------------
-  | TAFSIR API
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     TAFSIR
+  ========================================================= */
 
   const getTafsirApiEdition =
     (
@@ -1108,11 +1182,9 @@ export const MushafPageView: React.FC<
         tafsir.id
       ] || null;
 
-  /*
-  |--------------------------------------------------------------------------
-  | CURRENT SURAH
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     CURRENT SURAH
+  ========================================================= */
 
   const currentSurah =
     surahsList
@@ -1133,11 +1205,9 @@ export const MushafPageView: React.FC<
     currentSurah?.ayahs ||
     0;
 
-  /*
-  |--------------------------------------------------------------------------
-  | REFRESH DOWNLOAD
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     REFRESH DOWNLOAD
+  ========================================================= */
 
   const refreshCurrentSurahDownload =
     async () => {
@@ -1157,11 +1227,6 @@ export const MushafPageView: React.FC<
       }
 
       try {
-        /*
-         * MP3Quran:
-         * Whole surah = complete
-         */
-
         if (
           selectedReciter.audioSource ===
           'mp3quran'
@@ -1180,17 +1245,16 @@ export const MushafPageView: React.FC<
                   ? currentSurahAyahCount
                   : 0,
               total:
-                currentSurahAyahCount
+                currentSurahAyahCount,
+              downloading: false,
+              paused:
+                previous.paused,
+              error: false
             })
           );
 
           return;
         }
-
-        /*
-         * EveryAyah:
-         * Count individual ayahs
-         */
 
         const downloaded =
           await getDownloadedAyahCount(
@@ -1204,37 +1268,39 @@ export const MushafPageView: React.FC<
             ...previous,
             downloaded,
             total:
-              currentSurahAyahCount
+              currentSurahAyahCount,
+            downloading: false,
+            error: false
           })
         );
-      } catch {
+      } catch (error) {
+        console.error(
+          'Refresh download state error:',
+          error
+        );
+
         setSurahDownloadState(
           previous => ({
             ...previous,
             total:
-              currentSurahAyahCount
+              currentSurahAyahCount,
+            downloading: false
           })
         );
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | CURRENT SURAH / RECITER CHANGED
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     SURAH / RECITER CHANGED
+  ========================================================= */
 
   useEffect(() => {
     downloadSessionRef.current++;
 
-    if (
-      downloadAbortControllerRef.current
-    ) {
-      downloadAbortControllerRef.current.abort();
+    downloadAbortControllerRef.current?.abort();
 
-      downloadAbortControllerRef.current =
-        null;
-    }
+    downloadAbortControllerRef.current =
+      null;
 
     setSurahDownloadState({
       downloaded: 0,
@@ -1252,11 +1318,9 @@ export const MushafPageView: React.FC<
     selectedReciter.id
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | DOWNLOAD CURRENT SURAH
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     DOWNLOAD CURRENT SURAH
+  ========================================================= */
 
   const downloadCurrentSurah =
     async () => {
@@ -1293,7 +1357,9 @@ export const MushafPageView: React.FC<
 
       try {
         /*
-         * MP3Quran
+         * ===============================================
+         * MP3QURAN
+         * ===============================================
          */
 
         if (
@@ -1342,11 +1408,6 @@ export const MushafPageView: React.FC<
             );
           }
 
-          /*
-           * Keep UI at 0 until whole
-           * MP3 file is downloaded.
-           */
-
           setSurahDownloadState({
             downloaded: 0,
             total:
@@ -1380,6 +1441,14 @@ export const MushafPageView: React.FC<
             );
           }
 
+          if (
+            blob.size === 0
+          ) {
+            throw new Error(
+              'فایلی دەنگ بەتاڵە'
+            );
+          }
+
           await saveSurahAudio(
             reciterAtStart.id,
             surahNumberAtStart,
@@ -1403,23 +1472,23 @@ export const MushafPageView: React.FC<
               error: false
             });
 
-            if (
-              navigator.vibrate
-            ) {
-              navigator.vibrate(
-                [40, 60, 40]
-              );
-            }
+            navigator.vibrate?.([
+              40,
+              60,
+              40
+            ]);
           }
 
           return;
         }
 
         /*
+         * ===============================================
          * EVERYAYAH
+         * ===============================================
          */
 
-        const existing =
+        let currentCount =
           await getDownloadedAyahCount(
             reciterAtStart.id,
             surahNumberAtStart,
@@ -1435,16 +1504,13 @@ export const MushafPageView: React.FC<
 
         setSurahDownloadState({
           downloaded:
-            existing,
+            currentCount,
           total:
             ayahCountAtStart,
           downloading: true,
           paused: false,
           error: false
         });
-
-        let currentCount =
-          existing;
 
         for (
           let ayah = 1;
@@ -1468,16 +1534,14 @@ export const MushafPageView: React.FC<
             return;
           }
 
-          const existingAudio =
+          const existing =
             await getAyahAudio(
               reciterAtStart.id,
               surahNumberAtStart,
               ayah
             );
 
-          if (
-            existingAudio
-          ) {
+          if (existing) {
             continue;
           }
 
@@ -1496,7 +1560,7 @@ export const MushafPageView: React.FC<
 
           if (!response.ok) {
             throw new Error(
-              `HTTP ${response.status}`
+              `HTTP ${response.status} — ${url}`
             );
           }
 
@@ -1509,6 +1573,14 @@ export const MushafPageView: React.FC<
             throw new DOMException(
               'Download paused',
               'AbortError'
+            );
+          }
+
+          if (
+            blob.size === 0
+          ) {
+            throw new Error(
+              `فایلی ئایەتی ${ayah} بەتاڵە`
             );
           }
 
@@ -1562,13 +1634,11 @@ export const MushafPageView: React.FC<
             error: false
           });
 
-          if (
-            navigator.vibrate
-          ) {
-            navigator.vibrate(
-              [40, 60, 40]
-            );
-          }
+          navigator.vibrate?.([
+            40,
+            60,
+            40
+          ]);
         }
       } catch (error: any) {
         if (
@@ -1674,7 +1744,7 @@ export const MushafPageView: React.FC<
             });
 
             alert(
-              'دابەزاندنی دەنگ سەرکەوتوو نەبوو.\n\nئەگەر ئینتەرنێتەکەت باشە، لەوانەیە سەرچاوەی دەنگ ڕێگەی دابەزاندنی ڕاستەوخۆ نەدات.'
+              'دابەزاندنی دەنگ سەرکەوتوو نەبوو.\n\nلەوانەیە سەرچاوەی دەنگی ئەم قارییە بەردەست نەبێت یان ڕێگە بە دابەزاندنی ڕاستەوخۆ نەدات.'
             );
           }
         }
@@ -1689,27 +1759,18 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | PAUSE DOWNLOAD
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     PAUSE
+  ========================================================= */
 
   const pauseCurrentSurahDownload =
     () => {
-      const controller =
-        downloadAbortControllerRef.current;
-
-      if (controller) {
-        controller.abort();
-      }
+      downloadAbortControllerRef.current?.abort();
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | DELETE CURRENT SURAH
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     DELETE
+  ========================================================= */
 
   const removeCurrentSurahAudio =
     async () => {
@@ -1768,11 +1829,9 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | DOWNLOAD PROGRESS
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     DOWNLOAD PROGRESS
+  ========================================================= */
 
   const downloadProgress =
     surahDownloadState.total >
@@ -1790,11 +1849,9 @@ export const MushafPageView: React.FC<
     surahDownloadState.downloaded >=
       surahDownloadState.total;
 
-  /*
-  |--------------------------------------------------------------------------
-  | DOWNLOAD UI
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     DOWNLOAD UI
+  ========================================================= */
 
   const renderCurrentSurahDownload =
     () => {
@@ -1938,11 +1995,9 @@ export const MushafPageView: React.FC<
       );
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | PLAY SINGLE AYAH
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     PLAY SINGLE AYAH
+  ========================================================= */
 
   const playAyahAudio =
     async (
@@ -1954,28 +2009,7 @@ export const MushafPageView: React.FC<
       if (
         playingAyahKey === key
       ) {
-        audioRequestIdRef.current++;
-
-        activeSegmentRef.current =
-          null;
-
-        audioRef.current?.pause();
-
-        setPlayingAyahKey(
-          null
-        );
-
-        setIsPlayingAudio(
-          false
-        );
-
-        pageAudioIndexRef.current =
-          -1;
-
-        setPageAudioIndex(
-          -1
-        );
-
+        stopAudioCompletely();
         return;
       }
 
@@ -1988,9 +2022,7 @@ export const MushafPageView: React.FC<
       pageAudioIndexRef.current =
         -1;
 
-      setPageAudioIndex(
-        -1
-      );
+      setPageAudioIndex(-1);
 
       const ayahBox =
         ayahBoxes.find(
@@ -2021,7 +2053,7 @@ export const MushafPageView: React.FC<
       }
 
       audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      clearAudioObjectUrl();
 
       try {
         const source =
@@ -2038,7 +2070,10 @@ export const MushafPageView: React.FC<
           return;
         }
 
-        audioRef.current.src =
+        const audio =
+          audioRef.current;
+
+        audio.src =
           source.url;
 
         activeSegmentRef.current =
@@ -2049,25 +2084,31 @@ export const MushafPageView: React.FC<
             requestId
           };
 
-        setPlayingAyahKey(
-          key
-        );
-
         /*
-         * If MP3Quran timing is
-         * available, seek to the
-         * exact ayah.
+         * MP3Quran segment.
          */
-
         if (
           source.startTime !==
           undefined
         ) {
-          const audio =
-            audioRef.current;
-
           await new Promise<void>(
-            resolve => {
+            (
+              resolve,
+              reject
+            ) => {
+              const audio =
+                audioRef.current;
+
+              if (!audio) {
+                reject(
+                  new Error(
+                    'Audio element نەدۆزرایەوە'
+                  )
+                );
+
+                return;
+              }
+
               if (
                 audio.readyState >=
                 1
@@ -2076,19 +2117,44 @@ export const MushafPageView: React.FC<
                 return;
               }
 
-              const handler =
+              const onLoaded =
+                () => {
+                  cleanup();
+                  resolve();
+                };
+
+              const onError =
+                () => {
+                  cleanup();
+
+                  reject(
+                    new Error(
+                      'Audio metadata load failed'
+                    )
+                  );
+                };
+
+              const cleanup =
                 () => {
                   audio.removeEventListener(
                     'loadedmetadata',
-                    handler
+                    onLoaded
                   );
 
-                  resolve();
+                  audio.removeEventListener(
+                    'error',
+                    onError
+                  );
                 };
 
               audio.addEventListener(
                 'loadedmetadata',
-                handler
+                onLoaded
+              );
+
+              audio.addEventListener(
+                'error',
+                onError
               );
             }
           );
@@ -2104,20 +2170,30 @@ export const MushafPageView: React.FC<
             source.startTime;
         }
 
-        await audioRef.current.play();
+        setPlayingAyahKey(
+          key
+        );
+
+        await audio.play();
 
         if (
           requestId ===
           audioRequestIdRef.current
         ) {
-          setIsPlayingAudio(
-            true
-          );
+          setIsPlayingAudio(true);
         }
       } catch (error) {
         console.error(
           'Ayah audio error:',
-          error
+          {
+            reciter:
+              selectedReciter,
+            surah:
+              a.surahNumber,
+            ayah:
+              a.numberInSurah,
+            error
+          }
         );
 
         if (
@@ -2138,11 +2214,9 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | PAGE AUDIO
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     PAGE AUDIO
+  ========================================================= */
 
   const playPageAyahAtIndex =
     async (
@@ -2156,9 +2230,7 @@ export const MushafPageView: React.FC<
         pageAudioIndexRef.current =
           -1;
 
-        setPageAudioIndex(
-          -1
-        );
+        setPageAudioIndex(-1);
 
         setPlayingAyahKey(
           null
@@ -2234,7 +2306,7 @@ export const MushafPageView: React.FC<
       }
 
       audioRef.current.pause();
-      audioRef.current.currentTime = 0;
+      clearAudioObjectUrl();
 
       try {
         const source =
@@ -2251,7 +2323,10 @@ export const MushafPageView: React.FC<
           return;
         }
 
-        audioRef.current.src =
+        const audio =
+          audioRef.current;
+
+        audio.src =
           source.url;
 
         activeSegmentRef.current =
@@ -2266,11 +2341,24 @@ export const MushafPageView: React.FC<
           source.startTime !==
           undefined
         ) {
-          const audio =
-            audioRef.current;
-
           await new Promise<void>(
-            resolve => {
+            (
+              resolve,
+              reject
+            ) => {
+              const audio =
+                audioRef.current;
+
+              if (!audio) {
+                reject(
+                  new Error(
+                    'Audio element نەدۆزرایەوە'
+                  )
+                );
+
+                return;
+              }
+
               if (
                 audio.readyState >=
                 1
@@ -2279,19 +2367,44 @@ export const MushafPageView: React.FC<
                 return;
               }
 
-              const handler =
+              const onLoaded =
+                () => {
+                  cleanup();
+                  resolve();
+                };
+
+              const onError =
+                () => {
+                  cleanup();
+
+                  reject(
+                    new Error(
+                      'Audio metadata load failed'
+                    )
+                  );
+                };
+
+              const cleanup =
                 () => {
                   audio.removeEventListener(
                     'loadedmetadata',
-                    handler
+                    onLoaded
                   );
 
-                  resolve();
+                  audio.removeEventListener(
+                    'error',
+                    onError
+                  );
                 };
 
               audio.addEventListener(
                 'loadedmetadata',
-                handler
+                onLoaded
+              );
+
+              audio.addEventListener(
+                'error',
+                onError
               );
             }
           );
@@ -2307,7 +2420,7 @@ export const MushafPageView: React.FC<
             source.startTime;
         }
 
-        await audioRef.current.play();
+        await audio.play();
 
         if (
           requestId ===
@@ -2315,14 +2428,20 @@ export const MushafPageView: React.FC<
           pageAudioIndexRef.current ===
             index
         ) {
-          setIsPlayingAudio(
-            true
-          );
+          setIsPlayingAudio(true);
         }
       } catch (error) {
         console.error(
           'Page audio error:',
-          error
+          {
+            reciter:
+              selectedReciter,
+            surah:
+              ayah.surahNumber,
+            ayah:
+              ayah.numberInSurah,
+            error
+          }
         );
 
         if (
@@ -2343,11 +2462,9 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | SHARE AYAH
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     SHARE
+  ========================================================= */
 
   const shareAyah = async (
     a: any
@@ -2370,15 +2487,13 @@ export const MushafPageView: React.FC<
         );
       }
     } catch {
-      // User cancelled
+      // Cancelled
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | LONG PRESS
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     LONG PRESS
+  ========================================================= */
 
   const startLongPress = (
     boxKey: string,
@@ -2412,13 +2527,7 @@ export const MushafPageView: React.FC<
           false
         );
 
-        if (
-          navigator.vibrate
-        ) {
-          navigator.vibrate(
-            40
-          );
-        }
+        navigator.vibrate?.(40);
       }, LONG_PRESS_MS);
   };
 
@@ -2451,11 +2560,9 @@ export const MushafPageView: React.FC<
       );
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | SCROLL
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     SCROLL
+  ========================================================= */
 
   const scrollContainerRef =
     useRef<HTMLDivElement | null>(
@@ -2489,11 +2596,9 @@ export const MushafPageView: React.FC<
       currentPage / 20
     );
 
-  /*
-  |--------------------------------------------------------------------------
-  | PAGE DATA
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     PAGE DATA
+  ========================================================= */
 
   useEffect(() => {
     let cancelled =
@@ -2647,11 +2752,9 @@ export const MushafPageView: React.FC<
     selectedTafsir.id
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | UPDATE HIGHLIGHT
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     UPDATE HIGHLIGHT
+  ========================================================= */
 
   useEffect(() => {
     if (
@@ -2689,95 +2792,38 @@ export const MushafPageView: React.FC<
     pageAyahsData
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | PAGE AUDIO RESET
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     PAGE AUDIO RESET
+  ========================================================= */
 
   useEffect(() => {
-    audioRequestIdRef.current++;
-
-    activeSegmentRef.current =
-      null;
-
-    if (
-      audioRef.current
-    ) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current.src = '';
-    }
-
-    clearAudioObjectUrl();
-
-    pageAudioIndexRef.current =
-      -1;
-
-    setPageAudioIndex(
-      -1
-    );
-
-    setIsPlayingAudio(
-      false
-    );
-
-    setPlayingAyahKey(
-      null
-    );
+    stopAudioCompletely();
 
     closeHighlight();
-
     cancelLongPress();
   }, [
     currentPage
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | RECITER CHANGE AUDIO RESET
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     RECITER RESET
+  ========================================================= */
 
   useEffect(() => {
-    audioRequestIdRef.current++;
+    stopAudioCompletely();
 
-    activeSegmentRef.current =
-      null;
-
-    if (
-      audioRef.current
-    ) {
-      audioRef.current.pause();
-      audioRef.current.currentTime = 0;
-      audioRef.current.src = '';
-    }
-
-    clearAudioObjectUrl();
-
-    pageAudioIndexRef.current =
-      -1;
-
-    setPageAudioIndex(
-      -1
-    );
-
-    setIsPlayingAudio(
-      false
-    );
-
-    setPlayingAyahKey(
-      null
-    );
+    /*
+     * Timing cache stays available,
+     * but the currently playing source
+     * must always stop.
+     */
   }, [
     selectedReciter.id
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | CLEANUP
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     CLEANUP
+  ========================================================= */
 
   useEffect(() => {
     return () => {
@@ -2789,17 +2835,20 @@ export const MushafPageView: React.FC<
       if (
         audioRef.current
       ) {
-        audioRef.current.pause();
-        audioRef.current.src = '';
+        try {
+          audioRef.current.pause();
+          audioRef.current.removeAttribute(
+            'src'
+          );
+          audioRef.current.load();
+        } catch {
+          // Ignore
+        }
       }
 
       clearAudioObjectUrl();
 
-      if (
-        downloadAbortControllerRef.current
-      ) {
-        downloadAbortControllerRef.current.abort();
-      }
+      downloadAbortControllerRef.current?.abort();
 
       if (
         longPressTimer.current
@@ -2811,11 +2860,9 @@ export const MushafPageView: React.FC<
     };
   }, []);
 
-  /*
-  |--------------------------------------------------------------------------
-  | SCROLL TO CURRENT PAGE
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     SCROLL TO CURRENT PAGE
+  ========================================================= */
 
   useEffect(() => {
     if (
@@ -2843,10 +2890,8 @@ export const MushafPageView: React.FC<
               isFirstScroll.current
                 ? 'auto'
                 : 'smooth',
-            inline:
-              'center',
-            block:
-              'nearest'
+            inline: 'center',
+            block: 'nearest'
           });
 
           isFirstScroll.current =
@@ -2934,11 +2979,9 @@ export const MushafPageView: React.FC<
     currentPage
   ]);
 
-  /*
-  |--------------------------------------------------------------------------
-  | TOGGLE PAGE AUDIO
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     TOGGLE PAGE AUDIO
+  ========================================================= */
 
   const togglePageAudio =
     () => {
@@ -3000,11 +3043,9 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | AUDIO TIME UPDATE
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     TIME UPDATE
+  ========================================================= */
 
   const handleAudioTimeUpdate =
     () => {
@@ -3033,8 +3074,12 @@ export const MushafPageView: React.FC<
       ) {
         audio.pause();
 
-        audio.currentTime =
-          segment.endTime;
+        try {
+          audio.currentTime =
+            segment.endTime;
+        } catch {
+          // Ignore
+        }
 
         activeSegmentRef.current =
           null;
@@ -3043,11 +3088,9 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | AUDIO ENDED
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     ENDED
+  ========================================================= */
 
   const handleAudioEnded =
     () => {
@@ -3057,6 +3100,10 @@ export const MushafPageView: React.FC<
       const currentIndex =
         pageAudioIndexRef.current;
 
+      /*
+       * Single ayah playback:
+       * stop after the ayah.
+       */
       if (
         currentIndex < 0
       ) {
@@ -3131,11 +3178,38 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /*
-  |--------------------------------------------------------------------------
-  | SCROLL HANDLER
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     AUDIO ERROR
+  ========================================================= */
+
+  const handleAudioError =
+    () => {
+      const audio =
+        audioRef.current;
+
+      if (!audio) {
+        return;
+      }
+
+      console.error(
+        'HTML Audio Error:',
+        {
+          src: audio.src,
+          code:
+            audio.error?.code,
+          message:
+            audio.error?.message
+        }
+      );
+
+      setIsPlayingAudio(
+        false
+      );
+    };
+
+  /* =========================================================
+     SCROLL HANDLER
+  ========================================================= */
 
   const handleScroll = (
     e: React.UIEvent<HTMLDivElement>
@@ -3180,35 +3254,7 @@ export const MushafPageView: React.FC<
         scrollInitiatedByUser.current =
           true;
 
-        audioRequestIdRef.current++;
-
-        activeSegmentRef.current =
-          null;
-
-        if (
-          audioRef.current
-        ) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-          audioRef.current.src = '';
-        }
-
-        clearAudioObjectUrl();
-
-        pageAudioIndexRef.current =
-          -1;
-
-        setPageAudioIndex(
-          -1
-        );
-
-        setIsPlayingAudio(
-          false
-        );
-
-        setPlayingAyahKey(
-          null
-        );
+        stopAudioCompletely();
 
         if (
           onJumpToPage
@@ -3236,11 +3282,9 @@ export const MushafPageView: React.FC<
     }
   };
 
-  /*
-  |--------------------------------------------------------------------------
-  | BOOKMARK
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     BOOKMARK
+  ========================================================= */
 
   const toggleBookmark =
     () => {
@@ -3274,13 +3318,7 @@ export const MushafPageView: React.FC<
         )
       );
 
-      if (
-        navigator.vibrate
-      ) {
-        navigator.vibrate(
-          35
-        );
-      }
+      navigator.vibrate?.(35);
     };
 
   const selectedTafsirName =
@@ -3289,11 +3327,9 @@ export const MushafPageView: React.FC<
     selectedTafsir.title ||
     selectedTafsir.id;
 
-  /*
-  |--------------------------------------------------------------------------
-  | UI
-  |--------------------------------------------------------------------------
-  */
+  /* =========================================================
+     UI
+  ========================================================= */
 
   return (
     <div
@@ -3302,11 +3338,15 @@ export const MushafPageView: React.FC<
     >
       <audio
         ref={audioRef}
+        preload="none"
         onTimeUpdate={
           handleAudioTimeUpdate
         }
         onEnded={
           handleAudioEnded
+        }
+        onError={
+          handleAudioError
         }
         onPause={() => {
           setIsPlayingAudio(
@@ -3963,6 +4003,8 @@ export const MushafPageView: React.FC<
           selectedReciter.id
         }
         onSelectReciter={r => {
+          stopAudioCompletely();
+
           setSelectedReciter(
             r
           );
