@@ -260,9 +260,60 @@ export const SurahListView: React.FC<
     } catch {}
   }, []);
 
+  /*
+   * ئەگەر قاری لە شوێنێکی تری ئەپەکە بگۆڕدرێت،
+   * ئەم بەشەش خۆکارانە نوێ دەبێتەوە.
+   */
+  useEffect(() => {
+    const handleReciterChanged = (
+      event: Event
+    ) => {
+      const customEvent =
+        event as CustomEvent<string>;
+
+      const reciterId =
+        customEvent.detail;
+
+      if (!reciterId) return;
+
+      const found =
+        ALL_RECITERS_DIRECTORY.find(
+          r => r.id === reciterId
+        );
+
+      if (found) {
+        setSelectedReciter(found);
+      }
+    };
+
+    window.addEventListener(
+      'quran-reciter-changed',
+      handleReciterChanged
+    );
+
+    return () => {
+      window.removeEventListener(
+        'quran-reciter-changed',
+        handleReciterChanged
+      );
+    };
+  }, []);
+
   const selectReciter = (
     reciter: ReciterItem
   ) => {
+    /*
+     * هەموو download ـە کۆنەکان وەستێنین
+     * پێش گۆڕینی قاری.
+     */
+    Object.values(
+      abortControllers.current
+    ).forEach(controller => {
+      controller.abort();
+    });
+
+    abortControllers.current = {};
+
     setSelectedReciter(reciter);
 
     try {
@@ -271,6 +322,21 @@ export const SurahListView: React.FC<
         reciter.id
       );
     } catch {}
+
+    /*
+     * ئاگادارکردنەوەی MushafPageView
+     * بۆ ئەوەی هەمان قاری بەکاربهێنێت.
+     */
+    window.dispatchEvent(
+      new CustomEvent(
+        'quran-reciter-changed',
+        {
+          detail: reciter.id
+        }
+      )
+    );
+
+    setDownloadStates({});
 
     setShowReciterPicker(false);
   };
@@ -494,6 +560,24 @@ export const SurahListView: React.FC<
   ]);
 
   /*
+   * پاککردنەوەی دۆخی download ـی سورەتێک
+   */
+  const resetDownloadState = (
+    surah: SurahItem
+  ) => {
+    setDownloadStates(prev => ({
+      ...prev,
+      [surah.number]: {
+        downloaded: 0,
+        total: surah.ayahs,
+        downloading: false,
+        paused: false,
+        error: false
+      }
+    }));
+  };
+
+  /*
    * دابەزاندنی سورەت
    */
   const downloadSurah =
@@ -508,6 +592,9 @@ export const SurahListView: React.FC<
         return;
       }
 
+      const reciterAtStart =
+        selectedReciter;
+
       const controller =
         new AbortController();
 
@@ -516,15 +603,9 @@ export const SurahListView: React.FC<
       ] = controller;
 
       try {
-        /*
-         * دەستپێکردن لە یەکەم ئایەتی
-         * نەک تەنها existing + 1،
-         * بۆ ئەوەی ئەگەر gap هەبوو
-         * بتوانێت پڕی بکاتەوە.
-         */
         const existing =
           await getDownloadedAyahCount(
-            selectedReciter.id,
+            reciterAtStart.id,
             surah.number,
             surah.ayahs
           );
@@ -563,7 +644,7 @@ export const SurahListView: React.FC<
 
           const already =
             await isAyahDownloaded(
-              selectedReciter.id,
+              reciterAtStart.id,
               surah.number,
               ayah
             );
@@ -574,7 +655,7 @@ export const SurahListView: React.FC<
 
           const url =
             makeAyahUrl(
-              selectedReciter,
+              reciterAtStart,
               surah.number,
               ayah
             );
@@ -597,8 +678,13 @@ export const SurahListView: React.FC<
           const blob =
             await response.blob();
 
+          /*
+           * ئەگەر لە کاتی download ـەکەدا
+           * قاری گۆڕدرابێت، ئەم فایلە
+           * هەر بە قاریی سەرەتاییەکە پاشەکەوت دەکرێت.
+           */
           await saveAyahAudio(
-            selectedReciter.id,
+            reciterAtStart.id,
             surah.number,
             ayah,
             blob
@@ -627,28 +713,37 @@ export const SurahListView: React.FC<
 
         const finalCount =
           await getDownloadedAyahCount(
-            selectedReciter.id,
+            reciterAtStart.id,
             surah.number,
             surah.ayahs
           );
 
-        setDownloadStates(
-          prev => ({
-            ...prev,
-            [surah.number]: {
-              downloaded:
-                finalCount,
-              total:
-                surah.ayahs,
-              downloading:
-                false,
-              paused:
-                false,
-              error:
-                false
-            }
-          })
-        );
+        /*
+         * تەنها ئەگەر هێشتا هەمان قارییە
+         * دۆخی UI نوێ دەکەینەوە.
+         */
+        if (
+          selectedReciter.id ===
+          reciterAtStart.id
+        ) {
+          setDownloadStates(
+            prev => ({
+              ...prev,
+              [surah.number]: {
+                downloaded:
+                  finalCount,
+                total:
+                  surah.ayahs,
+                downloading:
+                  false,
+                paused:
+                  false,
+                error:
+                  false
+              }
+            })
+          );
+        }
       } catch (
         error: any
       ) {
@@ -658,30 +753,35 @@ export const SurahListView: React.FC<
         ) {
           const current =
             await getDownloadedAyahCount(
-              selectedReciter.id,
+              reciterAtStart.id,
               surah.number,
               surah.ayahs
             ).catch(
               () => 0
             );
 
-          setDownloadStates(
-            prev => ({
-              ...prev,
-              [surah.number]: {
-                downloaded:
-                  current,
-                total:
-                  surah.ayahs,
-                downloading:
-                  false,
-                paused:
-                  true,
-                error:
-                  false
-              }
-            })
-          );
+          if (
+            selectedReciter.id ===
+            reciterAtStart.id
+          ) {
+            setDownloadStates(
+              prev => ({
+                ...prev,
+                [surah.number]: {
+                  downloaded:
+                    current,
+                  total:
+                    surah.ayahs,
+                  downloading:
+                    false,
+                  paused:
+                    true,
+                  error:
+                    false
+                }
+              })
+            );
+          }
         } else {
           console.error(
             'Audio download error:',
@@ -690,40 +790,51 @@ export const SurahListView: React.FC<
 
           const current =
             await getDownloadedAyahCount(
-              selectedReciter.id,
+              reciterAtStart.id,
               surah.number,
               surah.ayahs
             ).catch(
               () => 0
             );
 
-          setDownloadStates(
-            prev => ({
-              ...prev,
-              [surah.number]: {
-                downloaded:
-                  current,
-                total:
-                  surah.ayahs,
-                downloading:
-                  false,
-                paused:
-                  false,
-                error:
-                  true
-              }
-            })
-          );
+          if (
+            selectedReciter.id ===
+            reciterAtStart.id
+          ) {
+            setDownloadStates(
+              prev => ({
+                ...prev,
+                [surah.number]: {
+                  downloaded:
+                    current,
+                  total:
+                    surah.ayahs,
+                  downloading:
+                    false,
+                  paused:
+                    false,
+                  error:
+                    true
+                }
+              })
+            );
 
-          alert(
-            'دابەزاندنی دەنگ سەرکەوتوو نەبوو.\n\nئەگەر ئینتەرنێتەکەت باشە، ئەوا لەوانەیە سەرچاوەی دەنگ ڕێگەی دابەزاندنی ڕاستەوخۆ نەدات.'
-          );
+            alert(
+              'دابەزاندنی دەنگ سەرکەوتوو نەبوو.\n\nئەگەر ئینتەرنێتەکەت باشە، ئەوا لەوانەیە سەرچاوەی دەنگ ڕێگەی دابەزاندنی ڕاستەوخۆ نەدات.'
+            );
+          }
         }
       } finally {
-        delete abortControllers
-          .current[
-          surah.number
-        ];
+        if (
+          abortControllers.current[
+            surah.number
+          ] === controller
+        ) {
+          delete abortControllers
+            .current[
+            surah.number
+          ];
+        }
       }
     };
 
@@ -782,21 +893,8 @@ export const SurahListView: React.FC<
           surah.ayahs
         );
 
-        setDownloadStates(
-          prev => ({
-            ...prev,
-            [surah.number]: {
-              downloaded: 0,
-              total:
-                surah.ayahs,
-              downloading:
-                false,
-              paused:
-                false,
-              error:
-                false
-            }
-          })
+        resetDownloadState(
+          surah
         );
       } catch (
         error
@@ -1098,11 +1196,6 @@ export const SurahListView: React.FC<
               </div>
             </div>
 
-            {/*
-             * ئەم wrapper ـە زۆر گرنگە:
-             * کلیکی کارتی سورەت نابێت
-             * کلیکی دوگمەی Download بخوات.
-             */}
             <div
               className="flex items-center gap-2 shrink-0"
               onClick={e =>
