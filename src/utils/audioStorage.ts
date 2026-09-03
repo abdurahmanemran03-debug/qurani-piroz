@@ -50,7 +50,7 @@ export function makeAudioKey(
   surahNumber: number,
   ayahNumber: number
 ) {
-  return `${reciterId}_${surahNumber}_${ayahNumber}`;
+  return `ayah_${reciterId}_${surahNumber}_${ayahNumber}`;
 }
 
 /*
@@ -63,7 +63,7 @@ export function makeSurahAudioKey(
   reciterId: string,
   surahNumber: number
 ) {
-  return `${reciterId}_surah_${surahNumber}`;
+  return `surah_${reciterId}_${surahNumber}`;
 }
 
 /*
@@ -151,9 +151,7 @@ export async function getAyahAudio(
       db.close();
 
       resolve(
-        record?.type === 'ayah'
-          ? record.blob
-          : null
+        record?.blob ?? null
       );
     };
 
@@ -166,7 +164,7 @@ export async function getAyahAudio(
 
 /*
 |--------------------------------------------------------------------------
-| SAVE COMPLETE SURAH AUDIO
+| SAVE WHOLE SURAH AUDIO
 |--------------------------------------------------------------------------
 */
 
@@ -211,7 +209,7 @@ export async function saveSurahAudio(
 
 /*
 |--------------------------------------------------------------------------
-| GET COMPLETE SURAH AUDIO
+| GET WHOLE SURAH AUDIO
 |--------------------------------------------------------------------------
 */
 
@@ -244,9 +242,7 @@ export async function getSurahAudio(
       db.close();
 
       resolve(
-        record?.type === 'surah'
-          ? record.blob
-          : null
+        record?.blob ?? null
       );
     };
 
@@ -259,7 +255,7 @@ export async function getSurahAudio(
 
 /*
 |--------------------------------------------------------------------------
-| CHECK AYAH
+| IS AYAH DOWNLOADED
 |--------------------------------------------------------------------------
 */
 
@@ -268,20 +264,19 @@ export async function isAyahDownloaded(
   surahNumber: number,
   ayahNumber: number
 ): Promise<boolean> {
-  const blob = await getAyahAudio(
-    reciterId,
-    surahNumber,
-    ayahNumber
-  );
+  const blob =
+    await getAyahAudio(
+      reciterId,
+      surahNumber,
+      ayahNumber
+    );
 
   return !!blob;
 }
 
 /*
 |--------------------------------------------------------------------------
-| COUNT DOWNLOADED AYATS
-|
-| This remains for EveryAyah reciters.
+| GET DOWNLOADED AYAH COUNT
 |--------------------------------------------------------------------------
 */
 
@@ -315,13 +310,14 @@ export async function getDownloadedAyahCount(
       ayah <= ayahCount;
       ayah++
     ) {
-      const request = store.get(
-        makeAudioKey(
-          reciterId,
-          surahNumber,
-          ayah
-        )
-      );
+      const request =
+        store.get(
+          makeAudioKey(
+            reciterId,
+            surahNumber,
+            ayah
+          )
+        );
 
       request.onsuccess = () => {
         checked++;
@@ -330,7 +326,10 @@ export async function getDownloadedAyahCount(
           count++;
         }
 
-        if (checked === ayahCount) {
+        if (
+          checked ===
+          ayahCount
+        ) {
           db.close();
           resolve(count);
         }
@@ -346,7 +345,7 @@ export async function getDownloadedAyahCount(
 
 /*
 |--------------------------------------------------------------------------
-| CHECK SURAH AUDIO
+| IS WHOLE SURAH DOWNLOADED
 |--------------------------------------------------------------------------
 */
 
@@ -366,11 +365,10 @@ export async function isSurahAudioDownloaded(
 /*
 |--------------------------------------------------------------------------
 | DELETE SURAH AUDIO
-|--------------------------------------------------------------------------
 |
-| Deletes BOTH:
-| - MP3Quran complete-surah file
-| - EveryAyah ayah-by-ayah files
+| Deletes:
+| - EveryAyah individual ayahs
+| - MP3Quran whole-surah file
 |--------------------------------------------------------------------------
 */
 
@@ -391,18 +389,9 @@ export async function deleteSurahAudio(
       tx.objectStore(STORE_NAME);
 
     /*
-     * MP3Quran complete file
+     * Delete EveryAyah files
      */
-    store.delete(
-      makeSurahAudioKey(
-        reciterId,
-        surahNumber
-      )
-    );
 
-    /*
-     * EveryAyah files
-     */
     for (
       let ayah = 1;
       ayah <= ayahCount;
@@ -416,6 +405,17 @@ export async function deleteSurahAudio(
         )
       );
     }
+
+    /*
+     * Delete MP3Quran whole-surah file
+     */
+
+    store.delete(
+      makeSurahAudioKey(
+        reciterId,
+        surahNumber
+      )
+    );
 
     tx.oncomplete = () => {
       db.close();
@@ -431,7 +431,7 @@ export async function deleteSurahAudio(
 
 /*
 |--------------------------------------------------------------------------
-| CHECK OLD EVERYAYAH COMPLETE
+| IS EVERYAYAH SURAH COMPLETE
 |--------------------------------------------------------------------------
 */
 
