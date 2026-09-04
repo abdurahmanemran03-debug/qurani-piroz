@@ -1,6 +1,8 @@
 // MushafPageView.tsx
 // Full replacement file for the Quran page viewer.
-// Kurdish reciters are resolved dynamically from MP3Quran when available.
+// NOTE: This file expects audioStorage.ts to export:
+// getAyahAudio, saveAyahAudio, getSurahAudio, saveSurahAudio,
+// deleteSurahAudio, getDownloadedAyahCount, isSurahAudioDownloaded.
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
@@ -27,10 +29,6 @@ export interface ReciterItem {
   serverKey: string;
   audioSource?: 'everyayah' | 'mp3quran';
   audioBaseUrl?: string;
-  mp3QuranReadId?: string;
-  surahList?: string;
-  surahTotal?: number;
-  availabilityNote?: string;
 }
 
 export interface TafsirItem {
@@ -92,429 +90,66 @@ const AYAH_CANVAS_HEIGHT = 2020;
 const AUDIO_EVENT = 'quran-reciter-changed';
 
 const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
-  // Kurdish
-  {
-    id: 'peshawa_kurdi',
-    name: 'پێشەوا هەڵەبجەیی',
-    subName: 'Peshawa Qadr Al-Kurdi • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Peshawa_Kurdi',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://server16.mp3quran.net/peshawa/Rewayat-Hafs-A-n-Assem/',
-  },
-  {
-    id: 'raad_kurdi',
-    name: 'ڕەعد کوردی',
-    subName: 'Raad Al Kurdi • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Raad_Al_Kurdi',
-    audioSource: 'mp3quran',
-    audioBaseUrl: 'https://server6.mp3quran.net/kurdi/',
-  },
-  {
-    id: 'rizgar_kurdi',
-    name: 'ڕزگار کوردی',
-    subName: 'Rizgar Muhammad Kurdi • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Rizgar_Kurdi',
-  },
-  {
-    id: 'abdulhadi_kurdi',
-    name: 'عەبدولهادی کوردی',
-    subName: 'Abdulhadi Kurdi • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Abdulhadi_Kurdi',
-  },
-  {
-    id: 'dilshad_kurdi',
-    name: 'دڵشاد کوردی',
-    subName: 'Dilshad Ahmad Kurdi • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Dilshad_Kurdi',
-  },
-  {
-    id: 'farman_shwani',
-    name: 'فەرمان شوێنی',
-    subName: 'Farman Shwani • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Farman_Shwani',
-  },
-  {
-    id: 'hamza_barzanji',
-    name: 'حەمزە بارزنجی',
-    subName: 'Hamza Barzanji • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Hamza_Barzanji',
-  },
-  {
-    id: 'sherzad_kurdi',
-    name: 'شێرزاد کوردی',
-    subName: 'Sherzad Abdulrahman • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Sherzad_Kurdi',
-  },
-  {
-    id: 'ubaydah_kurdi',
-    name: 'عوبەیدە کوردی',
-    subName: 'Ubaydah Muwaffaq • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Ubaydah_Kurdi',
-  },
-  {
-    id: 'ramazan_shukur',
-    name: 'ڕەمەزان شکور',
-    subName: 'Ramadan Shakoor • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Ramazan_Shukur',
-    audioSource: 'mp3quran',
-    audioBaseUrl: 'https://server6.mp3quran.net/shakoor/',
-  },
-  {
-    id: 'shirazad_taher',
-    name: 'شێرزاد عەبدولڕەحمان طاهر',
-    subName: 'Shirazad Taher • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Shirazad_Taher',
-    audioSource: 'mp3quran',
-    availabilityNote: 'بەپێی بەردەستبوونی سەرچاوە',
-  },
-  {
-    id: 'wishear_hayder_arbili',
-    name: 'وشیار حەیدەر ئەربیلی',
-    subName: 'Wishear Hayder Arbili • کوردی',
-    category: 'kurdish',
-    riwayah: 'حفص',
-    serverKey: 'Wishear_Hayder_Arbili',
-    audioSource: 'mp3quran',
-    availabilityNote: 'تۆمارە بەردەستەکان لە سەرچاوەکە پشکنراون',
-  },
+  { id: 'peshawa_kurdi', name: 'پێشەوا هەڵەبجەیی', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Peshawa_Kurdi', audioSource: 'mp3quran', audioBaseUrl: 'https://server16.mp3quran.net/peshawa/Rewayat-Hafs-A-n-Assem/' },
+  { id: 'raad_kurdi', name: 'ڕەعد کوردی', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Raad_Al_Kurdi', audioSource: 'mp3quran', audioBaseUrl: 'https://server6.mp3quran.net/kurdi/' },
+  { id: 'rizgar_kurdi', name: 'ڕزگار کوردی', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Rizgar_Kurdi' },
+  { id: 'abdulhadi_kurdi', name: 'عەبدولهادی کوردی', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Abdulhadi_Kurdi' },
+  { id: 'dilshad_kurdi', name: 'دڵشاد کوردی', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Dilshad_Kurdi' },
+  { id: 'farman_shwani', name: 'فەرمان شوێنی', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Farman_Shwani' },
+  { id: 'hamza_barzanji', name: 'حەمزە بارزنجی', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Hamza_Barzanji' },
+  { id: 'sherzad_kurdi', name: 'شێرزاد کوردی', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Sherzad_Kurdi' },
+  { id: 'ubaydah_kurdi', name: 'عوبەیدە کوردی', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Ubaydah_Kurdi' },
+  { id: 'ramazan_shukur', name: 'ڕەمەزان شکور', subName: 'کوردی', category: 'kurdish', riwayah: 'حفص', serverKey: 'Ramazan_Shukur', audioSource: 'mp3quran', audioBaseUrl: 'https://server6.mp3quran.net/shakoor/' },
 
-  // Kurdish Tafsir
-  {
-    id: 'handren_tafsir',
-    name: 'هەندرێن',
-    subName: 'تەفسیر',
-    category: 'kurdish_tafsir',
-    riwayah: 'حفص',
-    serverKey: 'Handren_Tafsir',
-  },
-  {
-    id: 'ghamdi_handren_asan',
-    name: 'غەمیدی - هەندرێن ئاسان',
-    subName: 'تەفسیر',
-    category: 'kurdish_tafsir',
-    riwayah: 'حفص',
-    serverKey: 'Ghamdi_Handren_Asan',
-  },
-  {
-    id: 'ghamdi_tahsin_badini',
-    name: 'تەحسین دۆسکی سەنەحی',
-    subName: 'بادینی',
-    category: 'kurdish_tafsir',
-    riwayah: 'حفص',
-    serverKey: 'Tahsin_Doski_Sanahi',
-  },
-  {
-    id: 'naqshbandi_badini',
-    name: 'نەقشبەندی بادینی',
-    subName: 'بادینی',
-    category: 'kurdish_tafsir',
-    riwayah: 'حفص',
-    serverKey: 'Naqshbandi_Badini',
-  },
+  { id: 'handren_tafsir', name: 'هەندرێن', subName: 'تەفسیر', category: 'kurdish_tafsir', riwayah: 'حفص', serverKey: 'Handren_Tafsir' },
+  { id: 'ghamdi_handren_asan', name: 'غەمیدی - هەندرێن ئاسان', subName: 'تەفسیر', category: 'kurdish_tafsir', riwayah: 'حفص', serverKey: 'Ghamdi_Handren_Asan' },
+  { id: 'ghamdi_tahsin_badini', name: 'تەحسین دۆسکی سەنەحی', subName: 'بادینی', category: 'kurdish_tafsir', riwayah: 'حفص', serverKey: 'Tahsin_Doski_Sanahi' },
+  { id: 'naqshbandi_badini', name: 'نەقشبەندی بادینی', subName: 'بادینی', category: 'kurdish_tafsir', riwayah: 'حفص', serverKey: 'Naqshbandi_Badini' },
 
-  // Famous
-  {
-    id: 'alafasy',
-    name: 'مشاری العفاسی',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Alafasy_128kbps',
-  },
-  {
-    id: 'abdul_basit_murattal',
-    name: 'عبدالباسط - مرتل',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Abdul_Basit_Murattal_192kbps',
-  },
-  {
-    id: 'abdul_basit_mujawwad',
-    name: 'عبدالباسط - مجود',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Abdul_Basit_Mujawwad_128kbps',
-  },
-  {
-    id: 'minshawy_murattal',
-    name: 'محمد صدیق المنشاوی - مرتل',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Minshawy_Murattal_128kbps',
-  },
-  {
-    id: 'minshawy_mujawwad',
-    name: 'محمد صدیق المنشاوی - مجود',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Minshawy_Mujawwad_192kbps',
-  },
-  {
-    id: 'husary_murattal',
-    name: 'محمود خلیل الحصری - مرتل',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Husary_128kbps',
-  },
-  {
-    id: 'husary_mujawwad',
-    name: 'محمود خلیل الحصری - مجود',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Husary_128kbps_Mujawwad',
-  },
-  {
-    id: 'maher_muaiqly',
-    name: 'ماهر المعیقلی',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Maher_AlMuaiqly_64kbps',
-  },
-  {
-    id: 'saad_ghamdi',
-    name: 'سعد الغامدی',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Ghamadi_40kbps',
-  },
-  {
-    id: 'yasser_dosari',
-    name: 'یاسر الدوسری',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Yasser_Ad-Dussary_128kbps',
-  },
-  {
-    id: 'sudais',
-    name: 'عبدالرحمن السدیس',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Abdurrahmaan_As-Sudais_192kbps',
-  },
-  {
-    id: 'shuraim',
-    name: 'سعود الشریم',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Saood_ash-Shuraym_128kbps',
-  },
-  {
-    id: 'ahmed_ajamy',
-    name: 'احمد العجمی',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Ahmed_ibn_Ali_al-Ajamy_128kbps',
-  },
-  {
-    id: 'abu_bakr_shatri',
-    name: 'ابوبکر الشاطری',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Abu_Bakr_Ash-Shaatree_128kbps',
-  },
-  {
-    id: 'idrees_abkar',
-    name: 'ادریس ابکر',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Idrees_Abkar_128kbps',
-  },
-  {
-    id: 'nasser_qatami',
-    name: 'ناصر القطامی',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Nasser_Alqatami_128kbps',
-  },
-  {
-    id: 'ali_jaber',
-    name: 'علی جابر',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Ali_Jaber_64kbps',
-  },
-  {
-    id: 'muhammad_ayyub',
-    name: 'محمد ایوب',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Muhammad_Ayyoub_128kbps',
-  },
-  {
-    id: 'muhammad_jibreel',
-    name: 'محمد جبریل',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Muhammad_Jibreel_128kbps',
-  },
-  {
-    id: 'khalid_jalil',
-    name: 'خالد الجلیل',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Khalid_AlJaleel_128kbps',
-  },
-  {
-    id: 'khalid_qahtani',
-    name: 'خالد القحطانی',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Khaalid_Abdullaah_al-Qahtaanee_192kbps',
-  },
-  {
-    id: 'abdullah_juhany',
-    name: 'عبدالله الجهني',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Abdullaah_3awwaad_Al-Juhaynee_128kbps',
-  },
-  {
-    id: 'abdullah_basfar',
-    name: 'عبدالله بصفر',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Abdullah_Basfar_192kbps',
-  },
-  {
-    id: 'abdulmohsen_qasim',
-    name: 'عبدالمحسن القاسم',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Muhsin_Al_Qasim_192kbps',
-  },
-  {
-    id: 'fares_abbad',
-    name: 'فارس عباد',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Fares_Abbad_64kbps',
-  },
-  {
-    id: 'hudhaify',
-    name: 'علی الحذیفی',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Hudhaify_128kbps',
-  },
-  {
-    id: 'hani_rifai',
-    name: 'هانی الرفاعی',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Hani_Rifai_192kbps',
-  },
-  {
-    id: 'ayman_suwaid',
-    name: 'ایمن سوید',
-    category: 'famous',
-    riwayah: 'teaching',
-    serverKey: 'Ayman_Sowaid_64kbps',
-  },
-  {
-    id: 'tariq_ibrahim',
-    name: 'ابراهیم اخضر',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Ibrahim_Akhdar_32kbps',
-  },
-  {
-    id: 'wadih_yamani',
-    name: 'وضیح الیمنی',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Wadih_Al-Yamani_128kbps',
-  },
-  {
-    id: 'nourin_siddeeq',
-    name: 'نورین صدیق',
-    category: 'famous',
-    riwayah: 'حفص',
-    serverKey: 'Nourin_Siddiq_128kbps',
-  },
+  { id: 'alafasy', name: 'مشاری العفاسی', category: 'famous', riwayah: 'حفص', serverKey: 'Alafasy_128kbps' },
+  { id: 'abdul_basit_murattal', name: 'عبدالباسط - مرتل', category: 'famous', riwayah: 'حفص', serverKey: 'Abdul_Basit_Murattal_192kbps' },
+  { id: 'abdul_basit_mujawwad', name: 'عبدالباسط - مجود', category: 'famous', riwayah: 'حفص', serverKey: 'Abdul_Basit_Mujawwad_128kbps' },
+  { id: 'minshawy_murattal', name: 'محمد صدیق المنشاوی - مرتل', category: 'famous', riwayah: 'حفص', serverKey: 'Minshawy_Murattal_128kbps' },
+  { id: 'minshawy_mujawwad', name: 'محمد صدیق المنشاوی - مجود', category: 'famous', riwayah: 'حفص', serverKey: 'Minshawy_Mujawwad_192kbps' },
+  { id: 'husary_murattal', name: 'محمود خلیل الحصری - مرتل', category: 'famous', riwayah: 'حفص', serverKey: 'Husary_128kbps' },
+  { id: 'husary_mujawwad', name: 'محمود خلیل الحصری - مجود', category: 'famous', riwayah: 'حفص', serverKey: 'Husary_128kbps_Mujawwad' },
+  { id: 'maher_muaiqly', name: 'ماهر المعیقلی', category: 'famous', riwayah: 'حفص', serverKey: 'Maher_AlMuaiqly_64kbps' },
+  { id: 'saad_ghamdi', name: 'سعد الغامدی', category: 'famous', riwayah: 'حفص', serverKey: 'Ghamadi_40kbps' },
+  { id: 'yasser_dosari', name: 'یاسر الدوسری', category: 'famous', riwayah: 'حفص', serverKey: 'Yasser_Ad-Dussary_128kbps' },
+  { id: 'sudais', name: 'عبدالرحمن السدیس', category: 'famous', riwayah: 'حفص', serverKey: 'Abdurrahmaan_As-Sudais_192kbps' },
+  { id: 'shuraim', name: 'سعود الشریم', category: 'famous', riwayah: 'حفص', serverKey: 'Saood_ash-Shuraym_128kbps' },
+  { id: 'ahmed_ajamy', name: 'احمد العجمی', category: 'famous', riwayah: 'حفص', serverKey: 'Ahmed_ibn_Ali_al-Ajamy_128kbps' },
+  { id: 'abu_bakr_shatri', name: 'ابوبکر الشاطری', category: 'famous', riwayah: 'حفص', serverKey: 'Abu_Bakr_Ash-Shaatree_128kbps' },
+  { id: 'idrees_abkar', name: 'ادریس ابکر', category: 'famous', riwayah: 'حفص', serverKey: 'Idrees_Abkar_128kbps' },
+  { id: 'nasser_qatami', name: 'ناصر القطامی', category: 'famous', riwayah: 'حفص', serverKey: 'Nasser_Alqatami_128kbps' },
+  { id: 'ali_jaber', name: 'علی جابر', category: 'famous', riwayah: 'حفص', serverKey: 'Ali_Jaber_64kbps' },
+  { id: 'muhammad_ayyub', name: 'محمد ایوب', category: 'famous', riwayah: 'حفص', serverKey: 'Muhammad_Ayyoub_128kbps' },
+  { id: 'muhammad_jibreel', name: 'محمد جبریل', category: 'famous', riwayah: 'حفص', serverKey: 'Muhammad_Jibreel_128kbps' },
+  { id: 'khalid_jalil', name: 'خالد الجلیل', category: 'famous', riwayah: 'حفص', serverKey: 'Khalid_AlJaleel_128kbps' },
+  { id: 'khalid_qahtani', name: 'خالد القحطانی', category: 'famous', riwayah: 'حفص', serverKey: 'Khaalid_Abdullaah_al-Qahtaanee_192kbps' },
+  { id: 'abdullah_juhany', name: 'عبدالله الجهني', category: 'famous', riwayah: 'حفص', serverKey: 'Abdullaah_3awwaad_Al-Juhaynee_128kbps' },
+  { id: 'abdullah_basfar', name: 'عبدالله بصفر', category: 'famous', riwayah: 'حفص', serverKey: 'Abdullah_Basfar_192kbps' },
+  { id: 'abdulmohsen_qasim', name: 'عبدالمحسن القاسم', category: 'famous', riwayah: 'حفص', serverKey: 'Muhsin_Al_Qasim_192kbps' },
+  { id: 'fares_abbad', name: 'فارس عباد', category: 'famous', riwayah: 'حفص', serverKey: 'Fares_Abbad_64kbps' },
+  { id: 'hudhaify', name: 'علی الحذیفی', category: 'famous', riwayah: 'حفص', serverKey: 'Hudhaify_128kbps' },
+  { id: 'hani_rifai', name: 'هانی الرفاعی', category: 'famous', riwayah: 'حفص', serverKey: 'Hani_Rifai_192kbps' },
+  { id: 'ayman_suwaid', name: 'ایمن سوید', category: 'famous', riwayah: 'teaching', serverKey: 'Ayman_Sowaid_64kbps' },
+  { id: 'tariq_ibrahim', name: 'ابراهیم اخضر', category: 'famous', riwayah: 'حفص', serverKey: 'Ibrahim_Akhdar_32kbps' },
+  { id: 'wadih_yamani', name: 'وضیح الیمنی', category: 'famous', riwayah: 'حفص', serverKey: 'Wadih_Al-Yamani_128kbps' },
+  { id: 'nourin_siddeeq', name: 'نورین صدیق', category: 'famous', riwayah: 'حفص', serverKey: 'Nourin_Siddiq_128kbps' },
 
-  // Riwayat
-  {
-    id: 'yassin_aljazairi_warsh',
-    name: 'یاسین الجزائری',
-    category: 'riwayat',
-    riwayah: 'ورش',
-    serverKey: 'Yassin_AlJazaery_Warsh_64kbps',
-  },
-  {
-    id: 'khamiri_shubah',
-    name: 'خمیری',
-    category: 'riwayat',
-    riwayah: 'شعبة',
-    serverKey: 'Khamiri_Shubah_128kbps',
-  },
-  {
-    id: 'miftah_saltany_duri',
-    name: 'مفتاح السلطانی',
-    category: 'riwayat',
-    riwayah: 'الدوری',
-    serverKey: 'Saltany_Duri_128kbps',
-  },
-  {
-    id: 'abdulrashid_sofi_susi',
-    name: 'عبدالرشید صوفی',
-    category: 'riwayat',
-    riwayah: 'السوسی',
-    serverKey: 'Soufi_Susi_128kbps',
-  },
-  {
-    id: 'abdulrashid_sofi_khalaf',
-    name: 'عبدالرشید صوفی',
-    category: 'riwayat',
-    riwayah: 'خلف',
-    serverKey: 'Soufi_Khalaf_128kbps',
-  },
+  { id: 'yassin_aljazairi_warsh', name: 'یاسین الجزائری', category: 'riwayat', riwayah: 'ورش', serverKey: 'Yassin_AlJazaery_Warsh_64kbps' },
+  { id: 'khamiri_shubah', name: 'خمیری', category: 'riwayat', riwayah: 'شعبة', serverKey: 'Khamiri_Shubah_128kbps' },
+  { id: 'miftah_saltany_duri', name: 'مفتاح السلطانی', category: 'riwayat', riwayah: 'الدوری', serverKey: 'Saltany_Duri_128kbps' },
+  { id: 'abdulrashid_sofi_susi', name: 'عبدالرشید صوفی', category: 'riwayat', riwayah: 'السوسی', serverKey: 'Soufi_Susi_128kbps' },
+  { id: 'abdulrashid_sofi_khalaf', name: 'عبدالرشید صوفی', category: 'riwayat', riwayah: 'خلف', serverKey: 'Soufi_Khalaf_128kbps' },
 
-  // Teaching
-  {
-    id: 'husary_muallim',
-    name: 'الحصری - معلم',
-    category: 'teaching',
-    riwayah: 'حفص',
-    serverKey: 'Husary_Muallim_128kbps',
-  },
-  {
-    id: 'minshawy_children',
-    name: 'المنشاوی - معلم',
-    category: 'teaching',
-    riwayah: 'حفص',
-    serverKey: 'Minshawy_Teacher_128kbps',
-  },
+  { id: 'husary_muallim', name: 'الحصری - معلم', category: 'teaching', riwayah: 'حفص', serverKey: 'Husary_Muallim_128kbps' },
+  { id: 'minshawy_children', name: 'المنشاوی - معلم', category: 'teaching', riwayah: 'حفص', serverKey: 'Minshawy_Teacher_128kbps' },
 ];
 
 const ALL_TAFSIRS_DIRECTORY: TafsirItem[] = [
-  {
-    id: 'asan',
-    name: 'تەفسیری ئاسان',
-    title: 'تەفسیری ئاسان',
-    language: 'ku',
-  },
+  { id: 'asan', name: 'تەفسیری ئاسان', title: 'تەفسیری ئاسان', language: 'ku' },
 ];
 
 const formatPageNum = (n: number) => String(n).padStart(3, '0');
@@ -522,34 +157,19 @@ const formatPageNum = (n: number) => String(n).padStart(3, '0');
 const pageImgUrl = (n: number) =>
   `https://android.quran.com/data/width_1260/page${formatPageNum(n)}.png`;
 
-const normalizeUrl = (url: string) => {
-  const value = String(url || '').trim();
-  return value.endsWith('/') ? value : `${value}/`;
-};
+const normalizeUrl = (url: string) => (url.endsWith('/') ? url : `${url}/`);
 
-const makeEveryAyahUrl = (
-  reciter: ReciterItem,
-  globalAyah: number,
-) =>
-  `https://everyayah.com/data/${reciter.serverKey}/${String(
-    globalAyah,
-  ).padStart(6, '0')}.mp3`;
+const makeEveryAyahUrl = (reciter: ReciterItem, globalAyah: number) =>
+  `https://everyayah.com/data/${reciter.serverKey}/${String(globalAyah).padStart(6, '0')}.mp3`;
 
-const makeMp3QuranSurahUrl = (
-  reciter: ReciterItem,
-  surahNumber: number,
-) =>
-  `${normalizeUrl(reciter.audioBaseUrl || '')}${String(
-    surahNumber,
-  ).padStart(3, '0')}.mp3`;
+const makeMp3QuranSurahUrl = (reciter: ReciterItem, surahNumber: number) =>
+  `${normalizeUrl(reciter.audioBaseUrl || '')}${String(surahNumber).padStart(3, '0')}.mp3`;
 
 const normalizeTimingValue = (value: unknown): number => {
   const n = Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
 
-  if (!Number.isFinite(n) || n < 0) {
-    return 0;
-  }
-
+  // MP3Quran normally returns milliseconds.
   return n > 10000 ? n / 1000 : n;
 };
 
@@ -558,42 +178,23 @@ const getInitialReciter = () => {
     const saved = localStorage.getItem('quran_selected_reciter');
 
     if (saved) {
-      const found = ALL_RECITERS_DIRECTORY.find(
-        (r) => r.id === saved,
-      );
-
-      if (found) {
-        return found;
-      }
+      const found = ALL_RECITERS_DIRECTORY.find((r) => r.id === saved);
+      if (found) return found;
     }
   } catch {}
 
-  return (
-    ALL_RECITERS_DIRECTORY.find(
-      (r) => r.id === 'peshawa_kurdi',
-    ) || ALL_RECITERS_DIRECTORY[0]
-  );
+  return ALL_RECITERS_DIRECTORY[18];
 };
 
 const getGlobalAyahNumber = (
   ayah: AyahData | undefined,
   fallback: number,
-) =>
-  Number(
-    ayah?.globalAyah ??
-      ayah?.number ??
-      fallback,
-  );
+) => Number(ayah?.globalAyah ?? ayah?.number ?? fallback);
 
 const getAyahNumber = (
   ayah: AyahData | undefined,
   fallback: number,
-) =>
-  Number(
-    ayah?.ayah ??
-      ayah?.number ??
-      fallback,
-  );
+) => Number(ayah?.ayah ?? ayah?.number ?? fallback);
 
 const getBoxAyahNumber = (
   box: AyahBox | undefined,
@@ -602,24 +203,12 @@ const getBoxAyahNumber = (
   Number(
     box?.ayahNumber ??
       box?.number ??
-      Number(box?.index ?? fallback) + 1,
+      (Number(box?.index ?? fallback) + 1),
   );
 
 async function getMp3QuranRead(reciter: ReciterItem) {
-  if (
-    reciter.mp3QuranReadId &&
-    reciter.audioBaseUrl
-  ) {
-    return {
-      id: reciter.mp3QuranReadId,
-      folder: normalizeUrl(reciter.audioBaseUrl),
-    };
-  }
-
   if (!reciter.audioBaseUrl) {
-    throw new Error(
-      'MP3Quran audio base URL is missing.',
-    );
+    throw new Error('MP3Quran audio base URL is missing.');
   }
 
   const response = await fetch(
@@ -638,52 +227,26 @@ async function getMp3QuranRead(reciter: ReciterItem) {
     ? json
     : json?.reciters ?? json?.data ?? [];
 
-  const normalizeName = (value: unknown) =>
-    String(value ?? '')
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9]+/g, ' ')
-      .trim();
-
-  const wanted = normalizeName(
-    reciter.subName || reciter.name,
-  );
-
   for (const item of reciters) {
-    const itemName = normalizeName(item?.name);
-
-    if (
-      itemName !== wanted &&
-      !itemName.includes(wanted) &&
-      !wanted.includes(itemName)
-    ) {
-      continue;
-    }
-
     for (const moshaf of item?.moshaf ?? []) {
-      const server = String(
-        moshaf?.server ??
-          moshaf?.folder_url ??
-          '',
-      ).trim();
+      const folder = normalizeUrl(
+        String(moshaf?.server ?? moshaf?.folder_url ?? ''),
+      );
 
-      if (!server) continue;
-
-      return {
-        id: String(
-          moshaf?.id ??
-            item?.id ??
-            '',
-        ),
-        folder: normalizeUrl(server),
-      };
+      if (
+        folder === normalizeUrl(reciter.audioBaseUrl) ||
+        folder.includes(normalizeUrl(reciter.audioBaseUrl)) ||
+        normalizeUrl(reciter.audioBaseUrl).includes(folder)
+      ) {
+        return {
+          id: String(moshaf?.id ?? item?.id ?? ''),
+          folder,
+        };
+      }
     }
   }
 
-  throw new Error(
-    `MP3Quran read not found for ${reciter.name}`,
-  );
+  throw new Error(`MP3Quran read not found for ${reciter.name}`);
 }
 
 async function getMp3QuranTiming(
@@ -694,19 +257,10 @@ async function getMp3QuranTiming(
     'https://mp3quran.net/api/v3/ayat_timing',
   );
 
-  url.searchParams.set(
-    'surah',
-    String(surahNumber),
-  );
+  url.searchParams.set('surah', String(surahNumber));
+  url.searchParams.set('read', String(readId));
 
-  url.searchParams.set(
-    'read',
-    String(readId),
-  );
-
-  const response = await fetch(
-    url.toString(),
-  );
+  const response = await fetch(url.toString());
 
   if (!response.ok) {
     throw new Error(
@@ -730,26 +284,20 @@ async function getMp3QuranTiming(
     );
   }
 
-  return rows.map(
-    (row: any, index: number) => ({
-      ayah: Number(
-        row?.ayah ??
-          row?.ayah_number ??
-          row?.number ??
-          index,
-      ),
-      start: normalizeTimingValue(
-        row?.start_time ??
-          row?.start ??
-          0,
-      ),
-      end: normalizeTimingValue(
-        row?.end_time ??
-          row?.end ??
-          0,
-      ),
-    }),
-  );
+  return rows.map((row: any, index: number) => ({
+    ayah: Number(
+      row?.ayah ??
+        row?.ayah_number ??
+        row?.number ??
+        index,
+    ),
+    start: normalizeTimingValue(
+      row?.start_time ?? row?.start ?? 0,
+    ),
+    end: normalizeTimingValue(
+      row?.end_time ?? row?.end ?? 0,
+    ),
+  }));
 }
 
 const getSurahNumberForPage = (
@@ -757,38 +305,23 @@ const getSurahNumberForPage = (
   surahsList: SurahItem[] | undefined,
   fallback = 1,
 ) => {
-  if (!surahsList?.length) {
-    return fallback;
-  }
+  if (!surahsList?.length) return fallback;
 
   const sorted = [...surahsList]
     .filter(
-      (s) =>
-        Number(
-          s.startPage ??
-            s.page,
-        ) > 0,
+      (s) => Number(s.startPage ?? s.page) > 0,
     )
     .sort(
       (a, b) =>
-        Number(
-          a.startPage ??
-            a.page,
-        ) -
-        Number(
-          b.startPage ??
-            b.page,
-        ),
+        Number(a.startPage ?? a.page) -
+        Number(b.startPage ?? b.page),
     );
 
   let selected = sorted[0];
 
   for (const surah of sorted) {
     if (
-      Number(
-        surah.startPage ??
-          surah.page,
-      ) <= page
+      Number(surah.startPage ?? surah.page) <= page
     ) {
       selected = surah;
     }
@@ -799,9 +332,9 @@ const getSurahNumberForPage = (
       selected?.id ??
       fallback,
   );
-};
+}
 
-export default function MushafPageView({
+export function MushafPageView({
   currentPage,
   onNextPage,
   onPrevPage,
@@ -812,10 +345,9 @@ export default function MushafPageView({
   surahsList,
   onJumpToPage,
 }: MushafPageViewProps) {
-  const [viewMode, setViewMode] =
-    useState<'mushaf' | 'scroll'>(
-      'mushaf',
-    );
+  const [viewMode, setViewMode] = useState<
+    'mushaf' | 'scroll'
+  >('mushaf');
 
   const [showControls, setShowControls] =
     useState(true);
@@ -826,15 +358,8 @@ export default function MushafPageView({
   const [tafsirOpen, setTafsirOpen] =
     useState(false);
 
-  const [reciters, setReciters] =
-    useState<ReciterItem[]>(
-      ALL_RECITERS_DIRECTORY,
-    );
-
   const [selectedReciter, setSelectedReciter] =
-    useState<ReciterItem>(
-      getInitialReciter,
-    );
+    useState<ReciterItem>(getInitialReciter);
 
   const [selectedTafsir, setSelectedTafsir] =
     useState<TafsirItem>(
@@ -904,82 +429,64 @@ export default function MushafPageView({
     [],
   );
 
-  const currentSurahNumber =
-    useMemo(
-      () =>
-        getSurahNumberForPage(
-          currentPage,
-          surahsList,
-        ),
-      [
+  const currentSurahNumber = useMemo(
+    () =>
+      getSurahNumberForPage(
         currentPage,
         surahsList,
-      ],
+      ),
+    [currentPage, surahsList],
+  );
+
+  const currentSurah = useMemo(() => {
+    const list = surahsList ?? [];
+
+    return list.find(
+      (s) =>
+        Number(s.number ?? s.id) ===
+        currentSurahNumber,
     );
+  }, [
+    surahsList,
+    currentSurahNumber,
+  ]);
 
-  const currentSurah =
-    useMemo(() => {
-      const list =
-        surahsList ?? [];
+  const currentSurahAyahCount = Number(
+    currentSurah?.numberOfAyahs ??
+      currentSurah?.ayahs ??
+      0,
+  );
 
-      return list.find(
-        (s) =>
-          Number(
-            s.number ??
-              s.id,
-          ) ===
-          currentSurahNumber,
+  const cleanupBlobUrl = useCallback(() => {
+    if (currentBlobUrlRef.current) {
+      URL.revokeObjectURL(
+        currentBlobUrlRef.current,
       );
-    }, [
-      surahsList,
-      currentSurahNumber,
-    ]);
 
-  const currentSurahAyahCount =
-    Number(
-      currentSurah?.numberOfAyahs ??
-        currentSurah?.ayahs ??
-        0,
-    );
+      currentBlobUrlRef.current = null;
+    }
+  }, []);
 
-  const cleanupBlobUrl =
-    useCallback(() => {
-      if (
-        currentBlobUrlRef.current
-      ) {
-        URL.revokeObjectURL(
-          currentBlobUrlRef.current,
-        );
+  const stopAudio = useCallback(() => {
+    pageAudioTokenRef.current += 1;
 
-        currentBlobUrlRef.current =
-          null;
-      }
-    }, []);
+    const audio = audioRef.current;
 
-  const stopAudio =
-    useCallback(() => {
-      pageAudioTokenRef.current += 1;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+      audio.removeAttribute('src');
+      audio.load();
+    }
 
-      const audio =
-        audioRef.current;
+    cleanupBlobUrl();
 
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.removeAttribute('src');
-        audio.load();
-      }
+    setIsPlaying(false);
+    setPlayingAyahIndex(null);
+  }, [cleanupBlobUrl]);
 
-      cleanupBlobUrl();
-
-      setIsPlaying(false);
-      setPlayingAyahIndex(null);
-    }, [
-      cleanupBlobUrl,
-    ]);
-
-  const refreshDownloadInfo =
-    useCallback(async () => {
+  const refreshDownloadInfo = useCallback(
+    async () => {
       try {
         const count =
           await getDownloadedAyahCount(
@@ -1001,11 +508,13 @@ export default function MushafPageView({
         setDownloadedCount(0);
         setSurahDownloaded(false);
       }
-    }, [
+    },
+    [
       selectedReciter.id,
       currentPage,
       currentSurahNumber,
-    ]);
+    ],
+  );
 
   useEffect(() => {
     try {
@@ -1015,26 +524,17 @@ export default function MushafPageView({
       );
 
       window.dispatchEvent(
-        new CustomEvent(
-          AUDIO_EVENT,
-          {
-            detail:
-              selectedReciter.id,
-          },
-        ),
+        new CustomEvent(AUDIO_EVENT, {
+          detail: selectedReciter.id,
+        }),
       );
     } catch {}
-  }, [
-    selectedReciter,
-  ]);
+  }, [selectedReciter]);
 
   useEffect(() => {
-    const handler = (
-      event: Event,
-    ) => {
+    const handler = (event: Event) => {
       const detail =
-        (event as CustomEvent)
-          .detail;
+        (event as CustomEvent).detail;
 
       const id =
         typeof detail === 'string'
@@ -1044,7 +544,7 @@ export default function MushafPageView({
       if (!id) return;
 
       const found =
-        reciters.find(
+        ALL_RECITERS_DIRECTORY.find(
           (r) => r.id === id,
         );
 
@@ -1063,486 +563,230 @@ export default function MushafPageView({
         AUDIO_EVENT,
         handler,
       );
-  }, [
-    reciters,
-  ]);
-
-  // ----------------------------------------------------------
-  // Dynamically discover Kurdish reciters from MP3Quran.
-  // ----------------------------------------------------------
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadKurdishReciters =
-      async () => {
-        try {
-          const response =
-            await fetch(
-              'https://mp3quran.net/api/v3/reciters?language=eng',
-            );
-
-          if (!response.ok) {
-            throw new Error(
-              `MP3Quran reciters failed: ${response.status}`,
-            );
-          }
-
-          const json =
-            await response.json();
-
-          const rows =
-            Array.isArray(json)
-              ? json
-              : json?.reciters ??
-                json?.data ??
-                [];
-
-          const normalizeName =
-            (value: unknown) =>
-              String(value ?? '')
-                .toLowerCase()
-                .normalize('NFD')
-                .replace(
-                  /[\u0300-\u036f]/g,
-                  '',
-                )
-                .replace(
-                  /[^a-z0-9]+/g,
-                  ' ',
-                )
-                .trim();
-
-          const knownNames =
-            new Set([
-              'peshawa qadr al kurdi',
-              'raad al kurdi',
-              'ramadan shakoor',
-              'shirazad taher',
-              'wishear hayder arbili',
-            ]);
-
-          const isKurdishCandidate =
-            (item: any) => {
-              const name =
-                normalizeName(
-                  item?.name,
-                );
-
-              return (
-                knownNames.has(name) ||
-                /\bkurdi\b|\bkurd\b|peshawa|shirazad|wishear|shakoor/.test(
-                  name,
-                )
-              );
-            };
-
-          const discovered: ReciterItem[] =
-            [];
-
-          for (const item of rows) {
-            if (
-              !isKurdishCandidate(
-                item,
-              )
-            ) {
-              continue;
-            }
-
-            const moshafs =
-              Array.isArray(
-                item?.moshaf,
-              )
-                ? item.moshaf
-                : [];
-
-            for (const moshaf of moshafs) {
-              const server =
-                String(
-                  moshaf?.server ??
-                    moshaf?.folder_url ??
-                    '',
-                ).trim();
-
-              if (!server) {
-                continue;
-              }
-
-              const rawName =
-                String(
-                  item?.name ??
-                    '',
-                ).trim();
-
-              const normalized =
-                normalizeName(
-                  rawName,
-                );
-
-              const safeId =
-                normalized.replace(
-                  /\s+/g,
-                  '_',
-                ) ||
-                `mp3quran_${
-                  item?.id ??
-                  discovered.length
-                }`;
-
-              const existing =
-                ALL_RECITERS_DIRECTORY.find(
-                  (r) => {
-                    const a =
-                      normalizeName(
-                        r.subName ??
-                          r.name,
-                      );
-
-                    const b =
-                      normalizeName(
-                        rawName,
-                      );
-
-                    return (
-                      a === b ||
-                      a.includes(b) ||
-                      b.includes(a)
-                    );
-                  },
-                );
-
-              const base: ReciterItem =
-                existing
-                  ? {
-                      ...existing,
-                    }
-                  : {
-                      id: `mp3quran_${safeId}`,
-                      name:
-                        rawName,
-                      subName:
-                        'MP3Quran • کوردی',
-                      category:
-                        'kurdish',
-                      riwayah:
-                        'حفص',
-                      serverKey:
-                        safeId,
-                    };
-
-              base.audioSource =
-                'mp3quran';
-
-              base.audioBaseUrl =
-                server.endsWith('/')
-                  ? server
-                  : `${server}/`;
-
-              base.mp3QuranReadId =
-                String(
-                  moshaf?.id ??
-                    item?.id ??
-                    '',
-                );
-
-              base.surahList =
-                String(
-                  moshaf?.surah_list ??
-                    '',
-                );
-
-              base.surahTotal =
-                Number(
-                  moshaf?.surah_total ??
-                    0,
-                ) || undefined;
-
-              if (
-                base.surahTotal &&
-                base.surahTotal < 114
-              ) {
-                base.availabilityNote =
-                  `${base.surahTotal} سۆرە لە سەرچاوەکەدا هەیە`;
-              }
-
-              const duplicate =
-                discovered.some(
-                  (r) =>
-                    r.name ===
-                      base.name &&
-                    r.audioBaseUrl ===
-                      base.audioBaseUrl,
-                );
-
-              if (!duplicate) {
-                discovered.push(
-                  base,
-                );
-              }
-            }
-          }
-
-          if (
-            !cancelled &&
-            discovered.length
-          ) {
-            const merged = [
-              ...ALL_RECITERS_DIRECTORY,
-            ];
-
-            for (const item of discovered) {
-              const index =
-                merged.findIndex(
-                  (r) =>
-                    r.id ===
-                    item.id,
-                );
-
-              if (index >= 0) {
-                merged[index] = {
-                  ...merged[index],
-                  ...item,
-                };
-              } else {
-                merged.push(
-                  item,
-                );
-              }
-            }
-
-            setReciters(
-              merged,
-            );
-
-            setSelectedReciter(
-              (current) =>
-                merged.find(
-                  (r) =>
-                    r.id ===
-                    current.id,
-                ) ?? current,
-            );
-          }
-        } catch {
-          // Built-in list remains available if the API is unavailable.
-        }
-      };
-
-    void loadKurdishReciters();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadPageData =
-      async () => {
-        try {
-          const response =
-            await fetch(
-              `https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,ku.asan`,
-            );
+    const loadPageData = async () => {
+      try {
+        const response = await fetch(
+          `https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,ku.asan`,
+        );
 
-          if (!response.ok) {
-            throw new Error(
-              `Quran API failed: ${response.status}`,
-            );
-          }
-
-          const json =
-            await response.json();
-
-          const editions =
-            json?.data ?? [];
-
-          const arabic =
-            editions.find(
-              (x: any) =>
-                x?.edition
-                  ?.identifier ===
-                'quran-uthmani',
-            );
-
-          const data =
-            arabic?.ayahs ?? [];
-
-          if (!cancelled) {
-            setPageAyahsData(
-              data,
-            );
-
-            setErrorText('');
-          }
-        } catch (
-          error
-        ) {
-          if (!cancelled) {
-            setPageAyahsData(
-              [],
-            );
-
-            setErrorText(
-              error instanceof Error
-                ? error.message
-                : 'Quran data failed',
-            );
-          }
+        if (!response.ok) {
+          throw new Error(
+            `Quran API failed: ${response.status}`,
+          );
         }
-      };
+
+        const json =
+          await response.json();
+
+        const editions =
+          json?.data ?? [];
+
+        const arabic =
+          editions.find(
+            (x: any) =>
+              x?.edition?.identifier ===
+              'quran-uthmani',
+          );
+
+        const data =
+          arabic?.ayahs ?? [];
+
+        if (!cancelled) {
+          setPageAyahsData(data);
+          setErrorText('');
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setPageAyahsData([]);
+          setErrorText(
+            error instanceof Error
+              ? error.message
+              : 'Quran data failed',
+          );
+        }
+      }
+    };
 
     loadPageData();
 
     return () => {
       cancelled = true;
     };
-  }, [
-    currentPage,
-  ]);
+  }, [currentPage]);
 
   useEffect(() => {
     let cancelled = false;
 
-    const loadBoxes =
-      async () => {
-        try {
-          const base =
-            import.meta.env
-              .BASE_URL || '/';
+    const loadBoxes = async () => {
+      try {
+        const base =
+          import.meta.env.BASE_URL || '/';
 
-          const url =
-            `${base.replace(
-              /\/?$/,
-              '/',
-            )}ayahdata/ayahdata.json`;
+        const url =
+          `${base.replace(/\/?$/, '/')}` +
+          'ayahdata/ayahdata.json';
 
-          const response =
-            await fetch(url);
+        const response =
+          await fetch(url);
 
-          if (!response.ok) {
-            throw new Error(
-              'Ayah coordinate file not found',
-            );
-          }
-
-          const json =
-            await response.json();
-
-          const raw =
-            json?.[
-              String(
-                currentPage,
-              )
-            ] ??
-            json?.[
-              currentPage
-            ] ??
-            [];
-
-          const boxes: AyahBox[] =
-            Array.isArray(raw)
-              ? raw
-              : raw?.boxes ??
-                raw?.ayahs ??
-                [];
-
-          if (!cancelled) {
-            setAyahBoxes(
-              boxes,
-            );
-          }
-        } catch {
-          if (!cancelled) {
-            setAyahBoxes([]);
-          }
+        if (!response.ok) {
+          throw new Error(
+            'Ayah coordinate file not found',
+          );
         }
-      };
+
+        const json =
+          await response.json();
+
+        const raw =
+          json?.[String(currentPage)] ??
+          json?.[currentPage] ??
+          [];
+
+        const boxes: AyahBox[] =
+          Array.isArray(raw)
+            ? raw
+            : raw?.boxes ??
+              raw?.ayahs ??
+              [];
+
+        if (!cancelled) {
+          setAyahBoxes(boxes);
+        }
+      } catch {
+        if (!cancelled) {
+          setAyahBoxes([]);
+        }
+      }
+    };
 
     loadBoxes();
 
     return () => {
       cancelled = true;
     };
-  }, [
-    currentPage,
-  ]);
+  }, [currentPage]);
 
   useEffect(() => {
     refreshDownloadInfo();
-  }, [
-    refreshDownloadInfo,
-  ]);
+  }, [refreshDownloadInfo]);
 
   useEffect(() => {
     return () => {
       stopAudio();
 
-      if (
-        longPressTimerRef.current
-      ) {
+      if (longPressTimerRef.current) {
         window.clearTimeout(
           longPressTimerRef.current,
         );
       }
     };
-  }, [
-    stopAudio,
-  ]);
+  }, [stopAudio]);
 
-  const getAyahForIndex =
-    (index: number) =>
-      pageAyahsData[index];
+  const getAyahForIndex = (index: number) =>
+    pageAyahsData[index];
 
-  const playAyah =
-    useCallback(
-      async (
-        index: number,
-        autoAdvance = false,
-      ) => {
-        const ayah =
-          getAyahForIndex(
-            index,
+  const playAyah = useCallback(
+    async (
+      index: number,
+      autoAdvance = false,
+    ) => {
+      const ayah =
+        getAyahForIndex(index);
+
+      if (!ayah) return;
+
+      const token =
+        ++pageAudioTokenRef.current;
+
+      setErrorText('');
+      setPlayingAyahIndex(index);
+      setIsPlaying(true);
+
+      try {
+        let src: string | null = null;
+
+        const globalAyah =
+          getGlobalAyahNumber(
+            ayah,
+            index + 1,
           );
 
-        if (!ayah) return;
+        const localAyah =
+          getAyahNumber(
+            ayah,
+            index + 1,
+          );
 
-        const token =
-          ++pageAudioTokenRef.current;
+        const localBlob =
+          await getAyahAudio(
+            selectedReciter.id,
+            currentSurahNumber,
+            localAyah,
+          );
 
-        setErrorText('');
-        setPlayingAyahIndex(
-          index,
-        );
-        setIsPlaying(true);
+        if (
+          token !==
+          pageAudioTokenRef.current
+        ) {
+          return;
+        }
 
-        try {
-          const globalAyah =
-            getGlobalAyahNumber(
-              ayah,
-              index + 1,
+        if (localBlob) {
+          cleanupBlobUrl();
+
+          currentBlobUrlRef.current =
+            URL.createObjectURL(
+              localBlob,
             );
 
-          const localAyah =
-            getAyahNumber(
-              ayah,
-              index + 1,
+          src =
+            currentBlobUrlRef.current;
+        } else if (
+          selectedReciter.audioSource ===
+          'mp3quran'
+        ) {
+          const read =
+            await getMp3QuranRead(
+              selectedReciter,
             );
 
-          const localBlob =
-            await getAyahAudio(
-              selectedReciter.id,
+          const timing =
+            await getMp3QuranTiming(
+              read.id,
               currentSurahNumber,
-              localAyah,
+            );
+
+          const segment =
+            timing.find(
+              (t) =>
+                t.ayah ===
+                  localAyah ||
+                t.ayah === index,
             );
 
           if (
-            token !==
-            pageAudioTokenRef.current
+            !segment ||
+            segment.end <=
+              segment.start
           ) {
-            return;
+            throw new Error(
+              'کاتی دەستپێک و کۆتایی ئەم ئایەتە نەدۆزرایەوە.',
+            );
           }
+
+          src =
+            read.folder +
+            `${String(
+              currentSurahNumber,
+            ).padStart(3, '0')}.mp3`;
+
+          cleanupBlobUrl();
 
           const audio =
             audioRef.current;
@@ -1553,502 +797,289 @@ export default function MushafPageView({
             );
           }
 
-          cleanupBlobUrl();
+          audio.src = src;
+          audio.currentTime =
+            segment.start;
 
-          // Local downloaded ayah
-          if (localBlob) {
-            currentBlobUrlRef.current =
-              URL.createObjectURL(
-                localBlob,
-              );
+          await audio.play();
 
-            audio.src =
-              currentBlobUrlRef.current;
-
-            await audio.play();
-
-            if (autoAdvance) {
-              const onEnded =
-                () => {
-                  audio.removeEventListener(
-                    'ended',
-                    onEnded,
-                  );
-
-                  if (
-                    token !==
-                    pageAudioTokenRef.current
-                  ) {
-                    return;
-                  }
-
-                  if (
-                    index + 1 <
-                    pageAyahsData.length
-                  ) {
-                    void playAyah(
-                      index + 1,
-                      true,
-                    );
-                  } else {
-                    setIsPlaying(
-                      false,
-                    );
-
-                    setPlayingAyahIndex(
-                      null,
-                    );
-                  }
-                };
-
-              audio.addEventListener(
-                'ended',
-                onEnded,
-              );
+          const stopAt = () => {
+            if (
+              token !==
+              pageAudioTokenRef.current
+            ) {
+              return;
             }
 
-            return;
-          }
-
-          // MP3Quran chapter audio
-          if (
-            selectedReciter.audioSource ===
-            'mp3quran'
-          ) {
-            const read =
-              await getMp3QuranRead(
-                selectedReciter,
-              );
-
-            let segment:
-              | {
-                  start: number;
-                  end: number;
-                }
-              | null = null;
-
-            try {
-              const timing =
-                await getMp3QuranTiming(
-                  read.id,
-                  currentSurahNumber,
-                );
-
-              const found =
-                timing.find(
-                  (t) =>
-                    t.ayah ===
-                      localAyah ||
-                    t.ayah ===
-                      index ||
-                    t.ayah ===
-                      index + 1,
-                );
-
-              if (
-                found &&
-                found.end >
-                  found.start
-              ) {
-                segment = {
-                  start:
-                    found.start,
-                  end:
-                    found.end,
-                };
-              }
-            } catch {
-              // Timing is optional.
-              // Full surah playback still works.
-            }
-
-            const surahUrl =
-              read.folder +
-              `${String(
-                currentSurahNumber,
-              ).padStart(
-                3,
-                '0',
-              )}.mp3`;
-
-            audio.src =
-              surahUrl;
-
-            if (segment) {
-              audio.currentTime =
-                segment.start;
-
-              await audio.play();
-
-              const stopAt =
-                () => {
-                  if (
-                    token !==
-                    pageAudioTokenRef.current
-                  ) {
-                    audio.removeEventListener(
-                      'timeupdate',
-                      stopAt,
-                    );
-
-                    return;
-                  }
-
-                  if (
-                    audio.currentTime >=
-                    segment!.end -
-                      0.08
-                  ) {
-                    audio.removeEventListener(
-                      'timeupdate',
-                      stopAt,
-                    );
-
-                    audio.pause();
-
-                    if (
-                      autoAdvance &&
-                      index + 1 <
-                        pageAyahsData.length
-                    ) {
-                      void playAyah(
-                        index + 1,
-                        true,
-                      );
-                    } else {
-                      setIsPlaying(
-                        false,
-                      );
-
-                      setPlayingAyahIndex(
-                        null,
-                      );
-                    }
-                  }
-                };
-
-              audio.addEventListener(
+            if (
+              audio.currentTime >=
+              segment.end - 0.08
+            ) {
+              audio.removeEventListener(
                 'timeupdate',
                 stopAt,
               );
-            } else {
-              // No timing available:
-              // play the full surah instead of failing.
-              await audio.play();
 
-              if (autoAdvance) {
-                const onEnded =
-                  () => {
-                    audio.removeEventListener(
-                      'ended',
-                      onEnded,
-                    );
+              audio.pause();
 
-                    if (
-                      token !==
-                      pageAudioTokenRef.current
-                    ) {
-                      return;
-                    }
-
-                    if (
-                      index + 1 <
-                      pageAyahsData.length
-                    ) {
-                      void playAyah(
-                        index + 1,
-                        true,
-                      );
-                    } else {
-                      setIsPlaying(
-                        false,
-                      );
-
-                      setPlayingAyahIndex(
-                        null,
-                      );
-                    }
-                  };
-
-                audio.addEventListener(
-                  'ended',
-                  onEnded,
+              if (
+                autoAdvance &&
+                index + 1 <
+                  pageAyahsData.length
+              ) {
+                void playAyah(
+                  index + 1,
+                  true,
+                );
+              } else {
+                setIsPlaying(false);
+                setPlayingAyahIndex(
+                  null,
                 );
               }
             }
+          };
 
-            return;
-          }
+          audio.addEventListener(
+            'timeupdate',
+            stopAt,
+          );
 
-          // EveryAyah
-          audio.src =
+          return;
+        } else {
+          src =
             makeEveryAyahUrl(
               selectedReciter,
               globalAyah,
             );
+        }
 
-          await audio.play();
+        if (
+          token !==
+          pageAudioTokenRef.current
+        ) {
+          return;
+        }
 
-          if (autoAdvance) {
-            const onEnded =
-              () => {
-                audio.removeEventListener(
-                  'ended',
-                  onEnded,
-                );
+        const audio =
+          audioRef.current;
 
-                if (
-                  token !==
-                  pageAudioTokenRef.current
-                ) {
-                  return;
-                }
+        if (!audio) {
+          throw new Error(
+            'Audio element not ready.',
+          );
+        }
 
-                if (
-                  index + 1 <
-                  pageAyahsData.length
-                ) {
-                  void playAyah(
-                    index + 1,
-                    true,
-                  );
-                } else {
-                  setIsPlaying(
-                    false,
-                  );
+        audio.src = src;
+        audio.currentTime = 0;
 
-                  setPlayingAyahIndex(
-                    null,
-                  );
-                }
-              };
+        await audio.play();
 
-            audio.addEventListener(
+        if (autoAdvance) {
+          const onEnded = () => {
+            audio.removeEventListener(
               'ended',
               onEnded,
             );
-          }
-        } catch (
-          error
-        ) {
-          setIsPlaying(false);
-          setPlayingAyahIndex(
-            null,
-          );
 
-          setErrorText(
-            error instanceof Error
-              ? error.message
-              : 'دەنگ نەدۆزرایەوە.',
+            if (
+              index + 1 <
+              pageAyahsData.length
+            ) {
+              void playAyah(
+                index + 1,
+                true,
+              );
+            } else {
+              setIsPlaying(false);
+              setPlayingAyahIndex(
+                null,
+              );
+            }
+          };
+
+          audio.addEventListener(
+            'ended',
+            onEnded,
           );
         }
-      },
-      [
-        currentSurahNumber,
-        pageAyahsData,
-        selectedReciter,
-        cleanupBlobUrl,
-      ],
-    );
+      } catch (error) {
+        setIsPlaying(false);
+        setPlayingAyahIndex(null);
 
-  const handleAyahPointerDown =
-    (index: number) => {
-      if (
-        longPressTimerRef.current
-      ) {
-        window.clearTimeout(
-          longPressTimerRef.current,
+        setErrorText(
+          error instanceof Error
+            ? error.message
+            : 'دەنگ نەدۆزرایەوە.',
         );
       }
+    },
+    [
+      currentSurahNumber,
+      pageAyahsData,
+      selectedReciter,
+      cleanupBlobUrl,
+    ],
+  );
+
+  const handleAyahPointerDown = (
+    index: number,
+  ) => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(
+        longPressTimerRef.current,
+      );
+    }
+
+    longPressTimerRef.current =
+      window.setTimeout(() => {
+        setSelectedAyahIndex(index);
+        setShowControls(true);
+      }, 450);
+  };
+
+  const handleAyahPointerUp = () => {
+    if (longPressTimerRef.current) {
+      window.clearTimeout(
+        longPressTimerRef.current,
+      );
 
       longPressTimerRef.current =
-        window.setTimeout(
-          () => {
-            setSelectedAyahIndex(
-              index,
-            );
+        null;
+    }
+  };
 
-            setShowControls(
-              true,
-            );
-          },
-          450,
-        );
-    };
+  const handleAyahClick = (
+    index: number,
+  ) => {
+    setSelectedAyahIndex(index);
+  };
 
-  const handleAyahPointerUp =
-    () => {
-      if (
-        longPressTimerRef.current
-      ) {
-        window.clearTimeout(
-          longPressTimerRef.current,
-        );
-
-        longPressTimerRef.current =
-          null;
-      }
-    };
-
-  const handleAyahClick =
-    (index: number) => {
-      setSelectedAyahIndex(
-        index,
-      );
-    };
-
-  const fetchTafsir =
-    useCallback(
-      async (
-        index: number,
-      ) => {
-        const ayah =
-          getAyahForIndex(
-            index,
-          );
-
-        if (!ayah) return;
-
-        setTafsirLoading(
-          true,
-        );
-
-        setTafsirVisible(
-          true,
-        );
-
-        setTafsirText('');
-
-        try {
-          const response =
-            await fetch(
-              `https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,ku.asan`,
-            );
-
-          if (!response.ok) {
-            throw new Error(
-              'Tafsir API failed',
-            );
-          }
-
-          const json =
-            await response.json();
-
-          const editions =
-            json?.data ?? [];
-
-          const tafsirEdition =
-            editions.find(
-              (x: any) =>
-                x?.edition
-                  ?.identifier ===
-                  'ku.asan' ||
-                x?.edition
-                  ?.language ===
-                  'ku',
-            );
-
-          const text =
-            tafsirEdition
-              ?.ayahs?.[
-              index
-            ]?.text;
-
-          setTafsirText(
-            text ||
-              'تەفسیر بۆ ئەم ئایەتە بەردەست نییە.',
-          );
-        } catch {
-          setTafsirText(
-            'نەتوانرا تەفسیر بهێنرێت.',
-          );
-        } finally {
-          setTafsirLoading(
-            false,
-          );
-        }
-      },
-      [
-        currentPage,
-        pageAyahsData,
-      ],
-    );
-
-  const toggleBookmark =
-    (index: number) => {
+  const fetchTafsir = useCallback(
+    async (index: number) => {
       const ayah =
-        getAyahForIndex(
-          index,
-        );
+        getAyahForIndex(index);
 
       if (!ayah) return;
 
-      const globalAyah =
-        getGlobalAyahNumber(
-          ayah,
-          index + 1,
-        );
+      setTafsirLoading(true);
+      setTafsirVisible(true);
+      setTafsirText('');
 
       try {
-        const key =
-          'quran_ayah_bookmarks';
-
-        const existing =
-          JSON.parse(
-            localStorage.getItem(
-              key,
-            ) || '[]',
+        const response =
+          await fetch(
+            `https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani,ku.asan`,
           );
 
-        const list =
-          Array.isArray(
-            existing,
-          )
-            ? existing
-            : [];
+        if (!response.ok) {
+          throw new Error(
+            'Tafsir API failed',
+          );
+        }
 
-        const already =
-          list.some(
+        const json =
+          await response.json();
+
+        const editions =
+          json?.data ?? [];
+
+        const tafsirEdition =
+          editions.find(
+            (x: any) =>
+              x?.edition?.identifier ===
+                'ku.asan' ||
+              x?.edition?.language ===
+                'ku',
+          );
+
+        const text =
+          tafsirEdition?.ayahs?.[
+            index
+          ]?.text;
+
+        setTafsirText(
+          text ||
+            'تەفسیر بۆ ئەم ئایەتە بەردەست نییە.',
+        );
+      } catch {
+        setTafsirText(
+          'نەتوانرا تەفسیر بهێنرێت.',
+        );
+      } finally {
+        setTafsirLoading(false);
+      }
+    },
+    [currentPage, pageAyahsData],
+  );
+
+  const toggleBookmark = (
+    index: number,
+  ) => {
+    const ayah =
+      getAyahForIndex(index);
+
+    if (!ayah) return;
+
+    const globalAyah =
+      getGlobalAyahNumber(
+        ayah,
+        index + 1,
+      );
+
+    try {
+      const key =
+        'quran_ayah_bookmarks';
+
+      const existing =
+        JSON.parse(
+          localStorage.getItem(
+            key,
+          ) || '[]',
+        );
+
+      const list =
+        Array.isArray(existing)
+          ? existing
+          : [];
+
+      const already =
+        list.some(
+          (item: any) =>
+            Number(
+              item?.globalAyah ??
+                item?.number,
+            ) === globalAyah,
+        );
+
+      const next = already
+        ? list.filter(
             (item: any) =>
               Number(
                 item?.globalAyah ??
                   item?.number,
-              ) ===
+              ) !== globalAyah,
+          )
+        : [
+            ...list,
+            {
               globalAyah,
-          );
+              page: currentPage,
+              ayah: index + 1,
+            },
+          ];
 
-        const next =
-          already
-            ? list.filter(
-                (item: any) =>
-                  Number(
-                    item?.globalAyah ??
-                      item?.number,
-                  ) !==
-                  globalAyah,
-              )
-            : [
-                ...list,
-                {
-                  globalAyah,
-                  page: currentPage,
-                  ayah:
-                    index + 1,
-                },
-              ];
-
-        localStorage.setItem(
-          key,
-          JSON.stringify(next),
-        );
-      } catch {}
-    };
+      localStorage.setItem(
+        key,
+        JSON.stringify(next),
+      );
+    } catch {}
+  };
 
   const downloadCurrentAyah =
     async () => {
       if (
-        selectedAyahIndex ==
-        null
+        selectedAyahIndex == null
       ) {
         return;
       }
@@ -2060,41 +1091,34 @@ export default function MushafPageView({
 
       if (!ayah) return;
 
-      setDownloadBusy(
-        true,
-      );
-
+      setDownloadBusy(true);
       setErrorText('');
 
       try {
         const globalAyah =
           getGlobalAyahNumber(
             ayah,
-            selectedAyahIndex +
-              1,
+            selectedAyahIndex + 1,
           );
 
         const localAyah =
           getAyahNumber(
             ayah,
-            selectedAyahIndex +
-              1,
+            selectedAyahIndex + 1,
           );
-
-        if (
-          selectedReciter.audioSource ===
-          'mp3quran'
-        ) {
-          throw new Error(
-            'MP3Quran بۆ دانلودی تاکە ئایەت پێویستی بە timing هەیە؛ لە ئێستادا دانلودی سۆرە بەکاربهێنە.',
-          );
-        }
 
         const url =
-          makeEveryAyahUrl(
-            selectedReciter,
-            globalAyah,
-          );
+          selectedReciter.audioSource ===
+          'mp3quran'
+            ? (() => {
+                throw new Error(
+                  'MP3Quran بۆ دانلودی تاکە ئایەت پێویستی بە timing هەیە؛ لە ئێستادا تەنها دانلودی سۆرە بەکاربهێنە.',
+                );
+              })()
+            : makeEveryAyahUrl(
+                selectedReciter,
+                globalAyah,
+              );
 
         const response =
           await fetch(url);
@@ -2116,18 +1140,14 @@ export default function MushafPageView({
         );
 
         await refreshDownloadInfo();
-      } catch (
-        error
-      ) {
+      } catch (error) {
         setErrorText(
           error instanceof Error
             ? error.message
             : 'دانلود سەرکەوتوو نەبوو.',
         );
       } finally {
-        setDownloadBusy(
-          false,
-        );
+        setDownloadBusy(false);
       }
     };
 
@@ -2141,18 +1161,11 @@ export default function MushafPageView({
         setErrorText(
           'دانلودی سۆرە لەم قارییەدا بە شێوەی MP3Quran بەردەست نییە.',
         );
-
         return;
       }
 
-      setDownloadBusy(
-        true,
-      );
-
-      setDownloadProgress(
-        0,
-      );
-
+      setDownloadBusy(true);
+      setDownloadProgress(0);
       setErrorText('');
 
       try {
@@ -2190,17 +1203,15 @@ export default function MushafPageView({
             blob,
           );
 
-          setDownloadProgress(
-            100,
-          );
+          setDownloadProgress(100);
 
           await refreshDownloadInfo();
 
           return;
         }
 
-        const chunks:
-          Uint8Array[] = [];
+        const chunks: Uint8Array[] =
+          [];
 
         let received = 0;
 
@@ -2208,15 +1219,12 @@ export default function MushafPageView({
           const {
             done,
             value,
-          } =
-            await reader.read();
+          } = await reader.read();
 
           if (done) break;
 
           if (value) {
-            chunks.push(
-              value,
-            );
+            chunks.push(value);
 
             received +=
               value.length;
@@ -2234,13 +1242,9 @@ export default function MushafPageView({
         }
 
         const blob =
-          new Blob(
-            chunks,
-            {
-              type:
-                'audio/mpeg',
-            },
-          );
+          new Blob(chunks, {
+            type: 'audio/mpeg',
+          });
 
         await saveSurahAudio(
           selectedReciter.id,
@@ -2248,23 +1252,17 @@ export default function MushafPageView({
           blob,
         );
 
-        setDownloadProgress(
-          100,
-        );
+        setDownloadProgress(100);
 
         await refreshDownloadInfo();
-      } catch (
-        error
-      ) {
+      } catch (error) {
         setErrorText(
           error instanceof Error
             ? error.message
             : 'دانلودی سۆرە سەرکەوتوو نەبوو.',
         );
       } finally {
-        setDownloadBusy(
-          false,
-        );
+        setDownloadBusy(false);
       }
     };
 
@@ -2277,9 +1275,7 @@ export default function MushafPageView({
         );
 
         await refreshDownloadInfo();
-      } catch (
-        error
-      ) {
+      } catch (error) {
         setErrorText(
           error instanceof Error
             ? error.message
@@ -2288,248 +1284,218 @@ export default function MushafPageView({
       }
     };
 
-  const handlePageScroll =
-    () => {
-      const el =
-        scrollRef.current;
+  const handlePageScroll = () => {
+    const el =
+      scrollRef.current;
 
-      if (
-        !el ||
-        !onJumpToPage
-      ) {
-        return;
-      }
+    if (
+      !el ||
+      !onJumpToPage
+    ) {
+      return;
+    }
 
-      const pageIndex =
-        Math.round(
-          el.scrollLeft /
-            el.clientWidth,
-        );
+    const pageIndex =
+      Math.round(
+        el.scrollLeft /
+          el.clientWidth,
+      );
 
-      const targetPage =
-        604 -
-        pageIndex;
+    const targetPage =
+      604 - pageIndex;
 
-      if (
-        targetPage >= 1 &&
-        targetPage <= 604
-      ) {
-        onJumpToPage(
-          targetPage,
-        );
-      }
-    };
+    if (
+      targetPage >= 1 &&
+      targetPage <= 604
+    ) {
+      onJumpToPage(
+        targetPage,
+      );
+    }
+  };
 
-  const pageImageStyle:
-    React.CSSProperties = {
+  const pageImageStyle: React.CSSProperties =
+    {
       display: 'block',
       width: '100%',
       height: '100%',
       objectFit: 'contain',
       filter:
         'grayscale(100%) contrast(115%) brightness(102%)',
-      mixBlendMode:
-        'multiply',
+      mixBlendMode: 'multiply',
       userSelect: 'none',
       pointerEvents: 'none',
     };
 
-  const boxScaleStyle =
-    (
-      box: AyahBox,
-    ): React.CSSProperties => ({
-      position:
-        'absolute',
-      left: `${
-        (box.x /
-          AYAH_CANVAS_WIDTH) *
-        100
-      }%`,
-      top: `${
-        (box.y /
-          AYAH_CANVAS_HEIGHT) *
-        100
-      }%`,
-      width: `${
-        (box.width /
-          AYAH_CANVAS_WIDTH) *
-        100
-      }%`,
-      height: `${
-        (box.height /
-          AYAH_CANVAS_HEIGHT) *
-        100
-      }%`,
-      background:
-        'transparent',
-      border: 'none',
-      padding: 0,
-      margin: 0,
-      cursor: 'pointer',
-      touchAction:
-        'manipulation',
-    });
+  const boxScaleStyle = (
+    box: AyahBox,
+  ): React.CSSProperties => ({
+    position: 'absolute',
+    left: `${
+      (box.x /
+        AYAH_CANVAS_WIDTH) *
+      100
+    }%`,
+    top: `${
+      (box.y /
+        AYAH_CANVAS_HEIGHT) *
+      100
+    }%`,
+    width: `${
+      (box.width /
+        AYAH_CANVAS_WIDTH) *
+      100
+    }%`,
+    height: `${
+      (box.height /
+        AYAH_CANVAS_HEIGHT) *
+      100
+    }%`,
+    background: 'transparent',
+    border: 'none',
+    padding: 0,
+    margin: 0,
+    cursor: 'pointer',
+    touchAction: 'manipulation',
+  });
 
-  const renderPage =
-    (page: number) => {
-      const isCurrent =
-        page === currentPage;
+  const renderPage = (
+    page: number,
+  ) => {
+    const isCurrent =
+      page === currentPage;
 
-      const boxes =
-        isCurrent
-          ? ayahBoxes
-          : [];
+    const boxes =
+      isCurrent
+        ? ayahBoxes
+        : [];
 
-      return (
+    return (
+      <div
+        key={page}
+        style={{
+          flex: '0 0 100%',
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          scrollSnapAlign: 'center',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          overflow: 'hidden',
+        }}
+      >
         <div
-          key={page}
           style={{
-            flex:
-              '0 0 100%',
+            position: 'relative',
             width: '100%',
             height: '100%',
-            position:
-              'relative',
-            scrollSnapAlign:
-              'center',
-            display: 'flex',
-            alignItems:
-              'center',
-            justifyContent:
-              'center',
-            overflow:
-              'hidden',
+            maxWidth: 1260,
+            maxHeight: 2020,
           }}
         >
+          <img
+            src={pageImgUrl(page)}
+            alt={`Quran page ${page}`}
+            draggable={false}
+            style={pageImageStyle}
+          />
+
+          {isCurrent &&
+            boxes.map(
+              (box, index) => {
+                const boxAyah =
+                  getBoxAyahNumber(
+                    box,
+                    index,
+                  );
+
+                const selected =
+                  selectedAyahIndex ===
+                  boxAyah - 1;
+
+                const playing =
+                  playingAyahIndex ===
+                  boxAyah - 1;
+
+                return (
+                  <button
+                    key={`${page}-${index}`}
+                    aria-label={`Ayah ${boxAyah}`}
+                    style={{
+                      ...boxScaleStyle(
+                        box,
+                      ),
+                      outline:
+                        selected ||
+                        playing
+                          ? '2px solid rgba(255,140,0,.65)'
+                          : 'none',
+                      background:
+                        playing
+                          ? 'rgba(255,165,0,.10)'
+                          : selected
+                            ? 'rgba(255,165,0,.06)'
+                            : 'transparent',
+                    }}
+                    onClick={() =>
+                      handleAyahClick(
+                        boxAyah - 1,
+                      )
+                    }
+                    onPointerDown={() =>
+                      handleAyahPointerDown(
+                        boxAyah - 1,
+                      )
+                    }
+                    onPointerUp={
+                      handleAyahPointerUp
+                    }
+                    onPointerCancel={
+                      handleAyahPointerUp
+                    }
+                    onPointerLeave={
+                      handleAyahPointerUp
+                    }
+                  />
+                );
+              },
+            )}
+        </div>
+
+        {showNumbers && (
           <div
             style={{
-              position:
-                'relative',
-              width: '100%',
-              height: '100%',
-              maxWidth: 1260,
-              maxHeight: 2020,
+              position: 'absolute',
+              bottom: 8,
+              left: 0,
+              right: 0,
+              textAlign: 'center',
+              fontSize: 12,
+              opacity: 0.55,
             }}
           >
-            <img
-              src={pageImgUrl(
-                page,
-              )}
-              alt={`Quran page ${page}`}
-              draggable={
-                false
-              }
-              style={
-                pageImageStyle
-              }
-            />
-
-            {isCurrent &&
-              boxes.map(
-                (
-                  box,
-                  index,
-                ) => {
-                  const boxAyah =
-                    getBoxAyahNumber(
-                      box,
-                      index,
-                    );
-
-                  const selected =
-                    selectedAyahIndex ===
-                    boxAyah - 1;
-
-                  const playing =
-                    playingAyahIndex ===
-                    boxAyah - 1;
-
-                  return (
-                    <button
-                      key={`${page}-${index}`}
-                      aria-label={`Ayah ${boxAyah}`}
-                      style={{
-                        ...boxScaleStyle(
-                          box,
-                        ),
-                        outline:
-                          selected ||
-                          playing
-                            ? '2px solid rgba(255,140,0,.65)'
-                            : 'none',
-                        background:
-                          playing
-                            ? 'rgba(255,165,0,.10)'
-                            : selected
-                              ? 'rgba(255,165,0,.06)'
-                              : 'transparent',
-                      }}
-                      onClick={() =>
-                        handleAyahClick(
-                          boxAyah -
-                            1,
-                        )
-                      }
-                      onPointerDown={() =>
-                        handleAyahPointerDown(
-                          boxAyah -
-                            1,
-                        )
-                      }
-                      onPointerUp={
-                        handleAyahPointerUp
-                      }
-                      onPointerCancel={
-                        handleAyahPointerUp
-                      }
-                      onPointerLeave={
-                        handleAyahPointerUp
-                      }
-                    />
-                  );
-                },
-              )}
+            {page}
           </div>
-
-          {showNumbers && (
-            <div
-              style={{
-                position:
-                  'absolute',
-                bottom: 8,
-                left: 0,
-                right: 0,
-                textAlign:
-                  'center',
-                fontSize: 12,
-                opacity: 0.55,
-              }}
-            >
-              {page}
-            </div>
-          )}
-        </div>
-      );
-    };
+        )}
+      </div>
+    );
+  };
 
   return (
     <div
       style={{
         width: '100%',
         height: '100%',
-        position:
-          'relative',
-        overflow:
-          'hidden',
-        background:
-          '#f7f3ea',
+        position: 'relative',
+        overflow: 'hidden',
+        background: '#f7f3ea',
         ...bgStyle,
       }}
       dir="rtl"
       onClick={() => {
         if (
-          selectedAyahIndex ==
-          null
+          selectedAyahIndex == null
         ) {
           setShowControls(
             (v) => !v,
@@ -2541,20 +1507,13 @@ export default function MushafPageView({
         ref={audioRef}
         preload="none"
         onPlay={() =>
-          setIsPlaying(
-            true,
-          )
+          setIsPlaying(true)
         }
         onPause={() =>
-          setIsPlaying(
-            false,
-          )
+          setIsPlaying(false)
         }
         onError={() => {
-          setIsPlaying(
-            false,
-          );
-
+          setIsPlaying(false);
           setPlayingAyahIndex(
             null,
           );
@@ -2565,8 +1524,7 @@ export default function MushafPageView({
         }}
       />
 
-      {viewMode ===
-      'scroll' ? (
+      {viewMode === 'scroll' ? (
         <div
           ref={scrollRef}
           onScroll={
@@ -2577,8 +1535,7 @@ export default function MushafPageView({
             height: '100%',
             display: 'flex',
             overflowX: 'auto',
-            overflowY:
-              'hidden',
+            overflowY: 'hidden',
             scrollSnapType:
               'x mandatory',
             direction: 'ltr',
@@ -2595,13 +1552,10 @@ export default function MushafPageView({
           style={{
             width: '100%',
             height: '100%',
-            position:
-              'relative',
+            position: 'relative',
             display: 'flex',
-            alignItems:
-              'center',
-            justifyContent:
-              'center',
+            alignItems: 'center',
+            justifyContent: 'center',
           }}
         >
           {renderPage(
@@ -2613,14 +1567,12 @@ export default function MushafPageView({
       {showControls && (
         <div
           style={{
-            position:
-              'absolute',
+            position: 'absolute',
             top: 10,
             left: 10,
             right: 10,
             display: 'flex',
-            alignItems:
-              'center',
+            alignItems: 'center',
             justifyContent:
               'space-between',
             gap: 8,
@@ -2640,8 +1592,7 @@ export default function MushafPageView({
 
           <div
             style={{
-              display:
-                'flex',
+              display: 'flex',
               gap: 6,
             }}
           >
@@ -2704,16 +1655,13 @@ export default function MushafPageView({
             right: 10,
             bottom: 14,
             zIndex: 40,
-            display:
-              'flex',
-            flexWrap:
-              'wrap',
+            display: 'flex',
+            flexWrap: 'wrap',
             justifyContent:
               'center',
             gap: 8,
             padding: 10,
-            borderRadius:
-              16,
+            borderRadius: 16,
             background:
               'rgba(20,20,20,.92)',
           }}
@@ -2774,8 +1722,7 @@ export default function MushafPageView({
 
               const text =
                 String(
-                  ayah.text ??
-                    '',
+                  ayah.text ?? '',
                 );
 
               void navigator.clipboard?.writeText(
@@ -2834,8 +1781,7 @@ export default function MushafPageView({
             background:
               'rgba(160,0,0,.88)',
             color: '#fff',
-            textAlign:
-              'center',
+            textAlign: 'center',
             fontSize: 13,
           }}
           onClick={() =>
@@ -2855,8 +1801,7 @@ export default function MushafPageView({
             zIndex: 100,
             background:
               'rgba(0,0,0,.55)',
-            display:
-              'flex',
+            display: 'flex',
             alignItems:
               'flex-end',
           }}
@@ -2869,12 +1814,9 @@ export default function MushafPageView({
           <div
             style={{
               width: '100%',
-              maxHeight:
-                '82%',
-              overflowY:
-                'auto',
-              background:
-                '#fff',
+              maxHeight: '82%',
+              overflowY: 'auto',
+              background: '#fff',
               color: '#111',
               borderRadius:
                 '22px 22px 0 0',
@@ -2892,33 +1834,24 @@ export default function MushafPageView({
               قاری
             </h3>
 
-            {reciters.map(
+            {ALL_RECITERS_DIRECTORY.map(
               (reciter) => (
                 <button
-                  key={
-                    reciter.id
-                  }
+                  key={reciter.id}
                   onClick={() => {
                     stopAudio();
-
                     setSelectedReciter(
                       reciter,
                     );
-
                     setRecitersOpen(
                       false,
                     );
                   }}
                   style={{
-                    width:
-                      '100%',
+                    width: '100%',
                     padding: 12,
-                    marginBottom:
-                      6,
-                    textAlign:
-                      'right',
-                    borderRadius:
-                      10,
+                    marginBottom: 6,
+                    textAlign: 'right',
                     border:
                       reciter.id ===
                       selectedReciter.id
@@ -2940,30 +1873,12 @@ export default function MushafPageView({
                   <div
                     style={{
                       fontSize: 12,
-                      opacity:
-                        0.65,
+                      opacity: 0.65,
                     }}
                   >
-                    {
-                      reciter.subName ||
-                      reciter.riwayah
-                    }
+                    {reciter.subName ||
+                      reciter.riwayah}
                   </div>
-
-                  {reciter.availabilityNote && (
-                    <div
-                      style={{
-                        fontSize: 11,
-                        opacity:
-                          0.55,
-                        marginTop: 3,
-                      }}
-                    >
-                      {
-                        reciter.availabilityNote
-                      }
-                    </div>
-                  )}
                 </button>
               ),
             )}
@@ -2975,8 +1890,7 @@ export default function MushafPageView({
                 )
               }
               style={{
-                width:
-                  '100%',
+                width: '100%',
                 padding: 12,
                 marginTop: 8,
               }}
@@ -2996,8 +1910,7 @@ export default function MushafPageView({
             zIndex: 110,
             background:
               'rgba(0,0,0,.55)',
-            display:
-              'flex',
+            display: 'flex',
             alignItems:
               'flex-end',
           }}
@@ -3010,12 +1923,9 @@ export default function MushafPageView({
           <div
             style={{
               width: '100%',
-              maxHeight:
-                '78%',
-              overflowY:
-                'auto',
-              background:
-                '#fff',
+              maxHeight: '78%',
+              overflowY: 'auto',
+              background: '#fff',
               color: '#111',
               borderRadius:
                 '22px 22px 0 0',
@@ -3032,8 +1942,8 @@ export default function MushafPageView({
             >
               {
                 selectedTafsir.title ||
-                selectedTafsir.name ||
-                'تەفسیر'
+                  selectedTafsir.name ||
+                  'تەفسیر'
               }
             </h3>
 
@@ -3047,9 +1957,7 @@ export default function MushafPageView({
                   lineHeight: 2,
                 }}
               >
-                {
-                  tafsirText
-                }
+                {tafsirText}
               </p>
             )}
 
