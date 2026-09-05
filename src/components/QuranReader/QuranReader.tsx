@@ -6,6 +6,27 @@ import React, {
   useState,
 } from 'react';
 
+/* =========================================================
+   QURAN AUDIO READER
+   Reference-style architecture:
+
+   Reciter
+      ↓
+   Audio Source
+      ↓
+   Surah file
+      ↓
+   HTML5 Audio
+      ↓
+   Timing / Ayah sync
+      ↓
+   Cache metadata
+      ↓
+   Playback
+
+   Audio logic stays inside this file.
+   ========================================================= */
+
 const PAGE_COUNT = 604;
 
 const QURAN_PAGE_BASE =
@@ -17,14 +38,25 @@ const QURAN_API_BASE =
 const MP3QURAN_API_BASE =
   'https://mp3quran.net/api/v3';
 
+/* =========================================================
+   STORAGE
+   ========================================================= */
+
 const RECITERS_CACHE_KEY =
-  'quran_kurdish_reciters_v4';
+  'quran_kurdish_reciters_v5';
+
+const SELECTED_RECITER_KEY =
+  'quran_selected_reciter';
 
 const TIMING_READS_CACHE_KEY =
-  'quran_timing_reads_v4';
+  'quran_timing_reads_v5';
 
 const TIMING_CACHE_PREFIX =
-  'quran_timing_v4';
+  'quran_timing_v5';
+
+/* =========================================================
+   TYPES
+   ========================================================= */
 
 interface AyahData {
   number?: number;
@@ -32,10 +64,12 @@ interface AyahData {
   ayah?: number;
   globalAyah?: number;
   text?: string;
+
   surah?: {
     number?: number;
     name?: string;
   };
+
   [key: string]: unknown;
 }
 
@@ -55,106 +89,176 @@ interface TimingRead {
 
 interface DynamicReciter {
   id: string;
+
   sourceId: string;
+
   name: string;
+
   nameAr: string;
+
   riwayah: string;
+
   server: string;
+
   surahList: number[];
+
   moshafId: string;
+
   timingReadId?: string;
 }
 
 interface SurahItem {
   number?: number;
   id?: number;
+
   name?: string;
   englishName?: string;
+
   startPage?: number;
   page?: number;
   endPage?: number;
+
   [key: string]: unknown;
 }
 
 interface QuranReaderProps {
   currentPage: number;
+
   onNextPage: () => void;
+
   onPrevPage: () => void;
+
   onBackToIndex: () => void;
+
   bgStyle?: React.CSSProperties;
+
   appLang: string;
+
   showNumbers: boolean;
+
   surahsList?: SurahItem[];
+
   onJumpToPage?: (page: number) => void;
 }
 
 interface Mp3Reciter {
   id?: number | string;
+
   name?: string;
+
   moshaf?: Array<{
     id?: number | string;
+
     name?: string;
+
     server?: string;
+
     surah_total?: number | string;
+
     surah_list?: string;
   }>;
 }
 
+/* =========================================================
+   KURDISH RECITERS
+   =========================================================
+
+   These names are matched against MP3Quran.
+
+   We intentionally include many aliases because
+   Arabic/English spellings can differ between API versions.
+   ========================================================= */
+
 const KURDISH_RECITERS = [
   {
     id: 'peshawa_kurdi',
+
     names: [
-      'peshawa qadr al-kurdi',
+      'peshawa qadr al kurdi',
+      'peshawa qadr alkurd',
+      'peshawa qadir al kurdi',
       'peshawa kurdi',
       'peshawa',
       'بيشةوا قادر الكردي',
       'بيشة وا قادر الكردي',
+      'پێشەوا قادر کوردی',
     ],
+
     kurdish: 'پێشەوا قادر کوردی',
   },
+
   {
     id: 'raad_kurdi',
+
     names: [
       'raad al kurdi',
       'raad al-kurdi',
       'raad kurdi',
+      'raad mohammad al kurdi',
       'رعد الكردي',
       'رعد محمد الكردي',
+      'رعد محمد الكردي',
+      'ڕەعد کوردی',
     ],
+
     kurdish: 'ڕەعد کوردی',
   },
+
   {
     id: 'ramadan_shakoor',
+
     names: [
       'ramadan shakoor',
       'ramadan shakur',
+      'ramadan shakour',
       'رمضان شكور',
+      'رمضان شكور الكردي',
+      'ڕەمەزان شاکور',
     ],
+
     kurdish: 'ڕەمەزان شاکور',
   },
+
   {
     id: 'shirazad_taher',
+
     names: [
       'shirazad taher',
       'shirzad taher',
+      'shirzad abdulrahman taher',
+      'shirazad abdurrahman taher',
       'شيرزاد طاهر',
       'شيرزاد عبدالرحمن طاهر',
+      'شێرزاد تاهر',
     ],
+
     kurdish: 'شێرزاد تاهر',
   },
+
   {
     id: 'wishear_hayder_arbili',
+
     names: [
       'wishear hayder arbili',
       'wishear haydar arbili',
+      'wishyar haydar arbili',
+      'wishear hider arbili',
       'وشيار حيدر اربيلي',
       'وشيار حيدر أربيلي',
+      'ویشیار حەیدەر ئەربیلی',
     ],
+
     kurdish: 'ویشیار حەیدەر ئەربیلی',
   },
 ];
 
-const normalizeText = (value: unknown): string =>
+/* =========================================================
+   TEXT HELPERS
+   ========================================================= */
+
+const normalizeText = (
+  value: unknown,
+): string =>
   String(value ?? '')
     .toLowerCase()
     .normalize('NFD')
@@ -164,14 +268,26 @@ const normalizeText = (value: unknown): string =>
     .replace(/\s+/g, ' ')
     .trim();
 
-const normalizeUrl = (value: unknown): string => {
+const normalizeUrl = (
+  value: unknown,
+): string => {
   const url = String(value ?? '').trim();
-  if (!url) return '';
-  return url.endsWith('/') ? url : `${url}/`;
+
+  if (!url) {
+    return '';
+  }
+
+  return url.endsWith('/')
+    ? url
+    : `${url}/`;
 };
 
-const parseSurahList = (value: unknown): number[] => {
-  if (typeof value !== 'string') return [];
+const parseSurahList = (
+  value: unknown,
+): number[] => {
+  if (typeof value !== 'string') {
+    return [];
+  }
 
   return value
     .split(',')
@@ -184,10 +300,22 @@ const parseSurahList = (value: unknown): number[] => {
     );
 };
 
-const readCache = <T,>(key: string): T | null => {
+/* =========================================================
+   SAFE LOCAL STORAGE
+   ========================================================= */
+
+const readCache = <T,>(
+  key: string,
+): T | null => {
   try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as T) : null;
+    const raw =
+      localStorage.getItem(key);
+
+    if (!raw) {
+      return null;
+    }
+
+    return JSON.parse(raw) as T;
   } catch {
     return null;
   }
@@ -203,31 +331,70 @@ const writeCache = (
       JSON.stringify(value),
     );
   } catch {
-    // Ignore cache errors.
+    /* Ignore storage errors. */
   }
 };
 
-const formatPage = (page: number) =>
-  String(page).padStart(3, '0');
+/* =========================================================
+   PAGE
+   ========================================================= */
 
-const getPageImage = (page: number) =>
-  `${QURAN_PAGE_BASE}page${formatPage(page)}.png`;
+const formatPage = (
+  page: number,
+) =>
+  String(
+    Math.max(
+      1,
+      Math.min(
+        PAGE_COUNT,
+        page,
+      ),
+    ),
+  ).padStart(3, '0');
 
-const normalizeTime = (value: unknown): number => {
+const getPageImage = (
+  page: number,
+) =>
+  `${QURAN_PAGE_BASE}page${formatPage(
+    page,
+  )}.png`;
+
+/* =========================================================
+   TIME
+   ========================================================= */
+
+const normalizeTime = (
+  value: unknown,
+): number => {
   const n = Number(value);
 
-  if (!Number.isFinite(n) || n < 0) {
+  if (
+    !Number.isFinite(n) ||
+    n < 0
+  ) {
     return 0;
   }
 
-  return n > 10000 ? n / 1000 : n;
+  /*
+   * MP3Quran can return milliseconds
+   * depending on endpoint/version.
+   */
+  return n > 10000
+    ? n / 1000
+    : n;
 };
+
+/* =========================================================
+   SURAH FROM PAGE
+   ========================================================= */
 
 const getSurahForPage = (
   page: number,
   surahs?: SurahItem[],
 ): number => {
-  if (!surahs?.length) return 1;
+  if (!surahs?.length) {
+    return 1;
+  }
 
   const list = surahs
     .map((s) => ({
@@ -236,35 +403,47 @@ const getSurahForPage = (
           s.id ??
           0,
       ),
+
       start: Number(
         s.startPage ??
           s.page ??
           s['start_page'] ??
           0,
       ),
+
       end: Number(
         s.endPage ??
           s['end_page'] ??
           0,
       ),
     }))
+
     .filter(
       (s) =>
         s.number >= 1 &&
         s.number <= 114 &&
         s.start > 0,
     )
-    .sort((a, b) => a.start - b.start);
 
-  const exact = list.find(
-    (s) =>
-      page >= s.start &&
-      (!s.end || page <= s.end),
-  );
+    .sort(
+      (a, b) =>
+        a.start - b.start,
+    );
 
-  if (exact) return exact.number;
+  const exact =
+    list.find(
+      (s) =>
+        page >= s.start &&
+        (!s.end ||
+          page <= s.end),
+    );
 
-  let result = list[0]?.number ?? 1;
+  if (exact) {
+    return exact.number;
+  }
+
+  let result =
+    list[0]?.number ?? 1;
 
   for (const s of list) {
     if (s.start <= page) {
@@ -277,23 +456,40 @@ const getSurahForPage = (
   return result;
 };
 
+/* =========================================================
+   FIND KURDISH RECITER
+   ========================================================= */
+
 const findKurdishReciter = (
   name: string,
 ) => {
-  const normalized = normalizeText(name);
+  const normalized =
+    normalizeText(name);
 
-  return KURDISH_RECITERS.find((item) =>
-    item.names.some((alias) => {
-      const a = normalizeText(alias);
+  if (!normalized) {
+    return undefined;
+  }
 
-      return (
-        normalized === a ||
-        normalized.includes(a) ||
-        a.includes(normalized)
-      );
-    }),
+  return KURDISH_RECITERS.find(
+    (item) =>
+      item.names.some(
+        (alias) => {
+          const a =
+            normalizeText(alias);
+
+          return (
+            normalized === a ||
+            normalized.includes(a) ||
+            a.includes(normalized)
+          );
+        },
+      ),
   );
 };
+
+/* =========================================================
+   CHOOSE BEST MOSHAF
+   ========================================================= */
 
 const chooseMoshaf = (
   moshaf?: Mp3Reciter['moshaf'],
@@ -302,39 +498,63 @@ const chooseMoshaf = (
     return null;
   }
 
-  return (
-    [...moshaf]
-      .filter(
-        (m) =>
-          Boolean(m?.server) &&
+  const valid =
+    moshaf.filter(
+      (m) => {
+        const server =
+          normalizeUrl(
+            m?.server,
+          );
+
+        const list =
           parseSurahList(
             m?.surah_list,
-          ).length > 0,
-      )
-      .sort(
-        (a, b) =>
-          parseSurahList(
-            b.surah_list,
-          ).length -
+          );
+
+        return (
+          Boolean(server) &&
+          list.length > 0
+        );
+      },
+    );
+
+  if (!valid.length) {
+    return null;
+  }
+
+  return (
+    [...valid].sort(
+      (a, b) => {
+        const aCount =
           parseSurahList(
             a.surah_list,
-          ).length,
-      )[0] ?? null
+          ).length;
+
+        const bCount =
+          parseSurahList(
+            b.surah_list,
+          ).length;
+
+        return (
+          bCount - aCount
+        );
+      },
+    )[0] ?? null
   );
 };
 
-/*
- * MP3Quran:
- * moshaf.id and timing read id are NOT blindly assumed
- * to be the same.
- *
- * We first obtain all timing reads, then match them
- * using the exact audio folder URL.
- */
+/* =========================================================
+   TIMING READS
+   ========================================================= */
+
 const fetchTimingReads =
-  async (): Promise<TimingRead[]> => {
+  async (): Promise<
+    TimingRead[]
+  > => {
     const cached =
-      readCache<TimingRead[]>(
+      readCache<
+        TimingRead[]
+      >(
         TIMING_READS_CACHE_KEY,
       );
 
@@ -345,12 +565,13 @@ const fetchTimingReads =
       return cached;
     }
 
-    const response = await fetch(
-      `${MP3QURAN_API_BASE}/ayat_timing/reads`,
-      {
-        cache: 'no-store',
-      },
-    );
+    const response =
+      await fetch(
+        `${MP3QURAN_API_BASE}/ayat_timing/reads`,
+        {
+          cache: 'no-store',
+        },
+      );
 
     if (!response.ok) {
       throw new Error(
@@ -358,37 +579,63 @@ const fetchTimingReads =
       );
     }
 
-    const json = await response.json();
+    const json =
+      await response.json();
 
-    const rows = Array.isArray(json)
-      ? json
-      : Array.isArray(json?.reads)
-        ? json.reads
-        : Array.isArray(json?.data)
-          ? json.data
-          : [];
+    const rows =
+      Array.isArray(json)
+        ? json
+        : Array.isArray(
+              json?.reads,
+            )
+          ? json.reads
+          : Array.isArray(
+                json?.data,
+              )
+            ? json.data
+            : [];
 
-    const result: TimingRead[] = rows
-      .map((row: any) => ({
-        id: String(row?.id ?? ''),
-        name: String(row?.name ?? ''),
-        rewaya: String(
-          row?.rewaya ?? '',
-        ),
-        folderUrl: normalizeUrl(
-          row?.folder_url,
-        ),
-        surahCount: Number(
-          row?.soar_count ?? 0,
-        ),
-      }))
-      .filter(
-        (row: TimingRead) =>
-          Boolean(
-            row.id &&
-            row.folderUrl,
-          ),
-      );
+    const result =
+      rows
+        .map(
+          (
+            row: any,
+          ): TimingRead => ({
+            id: String(
+              row?.id ?? '',
+            ),
+
+            name: String(
+              row?.name ?? '',
+            ),
+
+            rewaya: String(
+              row?.rewaya ?? '',
+            ),
+
+            folderUrl:
+              normalizeUrl(
+                row?.folder_url,
+              ),
+
+            surahCount:
+              Number(
+                row?.soar_count ??
+                  row?.surah_count ??
+                  0,
+              ),
+          }),
+        )
+
+        .filter(
+          (
+            row: TimingRead,
+          ) =>
+            Boolean(
+              row.id &&
+                row.folderUrl,
+            ),
+        );
 
     writeCache(
       TIMING_READS_CACHE_KEY,
@@ -398,69 +645,103 @@ const fetchTimingReads =
     return result;
   };
 
+/* =========================================================
+   FIND TIMING READ
+   ========================================================= */
+
 const findTimingReadForServer = (
   server: string,
   reads: TimingRead[],
 ): TimingRead | undefined => {
-  const target = normalizeUrl(server);
+  const target =
+    normalizeUrl(server);
 
-  if (!target) return undefined;
+  if (!target) {
+    return undefined;
+  }
 
   /*
-   * First: exact match.
+   * Exact URL.
    */
-  const exact = reads.find(
-    (r) =>
-      normalizeUrl(r.folderUrl) ===
-      target,
-  );
+  const exact =
+    reads.find(
+      (r) =>
+        normalizeUrl(
+          r.folderUrl,
+        ) === target,
+    );
 
-  if (exact) return exact;
+  if (exact) {
+    return exact;
+  }
 
   /*
-   * Second: normalized path match.
+   * Normalized path.
    */
   try {
-    const targetUrl = new URL(target);
+    const targetUrl =
+      new URL(target);
 
     const targetPath =
       targetUrl.pathname
-        .replace(/\/+$/, '')
+        .replace(
+          /\/+$/,
+          '',
+        )
         .toLowerCase();
 
-    return reads.find((r) => {
-      try {
-        const url = new URL(
-          normalizeUrl(r.folderUrl),
-        );
+    const targetHost =
+      targetUrl.hostname
+        .toLowerCase();
 
-        const path =
-          url.pathname
-            .replace(/\/+$/, '')
-            .toLowerCase();
+    return reads.find(
+      (r) => {
+        try {
+          const url =
+            new URL(
+              normalizeUrl(
+                r.folderUrl,
+              ),
+            );
 
-        return (
-          url.hostname ===
-            targetUrl.hostname &&
-          path === targetPath
-        );
-      } catch {
-        return false;
-      }
-    });
+          const path =
+            url.pathname
+              .replace(
+                /\/+$/,
+                '',
+              )
+              .toLowerCase();
+
+          return (
+            url.hostname.toLowerCase() ===
+              targetHost &&
+            path === targetPath
+          );
+        } catch {
+          return false;
+        }
+      },
+    );
   } catch {
     return undefined;
   }
 };
 
+/* =========================================================
+   FETCH MP3QURAN RECITERS
+   ========================================================= */
+
 const fetchKurdishReciters =
-  async (): Promise<DynamicReciter[]> => {
-    const response = await fetch(
-      `${MP3QURAN_API_BASE}/reciters?language=eng`,
-      {
-        cache: 'no-store',
-      },
-    );
+  async (): Promise<
+    DynamicReciter[]
+  > => {
+    const response =
+      await fetch(
+        `${MP3QURAN_API_BASE}/reciters?language=eng`,
+        {
+          cache: 'no-store',
+        },
+      );
 
     if (!response.ok) {
       throw new Error(
@@ -468,23 +749,29 @@ const fetchKurdishReciters =
       );
     }
 
-    const json = await response.json();
+    const json =
+      await response.json();
 
-    const apiReciters: Mp3Reciter[] =
+    const apiReciters:
+      Mp3Reciter[] =
       Array.isArray(json)
         ? json
-        : Array.isArray(json?.reciters)
+        : Array.isArray(
+              json?.reciters,
+            )
           ? json.reciters
-          : Array.isArray(json?.data)
+          : Array.isArray(
+                json?.data,
+              )
             ? json.data
             : [];
 
     /*
-     * Timing list is optional.
-     * Audio playback must still work even if timing
-     * is unavailable.
+     * Timing is optional.
+     * If timing fails, audio still works.
      */
-    let timingReads: TimingRead[] = [];
+    let timingReads:
+      TimingRead[] = [];
 
     try {
       timingReads =
@@ -493,33 +780,45 @@ const fetchKurdishReciters =
       timingReads = [];
     }
 
-    const result: DynamicReciter[] = [];
+    const result:
+      DynamicReciter[] = [];
 
     for (const reciter of apiReciters) {
-      const apiName = String(
-        reciter?.name ?? '',
-      ).trim();
+      const apiName =
+        String(
+          reciter?.name ?? '',
+        ).trim();
 
-      if (!apiName) continue;
+      if (!apiName) {
+        continue;
+      }
 
       const match =
-        findKurdishReciter(apiName);
+        findKurdishReciter(
+          apiName,
+        );
 
-      if (!match) continue;
+      if (!match) {
+        continue;
+      }
 
       const moshaf =
         chooseMoshaf(
           reciter.moshaf,
         );
 
-      if (!moshaf?.server) continue;
+      if (!moshaf?.server) {
+        continue;
+      }
 
       const surahList =
         parseSurahList(
           moshaf.surah_list,
         );
 
-      if (!surahList.length) continue;
+      if (!surahList.length) {
+        continue;
+      }
 
       const server =
         normalizeUrl(
@@ -534,30 +833,43 @@ const fetchKurdishReciters =
 
       result.push({
         id: match.id,
-        sourceId: String(
-          reciter.id ?? match.id,
-        ),
-        name: match.kurdish,
-        nameAr: apiName,
-        riwayah: 'حفص',
-        server,
-        surahList,
-        moshafId: String(
-          moshaf.id ??
+
+        sourceId:
+          String(
             reciter.id ??
-            match.id,
-        ),
+              match.id,
+          ),
+
+        name: match.kurdish,
+
+        nameAr: apiName,
+
+        riwayah: 'حفص',
+
+        server,
+
+        surahList,
+
+        moshafId:
+          String(
+            moshaf.id ??
+              reciter.id ??
+              match.id,
+          ),
+
         timingReadId:
           timing?.id,
       });
     }
 
     /*
-     * Keep only one record per Kurdish reciter.
-     * Prefer the one with more surahs.
+     * Remove duplicates.
      */
     const unique =
-      new Map<string, DynamicReciter>();
+      new Map<
+        string,
+        DynamicReciter
+      >();
 
     for (const item of result) {
       const old =
@@ -575,21 +887,27 @@ const fetchKurdishReciters =
       }
     }
 
+    /*
+     * Keep desired Kurdish order.
+     */
     const ordered =
       KURDISH_RECITERS
-        .map((x) =>
-          unique.get(x.id),
+        .map((item) =>
+          unique.get(
+            item.id,
+          ),
         )
+
         .filter(
           (
-            x,
-          ): x is DynamicReciter =>
-            Boolean(x),
+            item,
+          ): item is DynamicReciter =>
+            Boolean(item),
         );
 
     if (!ordered.length) {
       throw new Error(
-        'هیچ قارییەکی کورد لە MP3Quran نەدۆزرایەوە.',
+        'هیچ قارییەکی کورد لە سەرچاوەی دەنگ نەدۆزرایەوە.',
       );
     }
 
@@ -601,16 +919,23 @@ const fetchKurdishReciters =
     return ordered;
   };
 
+/* =========================================================
+   QURAN PAGE AYahs
+   ========================================================= */
+
 const fetchPageAyahs =
   async (
     page: number,
-  ): Promise<AyahData[]> => {
-    const response = await fetch(
-      `${QURAN_API_BASE}/page/${page}/editions/quran-uthmani`,
-      {
-        cache: 'force-cache',
-      },
-    );
+  ): Promise<
+    AyahData[]
+  > => {
+    const response =
+      await fetch(
+        `${QURAN_API_BASE}/page/${page}/editions/quran-uthmani`,
+        {
+          cache: 'force-cache',
+        },
+      );
 
     if (!response.ok) {
       throw new Error(
@@ -622,7 +947,9 @@ const fetchPageAyahs =
       await response.json();
 
     const edition =
-      Array.isArray(json?.data)
+      Array.isArray(
+        json?.data,
+      )
         ? json.data[0]
         : json?.data;
 
@@ -636,29 +963,39 @@ const fetchPageAyahs =
     return rows.map(
       (ayah: any) => ({
         ...ayah,
-        globalAyah: Number(
-          ayah?.number ?? 0,
-        ),
-        ayah: Number(
-          ayah?.numberInSurah ??
-            ayah?.ayah ??
-            0,
-        ),
+
+        globalAyah:
+          Number(
+            ayah?.number ?? 0,
+          ),
+
+        ayah:
+          Number(
+            ayah?.numberInSurah ??
+              ayah?.ayah ??
+              0,
+          ),
       }),
     );
   };
 
+/* =========================================================
+   TIMING
+   ========================================================= */
+
 const fetchTiming = async (
   readId: string,
   surah: number,
-): Promise<TimingRow[]> => {
+): Promise<
+  TimingRow[]
+> => {
   const cacheKey =
     `${TIMING_CACHE_PREFIX}:${readId}:${surah}`;
 
   const cached =
-    readCache<TimingRow[]>(
-      cacheKey,
-    );
+    readCache<
+      TimingRow[]
+    >(cacheKey);
 
   if (
     Array.isArray(cached) &&
@@ -667,16 +1004,17 @@ const fetchTiming = async (
     return cached;
   }
 
-  const response = await fetch(
-    `${MP3QURAN_API_BASE}/ayat_timing` +
-      `?surah=${surah}` +
-      `&read=${encodeURIComponent(
-        readId,
-      )}`,
-    {
-      cache: 'force-cache',
-    },
-  );
+  const response =
+    await fetch(
+      `${MP3QURAN_API_BASE}/ayat_timing` +
+        `?surah=${surah}` +
+        `&read=${encodeURIComponent(
+          readId,
+        )}`,
+      {
+        cache: 'force-cache',
+      },
+    );
 
   if (!response.ok) {
     throw new Error(
@@ -687,32 +1025,40 @@ const fetchTiming = async (
   const json =
     await response.json();
 
-  const rows = Array.isArray(json)
-    ? json
-    : Array.isArray(json?.ayat)
-      ? json.ayat
-      : Array.isArray(json?.data)
-        ? json.data
-        : [];
+  const rows =
+    Array.isArray(json)
+      ? json
+      : Array.isArray(
+            json?.ayat,
+          )
+        ? json.ayat
+        : Array.isArray(
+              json?.data,
+            )
+          ? json.data
+          : [];
 
-  const result: TimingRow[] =
+  const result =
     rows
       .map(
         (
           row: any,
           index: number,
         ) => ({
-          ayah: Number(
-            row?.ayah ??
-              row?.ayah_number ??
-              index + 1,
-          ),
+          ayah:
+            Number(
+              row?.ayah ??
+                row?.ayah_number ??
+                index + 1,
+            ),
+
           start:
             normalizeTime(
               row?.start_time ??
                 row?.start ??
                 0,
             ),
+
           end:
             normalizeTime(
               row?.end_time ??
@@ -721,6 +1067,7 @@ const fetchTiming = async (
             ),
         }),
       )
+
       .filter(
         (x: TimingRow) =>
           x.ayah >= 1 &&
@@ -737,16 +1084,115 @@ const fetchTiming = async (
   return result;
 };
 
+/* =========================================================
+   AUDIO FILE URL
+   =========================================================
+
+   MP3Quran's moshaf server is the authoritative source.
+
+   Most MP3Quran moshaf servers use:
+       001.mp3
+       002.mp3
+       ...
+       114.mp3
+
+   The server itself comes dynamically from the API,
+   instead of being hardcoded per reciter.
+   ========================================================= */
+
 const getAudioUrl = (
   reciter: DynamicReciter,
   surah: number,
-) =>
-  `${normalizeUrl(
-    reciter.server,
-  )}${String(surah).padStart(
-    3,
-    '0',
-  )}.mp3`;
+): string => {
+  const server =
+    normalizeUrl(
+      reciter.server,
+    );
+
+  return (
+    `${server}` +
+    `${String(
+      surah,
+    ).padStart(
+      3,
+      '0',
+    )}.mp3`
+  );
+};
+
+/* =========================================================
+   PRELOAD AUDIO
+   ========================================================= */
+
+const waitForMetadata = (
+  audio: HTMLAudioElement,
+): Promise<void> =>
+  new Promise(
+    (resolve) => {
+      if (
+        audio.readyState >= 1
+      ) {
+        resolve();
+        return;
+      }
+
+      const done = () => {
+        cleanup();
+        resolve();
+      };
+
+      const error = () => {
+        cleanup();
+        resolve();
+      };
+
+      const timeout =
+        window.setTimeout(
+          () => {
+            cleanup();
+            resolve();
+          },
+          8000,
+        );
+
+      const cleanup =
+        () => {
+          window.clearTimeout(
+            timeout,
+          );
+
+          audio.removeEventListener(
+            'loadedmetadata',
+            done,
+          );
+
+          audio.removeEventListener(
+            'error',
+            error,
+          );
+        };
+
+      audio.addEventListener(
+        'loadedmetadata',
+        done,
+        {
+          once: true,
+        },
+      );
+
+      audio.addEventListener(
+        'error',
+        error,
+        {
+          once: true,
+        },
+      );
+    },
+  );
+
+/* =========================================================
+   COMPONENT
+   ========================================================= */
 
 export function QuranReader({
   currentPage,
@@ -754,6 +1200,7 @@ export function QuranReader({
   onPrevPage,
   onBackToIndex,
   bgStyle,
+  appLang,
   showNumbers,
   surahsList,
   onJumpToPage,
@@ -774,14 +1221,33 @@ export function QuranReader({
   const loadingRef =
     useRef(false);
 
-  const [reciters, setReciters] =
-    useState<DynamicReciter[]>(() =>
-      readCache<DynamicReciter[]>(
-        RECITERS_CACHE_KEY,
-      ) ?? [],
-    );
+  const mountedRef =
+    useRef(true);
 
-  const [selectedReciter, setSelectedReciter] =
+  const activeRequestRef =
+    useRef(0);
+
+  /* =======================================================
+     RECITERS
+     ======================================================= */
+
+  const [
+    reciters,
+    setReciters,
+  ] = useState<
+    DynamicReciter[]
+  >(() =>
+    readCache<
+      DynamicReciter[]
+    >(
+      RECITERS_CACHE_KEY,
+    ) ?? [],
+  );
+
+  const [
+    selectedReciter,
+    setSelectedReciter,
+  ] =
     useState<DynamicReciter | null>(
       () => {
         const cached =
@@ -791,14 +1257,16 @@ export function QuranReader({
             RECITERS_CACHE_KEY,
           );
 
-        if (!cached?.length) {
+        if (
+          !cached?.length
+        ) {
           return null;
         }
 
         try {
           const saved =
             localStorage.getItem(
-              'quran_selected_reciter',
+              SELECTED_RECITER_KEY,
             );
 
           return (
@@ -814,23 +1282,61 @@ export function QuranReader({
       },
     );
 
-  const [ayahs, setAyahs] =
+  /* =======================================================
+     PAGE
+     ======================================================= */
+
+  const [
+    ayahs,
+    setAyahs,
+  ] =
     useState<AyahData[]>([]);
 
-  const [timings, setTimings] =
+  /* =======================================================
+     TIMING
+     ======================================================= */
+
+  const [
+    timings,
+    setTimings,
+  ] =
     useState<TimingRow[]>([]);
 
-  const [playingAyah, setPlayingAyah] =
-    useState<number | null>(null);
+  /* =======================================================
+     PLAYER
+     ======================================================= */
 
-  const [isPlaying, setIsPlaying] =
+  const [
+    playingAyah,
+    setPlayingAyah,
+  ] =
+    useState<number | null>(
+      null,
+    );
+
+  const [
+    isPlaying,
+    setIsPlaying,
+  ] =
     useState(false);
 
-  const [isLoading, setIsLoading] =
+  const [
+    isLoading,
+    setIsLoading,
+  ] =
     useState(false);
 
-  const [error, setError] =
-    useState<string | null>(null);
+  const [
+    error,
+    setError,
+  ] =
+    useState<string | null>(
+      null,
+    );
+
+  /* =======================================================
+     CURRENT SURAH
+     ======================================================= */
 
   const selectedSurah =
     useMemo(
@@ -845,125 +1351,235 @@ export function QuranReader({
       ],
     );
 
-  /*
-   * Load reciters.
-   */
+  /* =======================================================
+     MOUNT
+     ======================================================= */
+
   useEffect(() => {
-    let cancelled = false;
+    mountedRef.current =
+      true;
 
-    const load = async () => {
-      try {
-        const fresh =
-          await fetchKurdishReciters();
+    return () => {
+      mountedRef.current =
+        false;
 
-        if (cancelled) return;
+      const audio =
+        audioRef.current;
 
-        setReciters(fresh);
-
-        setSelectedReciter(
-          (old) =>
-            fresh.find(
-              (r) =>
-                r.id ===
-                old?.id,
-            ) ??
-            fresh[0] ??
-            null,
+      if (audio) {
+        audio.pause();
+        audio.removeAttribute(
+          'src',
         );
-      } catch (err) {
-        if (cancelled) return;
-
-        const cached =
-          readCache<
-            DynamicReciter[]
-          >(
-            RECITERS_CACHE_KEY,
-          );
-
-        if (
-          cached?.length
-        ) {
-          setReciters(cached);
-          setSelectedReciter(
-            (old) =>
-              old ??
-              cached[0],
-          );
-        } else {
-          setError(
-            err instanceof Error
-              ? err.message
-              : 'کێشە لە هێنانی قارییەکان.',
-          );
-        }
+        audio.load();
       }
     };
+  }, []);
 
-    load();
+  /* =======================================================
+     LOAD RECITERS
+     ======================================================= */
+
+  useEffect(() => {
+    let cancelled =
+      false;
+
+    const load =
+      async () => {
+        try {
+          const fresh =
+            await fetchKurdishReciters();
+
+          if (
+            cancelled ||
+            !mountedRef.current
+          ) {
+            return;
+          }
+
+          setReciters(
+            fresh,
+          );
+
+          setSelectedReciter(
+            (old) =>
+              fresh.find(
+                (r) =>
+                  r.id ===
+                  old?.id,
+              ) ??
+              fresh[0] ??
+              null,
+          );
+        } catch (
+          err,
+        ) {
+          if (
+            cancelled ||
+            !mountedRef.current
+          ) {
+            return;
+          }
+
+          const cached =
+            readCache<
+              DynamicReciter[]
+            >(
+              RECITERS_CACHE_KEY,
+            );
+
+          if (
+            cached?.length
+          ) {
+            setReciters(
+              cached,
+            );
+
+            setSelectedReciter(
+              (old) =>
+                old ??
+                cached[0],
+            );
+          } else {
+            setError(
+              err instanceof
+                Error
+                ? err.message
+                : 'کێشە لە هێنانی قارییەکان.',
+            );
+          }
+        }
+      };
+
+    void load();
 
     return () => {
       cancelled = true;
     };
   }, []);
 
-  /*
-   * Load page Quran text.
-   */
+  /* =======================================================
+     LOAD PAGE QURAN
+     ======================================================= */
+
   useEffect(() => {
-    let cancelled = false;
+    let cancelled =
+      false;
 
-    const load = async () => {
-      try {
-        const data =
-          await fetchPageAyahs(
-            currentPage,
+    const load =
+      async () => {
+        try {
+          const data =
+            await fetchPageAyahs(
+              currentPage,
+            );
+
+          if (
+            cancelled ||
+            !mountedRef.current
+          ) {
+            return;
+          }
+
+          setAyahs(
+            data,
           );
+        } catch {
+          if (
+            cancelled ||
+            !mountedRef.current
+          ) {
+            return;
+          }
 
-        if (cancelled) return;
+          setAyahs([]);
+        }
+      };
 
-        setAyahs(data);
-      } catch {
-        if (cancelled) return;
-
-        setAyahs([]);
-      }
-    };
-
-    load();
+    void load();
 
     return () => {
       cancelled = true;
     };
-  }, [currentPage]);
+  }, [
+    currentPage,
+  ]);
 
-  /*
-   * Whenever page or reciter changes:
-   * stop old audio and load timing for new surah.
-   */
+  /* =======================================================
+     PAGE AYahs
+     ======================================================= */
+
+  const pageAyahs =
+    useMemo(() => {
+      if (!ayahs.length) {
+        return [];
+      }
+
+      const fromSelectedSurah =
+        ayahs.filter(
+          (ayah) =>
+            Number(
+              ayah?.surah
+                ?.number ??
+                selectedSurah,
+            ) ===
+            selectedSurah,
+        );
+
+      return fromSelectedSurah.length
+        ? fromSelectedSurah
+        : ayahs;
+    }, [
+      ayahs,
+      selectedSurah,
+    ]);
+
+  /* =======================================================
+     RESET PLAYER WHEN PAGE / RECITER CHANGES
+     ======================================================= */
+
   useEffect(() => {
     const audio =
       audioRef.current;
 
+    activeRequestRef.current +=
+      1;
+
     if (audio) {
       audio.pause();
+
       audio.removeAttribute(
         'src',
       );
+
       audio.load();
     }
 
+    loadingRef.current =
+      false;
+
     setIsPlaying(false);
+
+    setIsLoading(false);
+
     setPlayingAyah(null);
+
     setTimings([]);
 
     if (
-      !selectedReciter ||
+      !selectedReciter
+    ) {
+      return;
+    }
+
+    if (
       !selectedReciter.timingReadId
     ) {
       return;
     }
 
-    let cancelled = false;
+    let cancelled =
+      false;
 
     const loadTiming =
       async () => {
@@ -989,17 +1605,29 @@ export function QuranReader({
             );
           }
 
-          if (!cancelled) {
-            setTimings(rows);
+          if (
+            !cancelled &&
+            mountedRef.current
+          ) {
+            setTimings(
+              rows,
+            );
           }
         } catch {
-          if (!cancelled) {
+          if (
+            !cancelled &&
+            mountedRef.current
+          ) {
+            /*
+             * Timing is optional.
+             * Audio must continue to work.
+             */
             setTimings([]);
           }
         }
       };
 
-    loadTiming();
+    void loadTiming();
 
     return () => {
       cancelled = true;
@@ -1011,19 +1639,24 @@ export function QuranReader({
     selectedSurah,
   ]);
 
-  /*
-   * Save selected reciter.
-   */
+  /* =======================================================
+     SAVE SELECTED RECITER
+     ======================================================= */
+
   useEffect(() => {
-    if (!selectedReciter) return;
+    if (
+      !selectedReciter
+    ) {
+      return;
+    }
 
     try {
       localStorage.setItem(
-        'quran_selected_reciter',
+        SELECTED_RECITER_KEY,
         selectedReciter.id,
       );
     } catch {
-      // Ignore.
+      /* Ignore. */
     }
 
     window.dispatchEvent(
@@ -1037,36 +1670,19 @@ export function QuranReader({
         },
       ),
     );
-  }, [selectedReciter]);
+  }, [
+    selectedReciter,
+  ]);
 
-  /*
-   * Which ayahs of this page belong to the selected surah.
-   */
-  const pageAyahs =
-    useMemo(() => {
-      if (!ayahs.length) return [];
-
-      const fromSelectedSurah =
-        ayahs.filter(
-          (ayah) =>
-            Number(
-              ayah?.surah?.number ??
-                selectedSurah,
-            ) ===
-            selectedSurah,
-        );
-
-      return fromSelectedSurah.length
-        ? fromSelectedSurah
-        : ayahs;
-    }, [
-      ayahs,
-      selectedSurah,
-    ]);
+  /* =======================================================
+     FIND TIMING
+     ======================================================= */
 
   const findTimingForAyah =
     useCallback(
-      (ayahNumber: number) =>
+      (
+        ayahNumber: number,
+      ) =>
         timings.find(
           (t) =>
             t.ayah ===
@@ -1075,16 +1691,15 @@ export function QuranReader({
       [timings],
     );
 
-  /*
-   * Play a specific ayah.
-   *
-   * IMPORTANT:
-   * The audio file is the real MP3Quran server file.
-   * Timing is used ONLY for seeking/highlighting.
-   */
+  /* =======================================================
+     PLAY AYAH
+     ======================================================= */
+
   const playAyah =
     useCallback(
-      async (index: number) => {
+      async (
+        index: number,
+      ) => {
         if (
           !selectedReciter ||
           loadingRef.current
@@ -1095,11 +1710,17 @@ export function QuranReader({
         const ayah =
           pageAyahs[index];
 
-        if (!ayah) return;
+        if (!ayah) {
+          return;
+        }
+
+        const requestId =
+          ++activeRequestRef.current;
 
         const surah =
           Number(
-            ayah?.surah?.number ??
+            ayah?.surah
+              ?.number ??
               selectedSurah,
           );
 
@@ -1118,11 +1739,17 @@ export function QuranReader({
           setError(
             `${selectedReciter.name} ئەم سۆرەتەی تێدا نییە.`,
           );
+
           return;
         }
 
-        loadingRef.current = true;
-        setIsLoading(true);
+        loadingRef.current =
+          true;
+
+        setIsLoading(
+          true,
+        );
+
         setError(null);
 
         try {
@@ -1133,7 +1760,9 @@ export function QuranReader({
             audio =
               new Audio();
 
-            audio.preload = 'auto';
+            audio.preload =
+              'auto';
+
             audioRef.current =
               audio;
           }
@@ -1145,58 +1774,37 @@ export function QuranReader({
             );
 
           /*
-           * Only reload when changing surah/reciter.
+           * Change source only when
+           * current audio source differs.
            */
+          const currentSrc =
+            audio.src;
+
           if (
-            audio.src !== url
+            currentSrc !==
+            url
           ) {
             audio.pause();
-            audio.src = url;
+
+            audio.src =
+              url;
+
             audio.load();
 
-            await new Promise<void>(
-              (resolve) => {
-                if (
-                  audio!.readyState >=
-                  1
-                ) {
-                  resolve();
-                  return;
-                }
-
-                const done =
-                  () => {
-                    audio!.removeEventListener(
-                      'loadedmetadata',
-                      done,
-                    );
-                    resolve();
-                  };
-
-                audio!.addEventListener(
-                  'loadedmetadata',
-                  done,
-                  {
-                    once: true,
-                  },
-                );
-
-                setTimeout(
-                  resolve,
-                  5000,
-                );
-              },
+            await waitForMetadata(
+              audio,
             );
           }
 
+          if (
+            requestId !==
+            activeRequestRef.current
+          ) {
+            return;
+          }
+
           /*
-           * Timing exists:
-           * seek exactly to ayah start.
-           *
-           * No timing:
-           * audio still plays from the beginning.
-           * This means a reciter without timing is NOT
-           * incorrectly rejected.
+           * Timing gives exact ayah position.
            */
           const timing =
             findTimingForAyah(
@@ -1206,17 +1814,29 @@ export function QuranReader({
           if (timing) {
             try {
               audio.currentTime =
-                timing.start;
+                Math.max(
+                  0,
+                  timing.start,
+                );
             } catch {
-              // Ignore seek errors.
+              /* Ignore seek errors. */
             }
-          } else if (
-            playingAyah === null
-          ) {
-            try {
-              audio.currentTime = 0;
-            } catch {
-              // Ignore.
+          } else {
+            /*
+             * Without timing:
+             * first ayah starts from beginning.
+             */
+            if (
+              playingAyah ===
+                null ||
+              audio.paused
+            ) {
+              try {
+                audio.currentTime =
+                  0;
+              } catch {
+                /* Ignore. */
+              }
             }
           }
 
@@ -1226,20 +1846,48 @@ export function QuranReader({
 
           await audio.play();
 
-          setIsPlaying(true);
-        } catch (err) {
-          setIsPlaying(false);
+          if (
+            requestId !==
+            activeRequestRef.current
+          ) {
+            return;
+          }
+
+          setIsPlaying(
+            true,
+          );
+        } catch (
+          err,
+        ) {
+          if (
+            requestId !==
+            activeRequestRef.current
+          ) {
+            return;
+          }
+
+          setIsPlaying(
+            false,
+          );
 
           setError(
-            err instanceof Error
+            err instanceof
+              Error
               ? err.message
               : 'دەنگەکە نەکرا پخش بکرێت.',
           );
         } finally {
-          loadingRef.current =
-            false;
+          if (
+            requestId ===
+            activeRequestRef.current
+          ) {
+            loadingRef.current =
+              false;
 
-          setIsLoading(false);
+            setIsLoading(
+              false,
+            );
+          }
         }
       },
       [
@@ -1251,18 +1899,23 @@ export function QuranReader({
       ],
     );
 
-  /*
-   * Audio time -> current ayah highlight.
-   */
+  /* =======================================================
+     AUDIO EVENTS
+     ======================================================= */
+
   useEffect(() => {
     const audio =
       audioRef.current;
 
-    if (!audio) return;
+    if (!audio) {
+      return;
+    }
 
     const handleTime =
       () => {
-        if (!timings.length) {
+        if (
+          !timings.length
+        ) {
           return;
         }
 
@@ -1278,7 +1931,9 @@ export function QuranReader({
                 t.end,
           );
 
-        if (!current) return;
+        if (!current) {
+          return;
+        }
 
         const index =
           pageAyahs.findIndex(
@@ -1304,9 +1959,13 @@ export function QuranReader({
     const handleEnded =
       () => {
         if (
-          playingAyah === null
+          playingAyah ===
+          null
         ) {
-          setIsPlaying(false);
+          setIsPlaying(
+            false,
+          );
+
           return;
         }
 
@@ -1321,9 +1980,49 @@ export function QuranReader({
             next,
           );
         } else {
-          setIsPlaying(false);
-          setPlayingAyah(null);
+          setIsPlaying(
+            false,
+          );
+
+          setPlayingAyah(
+            null,
+          );
         }
+      };
+
+    const handlePlay =
+      () => {
+        setIsPlaying(
+          true,
+        );
+      };
+
+    const handlePause =
+      () => {
+        /*
+         * Don't mark ended/loading transitions
+         * as a hard stop.
+         */
+        if (
+          !audio.ended
+        ) {
+          setIsPlaying(
+            false,
+          );
+        }
+      };
+
+    const handleError =
+      () => {
+        if (
+          loadingRef.current
+        ) {
+          return;
+        }
+
+        setIsPlaying(
+          false,
+        );
       };
 
     audio.addEventListener(
@@ -1336,6 +2035,21 @@ export function QuranReader({
       handleEnded,
     );
 
+    audio.addEventListener(
+      'play',
+      handlePlay,
+    );
+
+    audio.addEventListener(
+      'pause',
+      handlePause,
+    );
+
+    audio.addEventListener(
+      'error',
+      handleError,
+    );
+
     return () => {
       audio.removeEventListener(
         'timeupdate',
@@ -1346,6 +2060,21 @@ export function QuranReader({
         'ended',
         handleEnded,
       );
+
+      audio.removeEventListener(
+        'play',
+        handlePlay,
+      );
+
+      audio.removeEventListener(
+        'pause',
+        handlePause,
+      );
+
+      audio.removeEventListener(
+        'error',
+        handleError,
+      );
     };
   }, [
     timings,
@@ -1354,24 +2083,48 @@ export function QuranReader({
     playAyah,
   ]);
 
+  /* =======================================================
+     STOP
+     ======================================================= */
+
   const stopAudio =
     useCallback(() => {
+      activeRequestRef.current +=
+        1;
+
+      loadingRef.current =
+        false;
+
       const audio =
         audioRef.current;
 
-      if (!audio) return;
+      if (audio) {
+        audio.pause();
 
-      audio.pause();
-
-      try {
-        audio.currentTime = 0;
-      } catch {
-        // Ignore.
+        try {
+          audio.currentTime =
+            0;
+        } catch {
+          /* Ignore. */
+        }
       }
 
-      setIsPlaying(false);
-      setPlayingAyah(null);
+      setIsPlaying(
+        false,
+      );
+
+      setIsLoading(
+        false,
+      );
+
+      setPlayingAyah(
+        null,
+      );
     }, []);
+
+  /* =======================================================
+     TOGGLE PLAY
+     ======================================================= */
 
   const togglePlay =
     useCallback(() => {
@@ -1380,29 +2133,41 @@ export function QuranReader({
 
       if (
         !audio ||
-        playingAyah === null
+        playingAyah ===
+          null
       ) {
-        if (pageAyahs.length) {
-          void playAyah(0);
+        if (
+          pageAyahs.length
+        ) {
+          void playAyah(
+            0,
+          );
         }
 
         return;
       }
 
-      if (audio.paused) {
+      if (
+        audio.paused
+      ) {
         audio
           .play()
-          .then(() =>
-            setIsPlaying(true),
-          )
-          .catch(() =>
+          .then(() => {
+            setIsPlaying(
+              true,
+            );
+          })
+          .catch(() => {
             setError(
               'دەنگەکە نەکرا پخش بکرێت.',
-            ),
-          );
+            );
+          });
       } else {
         audio.pause();
-        setIsPlaying(false);
+
+        setIsPlaying(
+          false,
+        );
       }
     }, [
       playingAyah,
@@ -1410,49 +2175,176 @@ export function QuranReader({
       playAyah,
     ]);
 
-  /*
-   * Only load current page and nearby pages.
-   * This prevents Android from trying to decode 604
-   * large images at once.
-   */
-  const visiblePages = useMemo(
-    () =>
-      Array.from(
-        {
-          length: PAGE_COUNT,
-        },
-        (_, i) =>
-          i + 1,
-      ),
-    [],
-  );
+  /* =======================================================
+     CHANGE RECITER
+     ======================================================= */
+
+  const handleReciterChange =
+    useCallback(
+      (
+        reciterId: string,
+      ) => {
+        const found =
+          reciters.find(
+            (r) =>
+              r.id ===
+              reciterId,
+          );
+
+        if (!found) {
+          return;
+        }
+
+        activeRequestRef.current +=
+          1;
+
+        loadingRef.current =
+          false;
+
+        const audio =
+          audioRef.current;
+
+        if (audio) {
+          audio.pause();
+
+          audio.removeAttribute(
+            'src',
+          );
+
+          audio.load();
+        }
+
+        setIsPlaying(
+          false,
+        );
+
+        setIsLoading(
+          false,
+        );
+
+        setPlayingAyah(
+          null,
+        );
+
+        setError(null);
+
+        setSelectedReciter(
+          found,
+        );
+      },
+      [reciters],
+    );
+
+  /* =======================================================
+     PAGE NAVIGATION
+     ======================================================= */
+
+  const goNextPage =
+    useCallback(() => {
+      stopAudio();
+
+      if (
+        currentPage <
+        PAGE_COUNT
+      ) {
+        onNextPage();
+      }
+    }, [
+      stopAudio,
+      currentPage,
+      onNextPage,
+    ]);
+
+  const goPrevPage =
+    useCallback(() => {
+      stopAudio();
+
+      if (
+        currentPage > 1
+      ) {
+        onPrevPage();
+      }
+    }, [
+      stopAudio,
+      currentPage,
+      onPrevPage,
+    ]);
+
+  /* =======================================================
+     VISIBLE PAGES
+
+     Kept only as a logical page count.
+     We intentionally DO NOT render 604 images.
+     ======================================================= */
+
+  const visiblePages =
+    useMemo(
+      () =>
+        Array.from(
+          {
+            length:
+              PAGE_COUNT,
+          },
+          (_, i) =>
+            i + 1,
+        ),
+      [],
+    );
+
+  /* =======================================================
+     UI
+     ======================================================= */
 
   return (
     <div
       dir="rtl"
       style={{
-        position: 'fixed',
+        position:
+          'fixed',
+
         inset: 0,
-        overflow: 'hidden',
-        background: '#fff',
+
+        overflow:
+          'hidden',
+
+        background:
+          '#fff',
+
         ...bgStyle,
       }}
     >
-      {/* TOP BAR */}
+      {/* =================================================
+          TOP BAR
+          ================================================= */}
+
       <div
         style={{
-          position: 'absolute',
+          position:
+            'absolute',
+
           top: 0,
+
           left: 0,
+
           right: 0,
+
           zIndex: 20,
-          padding: '10px',
+
+          padding:
+            '10px',
+
           background:
             'rgba(255,255,255,0.96)',
+
           borderBottom:
             '1px solid #eee',
-          display: 'flex',
-          alignItems: 'center',
+
+          display:
+            'flex',
+
+          alignItems:
+            'center',
+
           gap: 8,
         }}
       >
@@ -1462,11 +2354,20 @@ export function QuranReader({
             onBackToIndex
           }
           style={{
-            border: '1px solid #ddd',
-            background: '#fff',
-            borderRadius: 10,
-            padding: '8px 11px',
-            fontSize: 18,
+            border:
+              '1px solid #ddd',
+
+            background:
+              '#fff',
+
+            borderRadius:
+              10,
+
+            padding:
+              '8px 11px',
+
+            fontSize:
+              18,
           }}
         >
           ✕
@@ -1477,30 +2378,33 @@ export function QuranReader({
             selectedReciter?.id ??
             ''
           }
-          onChange={(e) => {
-            const found =
-              reciters.find(
-                (r) =>
-                  r.id ===
-                  e.target.value,
-              );
-
-            if (found) {
-              setSelectedReciter(
-                found,
-              );
-            }
-          }}
+          onChange={(e) =>
+            handleReciterChange(
+              e.target.value,
+            )
+          }
           style={{
             flex: 1,
+
             minWidth: 0,
+
             border:
               '1px solid #ddd',
-            borderRadius: 10,
-            padding: '9px',
-            background: '#fff',
-            fontSize: 14,
-            direction: 'rtl',
+
+            borderRadius:
+              10,
+
+            padding:
+              '9px',
+
+            background:
+              '#fff',
+
+            fontSize:
+              14,
+
+            direction:
+              'rtl',
           }}
         >
           {!reciters.length && (
@@ -1510,14 +2414,20 @@ export function QuranReader({
           )}
 
           {reciters.map(
-            (reciter) => (
+            (
+              reciter,
+            ) => (
               <option
-                key={reciter.id}
-                value={reciter.id}
+                key={
+                  reciter.id
+                }
+                value={
+                  reciter.id
+                }
               >
                 {reciter.name}
                 {reciter.timingReadId
-                  ? ' • timing'
+                  ? ' • Timing'
                   : ''}
               </option>
             ),
@@ -1525,48 +2435,117 @@ export function QuranReader({
         </select>
       </div>
 
-      {/* ERROR */}
+      {/* =================================================
+          ERROR
+          ================================================= */}
+
       {error && (
         <div
           style={{
-            position: 'absolute',
+            position:
+              'absolute',
+
             top: 65,
+
             left: 10,
+
             right: 10,
+
             zIndex: 30,
+
             background:
               '#fff4f4',
-            color: '#a00',
+
+            color:
+              '#a00',
+
             border:
               '1px solid #f0caca',
-            borderRadius: 10,
-            padding: '9px 12px',
-            fontSize: 12,
-            textAlign: 'right',
+
+            borderRadius:
+              10,
+
+            padding:
+              '9px 12px',
+
+            fontSize:
+              12,
+
+            textAlign:
+              'right',
           }}
         >
           {error}
+
+          <button
+            type="button"
+            onClick={() =>
+              setError(null)
+            }
+            style={{
+              float:
+                'left',
+
+              border:
+                'none',
+
+              background:
+                'transparent',
+
+              color:
+                '#a00',
+
+              fontSize:
+                15,
+
+              cursor:
+                'pointer',
+            }}
+          >
+            ×
+          </button>
         </div>
       )}
 
-      {/* PAGE */}
+      {/* =================================================
+          PAGE
+          ================================================= */}
+
       <div
         style={{
-          position: 'absolute',
+          position:
+            'absolute',
+
           inset: 0,
-          overflowY: 'auto',
-          paddingTop: 65,
-          paddingBottom: 90,
+
+          overflowY:
+            'auto',
+
+          paddingTop:
+            error
+              ? 105
+              : 65,
+
+          paddingBottom:
+            90,
+
           WebkitOverflowScrolling:
             'touch',
         }}
       >
         <div
           style={{
-            width: '100%',
-            maxWidth: 700,
-            margin: '0 auto',
-            position: 'relative',
+            width:
+              '100%',
+
+            maxWidth:
+              700,
+
+            margin:
+              '0 auto',
+
+            position:
+              'relative',
           }}
         >
           <img
@@ -1574,20 +2553,44 @@ export function QuranReader({
               currentPage,
             )}
             alt={`لاپەڕە ${currentPage}`}
-            draggable={false}
+            draggable={
+              false
+            }
             style={{
-              display: 'block',
-              width: '100%',
-              height: 'auto',
-              userSelect: 'none',
+              display:
+                'block',
+
+              width:
+                '100%',
+
+              height:
+                'auto',
+
+              userSelect:
+                'none',
+
               WebkitUserSelect:
                 'none',
             }}
           />
 
-          {/* AYAH CLICK AREAS */}
+          {/* =============================================
+              AYAH CLICK AREAS
+
+              NOTE:
+              This remains compatible with the current
+              audio architecture.
+
+              Later, when ayahCoordinates.ts is connected,
+              these can be replaced by exact Mushaf boxes
+              without touching the audio manager.
+              ============================================= */}
+
           {pageAyahs.map(
-            (ayah, index) => {
+            (
+              ayah,
+              index,
+            ) => {
               const active =
                 playingAyah ===
                 index;
@@ -1599,6 +2602,13 @@ export function QuranReader({
                   1,
                 );
 
+              const ayahNumber =
+                Number(
+                  ayah?.numberInSurah ??
+                    ayah?.ayah ??
+                    index + 1,
+                );
+
               return (
                 <button
                   key={`${currentPage}-${index}`}
@@ -1608,33 +2618,43 @@ export function QuranReader({
                       index,
                     )
                   }
-                  aria-label={`ئایەت ${
-                    Number(
-                      ayah?.numberInSurah ??
-                        ayah?.ayah ??
-                        index + 1,
-                    )
-                  }`}
+                  aria-label={`ئایەت ${ayahNumber}`}
                   style={{
                     position:
                       'absolute',
+
                     left: 0,
+
                     right: 0,
+
                     top:
                       `${index * height}%`,
+
                     height:
                       `${height}%`,
-                    border: 'none',
+
+                    border:
+                      'none',
+
                     background:
                       active
                         ? 'rgba(255,193,7,0.22)'
                         : 'transparent',
-                    padding: 0,
-                    margin: 0,
+
+                    padding:
+                      0,
+
+                    margin:
+                      0,
+
                     cursor:
                       'pointer',
+
                     outline:
                       'none',
+
+                    WebkitTapHighlightColor:
+                      'transparent',
                   }}
                 />
               );
@@ -1643,54 +2663,88 @@ export function QuranReader({
         </div>
       </div>
 
-      {/* BOTTOM PLAYER */}
+      {/* =================================================
+          BOTTOM PLAYER
+          ================================================= */}
+
       <div
         style={{
-          position: 'absolute',
+          position:
+            'absolute',
+
           left: 10,
+
           right: 10,
+
           bottom: 10,
+
           zIndex: 30,
+
           background:
             'rgba(255,255,255,0.97)',
+
           border:
             '1px solid #e5e5e5',
-          borderRadius: 16,
+
+          borderRadius:
+            16,
+
           boxShadow:
             '0 5px 25px rgba(0,0,0,0.12)',
-          padding: 9,
+
+          padding:
+            9,
         }}
       >
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
+            display:
+              'flex',
+
+            alignItems:
+              'center',
+
             gap: 7,
           }}
         >
+          {/* PREVIOUS */}
+
           <button
             type="button"
-            onClick={() =>
-              void onPrevPage()
+            onClick={
+              goPrevPage
             }
             disabled={
-              currentPage <= 1
+              currentPage <=
+              1
             }
             style={{
-              width: 40,
-              height: 40,
+              width:
+                40,
+
+              height:
+                40,
+
               border:
                 '1px solid #ddd',
-              borderRadius: 10,
-              background: '#fff',
+
+              borderRadius:
+                10,
+
+              background:
+                '#fff',
+
               opacity:
-                currentPage <= 1
+                currentPage <=
+                1
                   ? 0.4
                   : 1,
             }}
           >
             →
           </button>
+
+          {/* PLAY */}
 
           <button
             type="button"
@@ -1702,13 +2756,27 @@ export function QuranReader({
               !selectedReciter
             }
             style={{
-              width: 44,
-              height: 44,
-              border: 'none',
-              borderRadius: 12,
-              background: '#222',
-              color: '#fff',
-              fontSize: 17,
+              width:
+                44,
+
+              height:
+                44,
+
+              border:
+                'none',
+
+              borderRadius:
+                12,
+
+              background:
+                '#222',
+
+              color:
+                '#fff',
+
+              fontSize:
+                17,
+
               opacity:
                 isLoading
                   ? 0.5
@@ -1722,38 +2790,60 @@ export function QuranReader({
                 : '▶'}
           </button>
 
+          {/* STOP */}
+
           <button
             type="button"
             onClick={
               stopAudio
             }
             style={{
-              width: 40,
-              height: 40,
+              width:
+                40,
+
+              height:
+                40,
+
               border:
                 '1px solid #ddd',
-              borderRadius: 10,
-              background: '#fff',
+
+              borderRadius:
+                10,
+
+              background:
+                '#fff',
             }}
           >
             ■
           </button>
 
+          {/* INFO */}
+
           <div
             style={{
               flex: 1,
-              minWidth: 0,
-              textAlign: 'right',
+
+              minWidth:
+                0,
+
+              textAlign:
+                'right',
             }}
           >
             <div
               style={{
-                fontSize: 12,
-                fontWeight: 700,
+                fontSize:
+                  12,
+
+                fontWeight:
+                  700,
+
                 whiteSpace:
                   'nowrap',
+
                 overflow:
                   'hidden',
+
                 textOverflow:
                   'ellipsis',
               }}
@@ -1764,9 +2854,14 @@ export function QuranReader({
 
             <div
               style={{
-                marginTop: 3,
-                fontSize: 10,
-                color: '#777',
+                marginTop:
+                  3,
+
+                fontSize:
+                  10,
+
+                color:
+                  '#777',
               }}
             >
               {playingAyah !==
@@ -1784,28 +2879,39 @@ export function QuranReader({
                     )
                   }`
                 : selectedReciter
-                    ?.timingReadId
+                      ?.timingReadId
                   ? 'Timing چالاکە'
                   : 'دەنگ بەردەستە'}
             </div>
           </div>
 
+          {/* NEXT */}
+
           <button
             type="button"
-            onClick={() =>
-              void onNextPage()
+            onClick={
+              goNextPage
             }
             disabled={
               currentPage >=
               PAGE_COUNT
             }
             style={{
-              width: 40,
-              height: 40,
+              width:
+                40,
+
+              height:
+                40,
+
               border:
                 '1px solid #ddd',
-              borderRadius: 10,
-              background: '#fff',
+
+              borderRadius:
+                10,
+
+              background:
+                '#fff',
+
               opacity:
                 currentPage >=
                 PAGE_COUNT
@@ -1817,31 +2923,46 @@ export function QuranReader({
           </button>
         </div>
 
+        {/* PAGE NUMBER */}
+
         {showNumbers && (
           <div
             style={{
-              textAlign: 'center',
-              marginTop: 5,
-              fontSize: 10,
-              color: '#888',
+              textAlign:
+                'center',
+
+              marginTop:
+                5,
+
+              fontSize:
+                10,
+
+              color:
+                '#888',
             }}
           >
-            لاپەڕە {currentPage} /{' '}
+            لاپەڕە{' '}
+            {currentPage} /{' '}
             {PAGE_COUNT}
           </div>
         )}
       </div>
 
-      {/* Hidden audio element is created programmatically.
-          This empty list intentionally prevents 604 images
-          from being rendered simultaneously. */}
+      {/* =================================================
+          LOGICAL PAGE LIST
+
+          No images are rendered here.
+          ================================================= */}
+
       <div
         aria-hidden="true"
         style={{
-          display: 'none',
+          display:
+            'none',
         }}
       >
-        {visiblePages.length === 0
+        {visiblePages.length ===
+        0
           ? null
           : null}
       </div>
