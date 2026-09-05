@@ -7,8 +7,6 @@ import React, {
   useState,
 } from 'react';
 
-import { getAyahBoxesForPage } from '../../data/ayahCoordinates';
-
 const PAGE_COUNT = 604;
 
 const AYAH_CANVAS_WIDTH = 1260;
@@ -46,16 +44,6 @@ interface AyahData {
   [key: string]: unknown;
 }
 
-interface AyahBox {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  ayahNumber?: number;
-  number?: number;
-  index?: number;
-}
-
 interface ReaderReciter {
   id: string;
   name: string;
@@ -72,13 +60,6 @@ interface TimingItem {
   end: number;
 }
 
-/*
- * These are the initial Kurdish reciters.
- *
- * The actual MP3Quran read is discovered dynamically from the
- * MP3Quran API using the base URL, so we don't depend only on
- * hard-coded timing IDs.
- */
 const KURDISH_RECITERS: ReaderReciter[] = [
   {
     id: 'peshawa_kurdi',
@@ -93,7 +74,8 @@ const KURDISH_RECITERS: ReaderReciter[] = [
     name: 'ڕەعد کوردی',
     subName: 'کوردی',
     source: 'mp3quran',
-    baseUrl: 'https://server6.mp3quran.net/kurdi/',
+    baseUrl:
+      'https://server6.mp3quran.net/kurdi/',
   },
   {
     id: 'rizgar_kurdi',
@@ -158,7 +140,7 @@ const formatPageNumber = (page: number) =>
 
 const getPageImageUrl = (page: number) =>
   `https://android.quran.com/data/width_1260/page${formatPageNumber(
-    page,
+    page
   )}.png`;
 
 const normalizeUrl = (url: string) =>
@@ -166,32 +148,22 @@ const normalizeUrl = (url: string) =>
 
 const getGlobalAyahNumber = (
   ayah: AyahData | undefined,
-  fallback: number,
+  fallback: number
 ) =>
   Number(
     ayah?.globalAyah ??
       ayah?.number ??
-      fallback,
+      fallback
   );
 
 const getLocalAyahNumber = (
   ayah: AyahData | undefined,
-  fallback: number,
+  fallback: number
 ) =>
   Number(
     ayah?.numberInSurah ??
       ayah?.ayah ??
-      fallback,
-  );
-
-const getBoxAyahNumber = (
-  box: AyahBox | undefined,
-  fallback: number,
-) =>
-  Number(
-    box?.ayahNumber ??
-      box?.number ??
-      (Number(box?.index ?? fallback) + 1),
+      fallback
   );
 
 const normalizeTime = (value: unknown) => {
@@ -201,16 +173,12 @@ const normalizeTime = (value: unknown) => {
     return 0;
   }
 
-  /*
-   * MP3Quran normally returns milliseconds.
-   * Small values are treated as seconds.
-   */
   return n > 10000 ? n / 1000 : n;
 };
 
 const getEveryAyahUrl = (
   reciter: ReaderReciter,
-  globalAyah: number,
+  globalAyah: number
 ) => {
   if (!reciter.serverKey) {
     return null;
@@ -221,35 +189,22 @@ const getEveryAyahUrl = (
   }/${String(globalAyah).padStart(6, '0')}.mp3`;
 };
 
-const getSurahAudioUrl = (
-  reciter: ReaderReciter,
-  surahNumber: number,
-) => {
-  if (!reciter.baseUrl) {
-    return null;
-  }
-
-  return `${normalizeUrl(reciter.baseUrl)}${String(
-    surahNumber,
-  ).padStart(3, '0')}.mp3`;
-};
-
 async function getMp3QuranRead(
-  reciter: ReaderReciter,
+  reciter: ReaderReciter
 ) {
   if (!reciter.baseUrl) {
     throw new Error(
-      'MP3Quran base URL بۆ ئەم قارییە نییە.',
+      'MP3Quran base URL بۆ ئەم قارییە نییە.'
     );
   }
 
   const response = await fetch(
-    MP3QURAN_RECITERS_API,
+    MP3QURAN_RECITERS_API
   );
 
   if (!response.ok) {
     throw new Error(
-      `MP3Quran API error: ${response.status}`,
+      `MP3Quran API error: ${response.status}`
     );
   }
 
@@ -262,7 +217,7 @@ async function getMp3QuranRead(
       [];
 
   const wanted = normalizeUrl(
-    reciter.baseUrl,
+    reciter.baseUrl
   );
 
   for (const item of reciters) {
@@ -271,8 +226,8 @@ async function getMp3QuranRead(
         String(
           moshaf?.server ??
             moshaf?.folder_url ??
-            '',
-        ),
+            ''
+        )
       );
 
       if (
@@ -284,7 +239,7 @@ async function getMp3QuranRead(
           id: String(
             moshaf?.id ??
               item?.id ??
-              '',
+              ''
           ),
           folder,
         };
@@ -292,79 +247,36 @@ async function getMp3QuranRead(
     }
   }
 
-  /*
-   * If the API didn't match the folder exactly,
-   * try the reciter name.
-   */
-  const nameLower = reciter.name
-    .toLowerCase();
-
-  for (const item of reciters) {
-    const itemName = String(
-      item?.name ??
-        item?.reciter_name ??
-        '',
-    ).toLowerCase();
-
-    if (
-      itemName &&
-      (
-        itemName.includes(nameLower) ||
-        nameLower.includes(itemName)
-      )
-    ) {
-      const moshaf =
-        item?.moshaf?.[0];
-
-      if (moshaf) {
-        return {
-          id: String(
-            moshaf?.id ??
-              item?.id ??
-              '',
-          ),
-          folder: normalizeUrl(
-            String(
-              moshaf?.server ??
-                moshaf?.folder_url ??
-                '',
-            ),
-          ),
-        };
-      }
-    }
-  }
-
   throw new Error(
-    `قاری ${reciter.name} لە MP3Quran نەدۆزرایەوە.`,
+    `قاری ${reciter.name} لە MP3Quran نەدۆزرایەوە.`
   );
 }
 
 async function getMp3QuranTiming(
   readId: string | number,
-  surahNumber: number,
+  surahNumber: number
 ): Promise<TimingItem[]> {
   const url = new URL(
-    MP3QURAN_TIMING_API,
+    MP3QURAN_TIMING_API
   );
 
   url.searchParams.set(
     'surah',
-    String(surahNumber),
+    String(surahNumber)
   );
 
   url.searchParams.set(
     'read',
-    String(readId),
+    String(readId)
   );
 
   const response = await fetch(
-    url.toString(),
+    url.toString()
   );
 
   if (!response.ok) {
     throw new Error(
-      `Timing API error: ${response.status}`,
+      `Timing API error: ${response.status}`
     );
   }
 
@@ -383,7 +295,7 @@ async function getMp3QuranTiming(
     rows.length === 0
   ) {
     throw new Error(
-      'کاتی ئایەتەکان لە MP3Quran نەدۆزرایەوە.',
+      'کاتی ئایەتەکان لە MP3Quran نەدۆزرایەوە.'
     );
   }
 
@@ -393,34 +305,34 @@ async function getMp3QuranTiming(
         row?.ayah ??
           row?.ayah_number ??
           row?.number ??
-          index + 1,
+          index + 1
       ),
       start: normalizeTime(
         row?.start_time ??
           row?.start ??
-          0,
+          0
       ),
       end: normalizeTime(
         row?.end_time ??
           row?.end ??
-          0,
+          0
       ),
-    }),
+    })
   );
 }
 
 function findTiming(
   timings: TimingItem[],
-  ayahNumber: number,
+  ayahNumber: number
 ) {
   return (
     timings.find(
       item =>
-        item.ayah === ayahNumber,
+        item.ayah === ayahNumber
     ) ??
     timings.find(
       item =>
-        item.ayah === ayahNumber - 1,
+        item.ayah === ayahNumber - 1
     ) ??
     null
   );
@@ -428,7 +340,7 @@ function findTiming(
 
 function getSurahNumberFromPage(
   page: number,
-  surahsList?: any[],
+  surahsList?: any[]
 ) {
   if (
     !surahsList ||
@@ -444,7 +356,7 @@ function getSurahNumberFromPage(
     const startPage = Number(
       surah?.startPage ??
         surah?.page ??
-        1,
+        1
     );
 
     if (
@@ -457,44 +369,8 @@ function getSurahNumberFromPage(
   return Number(
     selected?.number ??
       selected?.id ??
-      1,
+      1
   );
-}
-
-function getSurahStartPage(
-  page: number,
-  surahsList?: any[],
-) {
-  if (
-    !surahsList ||
-    surahsList.length === 0
-  ) {
-    return null;
-  }
-
-  let selected: any = null;
-
-  for (const surah of surahsList) {
-    const startPage = Number(
-      surah?.startPage ??
-        surah?.page ??
-        1,
-    );
-
-    if (
-      startPage <= page
-    ) {
-      selected = surah;
-    }
-  }
-
-  return selected
-    ? Number(
-        selected?.startPage ??
-          selected?.page ??
-          page,
-      )
-    : null;
 }
 
 export function QuranReader({
@@ -510,32 +386,24 @@ export function QuranReader({
 }: QuranReaderProps) {
   const audioRef =
     useRef<HTMLAudioElement | null>(
-      null,
+      null
     );
 
   const scrollRef =
     useRef<HTMLDivElement | null>(
-      null,
+      null
     );
 
   const audioTokenRef =
     useRef(0);
 
-  const blobUrlRef =
-    useRef<string | null>(
-      null,
-    );
-
   const currentTimingRef =
     useRef<TimingItem | null>(
-      null,
+      null
     );
 
   const [ayahs, setAyahs] =
     useState<AyahData[]>([]);
-
-  const [ayahBoxes, setAyahBoxes] =
-    useState<AyahBox[]>([]);
 
   const [loading, setLoading] =
     useState(true);
@@ -548,7 +416,7 @@ export function QuranReader({
       try {
         return (
           localStorage.getItem(
-            'quran_selected_reciter',
+            'quran_selected_reciter'
           ) ??
           'raad_kurdi'
         );
@@ -572,19 +440,16 @@ export function QuranReader({
   const [duration, setDuration] =
     useState(0);
 
-  const [pageWidth, setPageWidth] =
-    useState(0);
-
   const selectedReciter =
     useMemo(
       () =>
         KURDISH_RECITERS.find(
           reciter =>
             reciter.id ===
-            selectedReciterId,
+            selectedReciterId
         ) ??
         KURDISH_RECITERS[1],
-      [selectedReciterId],
+      [selectedReciterId]
     );
 
   const currentSurahNumber =
@@ -592,98 +457,17 @@ export function QuranReader({
       () =>
         getSurahNumberFromPage(
           currentPage,
-          surahsList,
+          surahsList
         ),
       [
         currentPage,
         surahsList,
-      ],
-    );
-
-  const currentSurahStartPage =
-    useMemo(
-      () =>
-        getSurahStartPage(
-          currentPage,
-          surahsList,
-        ),
-      [
-        currentPage,
-        surahsList,
-      ],
-    );
-
-  const currentAyahIndex =
-    useMemo(() => {
-      if (
-        playingAyahIndex !== null
-      ) {
-        return playingAyahIndex;
-      }
-
-      return -1;
-    }, [playingAyahIndex]);
-
-  const pageImage =
-    getPageImageUrl(
-      currentPage,
+      ]
     );
 
   /*
-   * -----------------------------------------
-   * AUDIO CLEANUP
-   * -----------------------------------------
+   * Load Quran page data
    */
-
-  const revokeBlobUrl =
-    useCallback(() => {
-      if (
-        blobUrlRef.current
-      ) {
-        URL.revokeObjectURL(
-          blobUrlRef.current,
-        );
-
-        blobUrlRef.current =
-          null;
-      }
-    }, []);
-
-  const stopAudio =
-    useCallback(() => {
-      audioTokenRef.current += 1;
-
-      const audio =
-        audioRef.current;
-
-      if (audio) {
-        audio.pause();
-        audio.currentTime = 0;
-        audio.removeAttribute(
-          'src',
-        );
-        audio.load();
-      }
-
-      currentTimingRef.current =
-        null;
-
-      revokeBlobUrl();
-
-      setIsPlaying(false);
-      setPlayingAyahIndex(
-        null,
-      );
-      setCurrentTime(0);
-      setDuration(0);
-    }, [revokeBlobUrl]);
-
-  /*
-   * -----------------------------------------
-   * LOAD QURAN DATA
-   * -----------------------------------------
-   */
-
   useEffect(() => {
     let cancelled = false;
 
@@ -694,12 +478,12 @@ export function QuranReader({
       try {
         const response =
           await fetch(
-            `https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani`,
+            `https://api.alquran.cloud/v1/page/${currentPage}/editions/quran-uthmani`
           );
 
         if (!response.ok) {
           throw new Error(
-            `Quran API error: ${response.status}`,
+            `Quran API error: ${response.status}`
           );
         }
 
@@ -708,7 +492,7 @@ export function QuranReader({
 
         const editions =
           Array.isArray(
-            json?.data,
+            json?.data
           )
             ? json.data
             : [];
@@ -717,23 +501,19 @@ export function QuranReader({
           editions.find(
             (edition: any) =>
               edition?.edition?.identifier ===
-                'quran-uthmani' ||
-              edition?.edition?.identifier ===
-                'quran-uthmani',
+              'quran-uthmani'
           ) ??
           editions[0];
 
         const pageAyahs =
           Array.isArray(
-            arabicEdition?.ayahs,
+            arabicEdition?.ayahs
           )
             ? arabicEdition.ayahs
             : [];
 
         if (!cancelled) {
-          setAyahs(
-            pageAyahs,
-          );
+          setAyahs(pageAyahs);
         }
       } catch (error) {
         if (!cancelled) {
@@ -742,7 +522,7 @@ export function QuranReader({
           setErrorText(
             error instanceof Error
               ? error.message
-              : 'داتای قورئان نەهات.',
+              : 'داتای قورئان نەهات.'
           );
         }
       } finally {
@@ -760,58 +540,32 @@ export function QuranReader({
   }, [currentPage]);
 
   /*
-   * -----------------------------------------
-   * LOAD AYAH COORDINATES
-   * -----------------------------------------
+   * Stop audio whenever page or reciter changes.
    */
+  const stopAudio =
+    useCallback(() => {
+      audioTokenRef.current += 1;
 
-  useEffect(() => {
-    try {
-      const boxes =
-        getAyahBoxesForPage(
-          currentPage,
+      const audio =
+        audioRef.current;
+
+      if (audio) {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.removeAttribute(
+          'src'
         );
+        audio.load();
+      }
 
-      const normalized =
-        Array.isArray(boxes)
-          ? boxes.map(
-              (box: any) => ({
-                x: Number(
-                  box?.x ?? 0,
-                ),
-                y: Number(
-                  box?.y ?? 0,
-                ),
-                width: Number(
-                  box?.width ?? 0,
-                ),
-                height: Number(
-                  box?.height ?? 0,
-                ),
-                ayahNumber:
-                  box?.ayahNumber ??
-                  box?.number,
-                number:
-                  box?.number,
-                index:
-                  box?.index,
-              }),
-            )
-          : [];
+      currentTimingRef.current =
+        null;
 
-      setAyahBoxes(
-        normalized,
-      );
-    } catch {
-      setAyahBoxes([]);
-    }
-  }, [currentPage]);
-
-  /*
-   * -----------------------------------------
-   * STOP AUDIO WHEN PAGE CHANGES
-   * -----------------------------------------
-   */
+      setIsPlaying(false);
+      setPlayingAyahIndex(null);
+      setCurrentTime(0);
+      setDuration(0);
+    }, []);
 
   useEffect(() => {
     stopAudio();
@@ -822,11 +576,33 @@ export function QuranReader({
   ]);
 
   /*
-   * -----------------------------------------
-   * RECITER EVENT
-   * -----------------------------------------
+   * Save selected reciter.
    */
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        'quran_selected_reciter',
+        selectedReciterId
+      );
+    } catch {}
 
+    window.dispatchEvent(
+      new CustomEvent(
+        AUDIO_EVENT,
+        {
+          detail: {
+            id: selectedReciterId,
+          },
+        }
+      )
+    );
+  }, [
+    selectedReciterId,
+  ]);
+
+  /*
+   * Allow other components to change reciter.
+   */
   useEffect(() => {
     const handleReciterChange =
       (event: Event) => {
@@ -838,160 +614,31 @@ export function QuranReader({
 
         if (id) {
           setSelectedReciterId(
-            String(id),
+            String(id)
           );
         }
       };
 
     window.addEventListener(
       AUDIO_EVENT,
-      handleReciterChange,
+      handleReciterChange
     );
 
     return () => {
       window.removeEventListener(
         AUDIO_EVENT,
-        handleReciterChange,
+        handleReciterChange
       );
     };
   }, []);
 
   /*
-   * -----------------------------------------
-   * SAVE RECITER
-   * -----------------------------------------
+   * Play selected ayah.
    */
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(
-        'quran_selected_reciter',
-        selectedReciterId,
-      );
-    } catch {}
-
-    window.dispatchEvent(
-      new CustomEvent(
-        AUDIO_EVENT,
-        {
-          detail: {
-            id: selectedReciterId,
-          },
-        },
-      ),
-    );
-  }, [
-    selectedReciterId,
-  ]);
-
-  /*
-   * -----------------------------------------
-   * RESPONSIVE WIDTH
-   * -----------------------------------------
-   */
-
-  useEffect(() => {
-    const update =
-      () => {
-        setPageWidth(
-          window.innerWidth,
-        );
-      };
-
-    update();
-
-    window.addEventListener(
-      'resize',
-      update,
-    );
-
-    return () =>
-      window.removeEventListener(
-        'resize',
-        update,
-      );
-  }, []);
-
-  /*
-   * -----------------------------------------
-   * SCROLL TO ACTIVE AYAH
-   * -----------------------------------------
-   */
-
-  const scrollActiveAyahIntoView =
-    useCallback(
-      (
-        index: number,
-      ) => {
-        const box =
-          ayahBoxes[index];
-
-        if (!box) {
-          return;
-        }
-
-        const container =
-          scrollRef.current;
-
-        if (!container) {
-          return;
-        }
-
-        const scale =
-          container.clientWidth /
-          AYAH_CANVAS_WIDTH;
-
-        const targetX =
-          box.x * scale;
-
-        const targetY =
-          box.y * scale;
-
-        const viewTop =
-          container.scrollTop;
-
-        const viewBottom =
-          viewTop +
-          container.clientHeight;
-
-        const boxTop =
-          targetY;
-
-        const boxBottom =
-          targetY +
-          box.height * scale;
-
-        if (
-          boxTop < viewTop ||
-          boxBottom >
-            viewBottom
-        ) {
-          container.scrollTo({
-            top: Math.max(
-              0,
-              targetY -
-                container.clientHeight /
-                  2,
-            ),
-            behavior:
-              'smooth',
-          });
-        }
-      },
-      [ayahBoxes],
-    );
-
-  /*
-   * -----------------------------------------
-   * PLAY AYAH
-   * -----------------------------------------
-   */
-
   const playAyah =
     useCallback(
       async (
-        index: number,
-        autoAdvance = false,
+        index: number
       ) => {
         const ayah =
           ayahs[index];
@@ -1004,24 +651,17 @@ export function QuranReader({
           ++audioTokenRef.current;
 
         setErrorText('');
-
-        setPlayingAyahIndex(
-          index,
-        );
-
+        setPlayingAyahIndex(index);
         setIsPlaying(true);
-
-        scrollActiveAyahIntoView(
-          index,
-        );
 
         const audio =
           audioRef.current;
 
         if (!audio) {
           setErrorText(
-            'Audio element ئامادە نییە.',
+            'Audio element ئامادە نییە.'
           );
+
           setIsPlaying(false);
           return;
         }
@@ -1030,28 +670,22 @@ export function QuranReader({
           const globalAyah =
             getGlobalAyahNumber(
               ayah,
-              index + 1,
+              index + 1
             );
 
           const localAyah =
             getLocalAyahNumber(
               ayah,
-              index + 1,
+              index + 1
             );
-
-          /*
-           * ---------------------------------
-           * MP3QURAN
-           * ---------------------------------
-           */
 
           if (
             selectedReciter.source ===
-              'mp3quran'
+            'mp3quran'
           ) {
             const read =
               await getMp3QuranRead(
-                selectedReciter,
+                selectedReciter
               );
 
             if (
@@ -1064,7 +698,7 @@ export function QuranReader({
             const timing =
               await getMp3QuranTiming(
                 read.id,
-                currentSurahNumber,
+                currentSurahNumber
               );
 
             if (
@@ -1077,67 +711,50 @@ export function QuranReader({
             const segment =
               findTiming(
                 timing,
-                localAyah,
+                localAyah
               );
 
             if (
               !segment ||
               segment.end <=
-                segment.start
+              segment.start
             ) {
               throw new Error(
-                `Timing بۆ ئایەتی ${localAyah} بەردەست نییە.`,
+                `Timing بۆ ئایەتی ${localAyah} بەردەست نییە.`
               );
             }
 
             const src =
               `${read.folder}${String(
-                currentSurahNumber,
+                currentSurahNumber
               ).padStart(
                 3,
-                '0',
+                '0'
               )}.mp3`;
 
             currentTimingRef.current =
               segment;
 
             audio.src = src;
-
             audio.currentTime =
               segment.start;
 
-            setDuration(
-              Number.isFinite(
-                audio.duration,
-              )
-                ? audio.duration
-                : segment.end,
-            );
-
             await audio.play();
 
-            setIsPlaying(
-              true,
-            );
+            setIsPlaying(true);
 
             return;
           }
 
-          /*
-           * ---------------------------------
-           * EVERYAYAH
-           * ---------------------------------
-           */
-
           const src =
             getEveryAyahUrl(
               selectedReciter,
-              globalAyah,
+              globalAyah
             );
 
           if (!src) {
             throw new Error(
-              'Audio URL بۆ ئەم قارییە نییە.',
+              'Audio URL بۆ ئەم قارییە نییە.'
             );
           }
 
@@ -1149,9 +766,7 @@ export function QuranReader({
 
           await audio.play();
 
-          setIsPlaying(
-            true,
-          );
+          setIsPlaying(true);
         } catch (error) {
           if (
             token !==
@@ -1161,34 +776,25 @@ export function QuranReader({
           }
 
           setIsPlaying(false);
-          setPlayingAyahIndex(
-            null,
-          );
+          setPlayingAyahIndex(null);
 
           setErrorText(
             error instanceof Error
               ? error.message
-              : 'دەنگ نەکرایەوە.',
+              : 'دەنگ نەکرایەوە.'
           );
         }
       },
       [
         ayahs,
         currentSurahNumber,
-        scrollActiveAyahIntoView,
         selectedReciter,
-      ],
+      ]
     );
 
   /*
-   * -----------------------------------------
-   * AUDIO TIME UPDATE
-   * -----------------------------------------
-   *
-   * This is the important part for
-   * synchronizing audio + highlight.
+   * Audio timing + automatic ayah advance.
    */
-
   const handleTimeUpdate =
     useCallback(() => {
       const audio =
@@ -1201,26 +807,18 @@ export function QuranReader({
       const time =
         audio.currentTime;
 
-      setCurrentTime(
-        time,
-      );
+      setCurrentTime(time);
 
       const timing =
         currentTimingRef.current;
 
       if (
         !timing ||
-        playingAyahIndex ===
-          null
+        playingAyahIndex === null
       ) {
         return;
       }
 
-      /*
-       * If current audio passed the
-       * end time of the current ayah,
-       * immediately move to the next one.
-       */
       if (
         time >=
         timing.end - 0.06
@@ -1236,8 +834,7 @@ export function QuranReader({
           ayahs.length
         ) {
           void playAyah(
-            nextIndex,
-            true,
+            nextIndex
           );
         } else {
           stopAudio();
@@ -1250,37 +847,10 @@ export function QuranReader({
       stopAudio,
     ]);
 
-  /*
-   * -----------------------------------------
-   * AUDIO EVENTS
-   * -----------------------------------------
-   */
-
-  const handleLoadedMetadata =
-    useCallback(() => {
-      const audio =
-        audioRef.current;
-
-      if (!audio) {
-        return;
-      }
-
-      if (
-        Number.isFinite(
-          audio.duration,
-        )
-      ) {
-        setDuration(
-          audio.duration,
-        );
-      }
-    }, []);
-
   const handleEnded =
     useCallback(() => {
       if (
-        playingAyahIndex ===
-        null
+        playingAyahIndex === null
       ) {
         stopAudio();
         return;
@@ -1294,8 +864,7 @@ export function QuranReader({
         ayahs.length
       ) {
         void playAyah(
-          nextIndex,
-          true,
+          nextIndex
         );
       } else {
         stopAudio();
@@ -1307,17 +876,32 @@ export function QuranReader({
       stopAudio,
     ]);
 
-  /*
-   * -----------------------------------------
-   * CLICK ON AYAH
-   * -----------------------------------------
-   */
+  const handleLoadedMetadata =
+    useCallback(() => {
+      const audio =
+        audioRef.current;
 
+      if (!audio) {
+        return;
+      }
+
+      if (
+        Number.isFinite(
+          audio.duration
+        )
+      ) {
+        setDuration(
+          audio.duration
+        );
+      }
+    }, []);
+
+  /*
+   * Click on ayah.
+   */
   const handleAyahClick =
     useCallback(
-      (
-        index: number,
-      ) => {
+      (index: number) => {
         if (
           playingAyahIndex ===
             index &&
@@ -1327,25 +911,19 @@ export function QuranReader({
           return;
         }
 
-        void playAyah(
-          index,
-          false,
-        );
+        void playAyah(index);
       },
       [
         isPlaying,
         playAyah,
         playingAyahIndex,
         stopAudio,
-      ],
+      ]
     );
 
   /*
-   * -----------------------------------------
-   * PREVIOUS / NEXT
-   * -----------------------------------------
+   * Navigation.
    */
-
   const handlePrevious =
     useCallback(() => {
       stopAudio();
@@ -1365,35 +943,27 @@ export function QuranReader({
     ]);
 
   /*
-   * -----------------------------------------
-   * SELECT RECITER
-   * -----------------------------------------
+   * Select reciter.
    */
-
   const selectReciter =
     useCallback(
       (
-        reciter: ReaderReciter,
+        reciter: ReaderReciter
       ) => {
         stopAudio();
 
         setSelectedReciterId(
-          reciter.id,
+          reciter.id
         );
 
-        setShowReciters(
-          false,
-        );
+        setShowReciters(false);
       },
-      [stopAudio],
+      [stopAudio]
     );
 
   /*
-   * -----------------------------------------
-   * PAGE JUMP
-   * -----------------------------------------
+   * Page scroll -> App currentPage.
    */
-
   const handleScroll =
     useCallback(() => {
       const container =
@@ -1411,13 +981,10 @@ export function QuranReader({
           container.scrollLeft /
             Math.max(
               1,
-              container.clientWidth,
-            ),
+              container.clientWidth
+            )
         );
 
-      /*
-       * Pages are displayed 604 -> 1.
-       */
       const targetPage =
         PAGE_COUNT - index;
 
@@ -1427,18 +994,12 @@ export function QuranReader({
           PAGE_COUNT
       ) {
         onJumpToPage(
-          targetPage,
+          targetPage
         );
       }
     }, [
       onJumpToPage,
     ]);
-
-  /*
-   * -----------------------------------------
-   * CLEANUP
-   * -----------------------------------------
-   */
 
   useEffect(() => {
     return () => {
@@ -1447,85 +1008,69 @@ export function QuranReader({
   }, [stopAudio]);
 
   /*
-   * -----------------------------------------
-   * RENDER AYAH BOXES
-   * -----------------------------------------
+   * Temporary approximate ayah areas.
+   *
+   * چونکە ayahCoordinates.ts نییە،
+   * ئێستا ئایەتەکان بە یەکسانی
+   * لەسەر لاپەڕە دابەش دەکرێن.
+   *
+   * دواتر coordinate ـی ڕاستەقینە
+   * لێرە جێگیر دەکەین.
    */
-
-  const renderAyahBoxes =
+  const renderAyahAreas =
     () => {
       if (
-        ayahBoxes.length === 0
+        ayahs.length === 0
       ) {
         return null;
       }
 
-      return ayahBoxes.map(
+      const topStart = 17;
+      const bottomEnd = 91;
+      const availableHeight =
+        bottomEnd - topStart;
+
+      const itemHeight =
+        availableHeight /
+        ayahs.length;
+
+      return ayahs.map(
         (
-          box,
-          index,
+          ayah,
+          index
         ) => {
-          const ayahNumber =
-            getBoxAyahNumber(
-              box,
-              index,
-            );
-
-          const matchingIndex =
-            ayahs.findIndex(
-              (
-                ayah,
-                ayahIndex,
-              ) =>
-                getLocalAyahNumber(
-                  ayah,
-                  ayahIndex + 1,
-                ) ===
-                ayahNumber,
-            );
-
-          const actualIndex =
-            matchingIndex >= 0
-              ? matchingIndex
-              : index;
-
           const active =
-            actualIndex ===
-            currentAyahIndex;
+            playingAyahIndex ===
+            index;
+
+          const top =
+            topStart +
+            index *
+              itemHeight;
 
           return (
             <button
               key={`ayah-${currentPage}-${index}`}
               type="button"
-              aria-label={`ئایەتی ${ayahNumber}`}
+              aria-label={`ئایەتی ${getLocalAyahNumber(
+                ayah,
+                index + 1
+              )}`}
               onClick={() =>
                 handleAyahClick(
-                  actualIndex,
+                  index
                 )
               }
               style={{
                 position:
                   'absolute',
-                left: `${(
-                  (box.x /
-                    AYAH_CANVAS_WIDTH) *
-                  100
-                ).toFixed(5)}%`,
-                top: `${(
-                  (box.y /
-                    AYAH_CANVAS_HEIGHT) *
-                  100
-                ).toFixed(5)}%`,
-                width: `${(
-                  (box.width /
-                    AYAH_CANVAS_WIDTH) *
-                  100
-                ).toFixed(5)}%`,
-                height: `${(
-                  (box.height /
-                    AYAH_CANVAS_HEIGHT) *
-                  100
-                ).toFixed(5)}%`,
+                left: '7%',
+                right: '7%',
+                top: `${top}%`,
+                height: `${Math.max(
+                  1.2,
+                  itemHeight - 0.25
+                )}%`,
                 border:
                   active
                     ? '2px solid rgba(255, 174, 0, 0.95)'
@@ -1538,8 +1083,7 @@ export function QuranReader({
                   active
                     ? '0 0 12px rgba(255, 170, 0, 0.42)'
                     : 'none',
-                borderRadius:
-                  7,
+                borderRadius: 7,
                 padding: 0,
                 margin: 0,
                 cursor:
@@ -1550,21 +1094,15 @@ export function QuranReader({
               }}
             />
           );
-        },
+        }
       );
     };
-
-  /*
-   * -----------------------------------------
-   * PLAY / PAUSE BUTTON
-   * -----------------------------------------
-   */
 
   const toggleCurrentAyah =
     () => {
       if (
         playingAyahIndex !==
-        null &&
+          null &&
         isPlaying
       ) {
         const audio =
@@ -1574,9 +1112,7 @@ export function QuranReader({
           audio.pause();
         }
 
-        setIsPlaying(
-          false,
-        );
+        setIsPlaying(false);
 
         return;
       }
@@ -1590,9 +1126,7 @@ export function QuranReader({
 
         if (audio) {
           void audio.play();
-          setIsPlaying(
-            true,
-          );
+          setIsPlaying(true);
         }
 
         return;
@@ -1601,18 +1135,9 @@ export function QuranReader({
       if (
         ayahs.length > 0
       ) {
-        void playAyah(
-          0,
-          false,
-        );
+        void playAyah(0);
       }
     };
-
-  /*
-   * -----------------------------------------
-   * PROGRESS
-   * -----------------------------------------
-   */
 
   const progress =
     duration > 0
@@ -1622,43 +1147,14 @@ export function QuranReader({
             0,
             (currentTime /
               duration) *
-              100,
-          ),
+              100
+          )
         )
       : 0;
 
-  /*
-   * -----------------------------------------
-   * PAGE CSS
-   * -----------------------------------------
-   */
-
-  const pageShellStyle:
-    CSSProperties = {
-    position:
-      'relative',
-    flex:
-      '0 0 100%',
-    width:
-      '100%',
-    minWidth:
-      '100%',
-    height:
-      '100%',
-    display:
-      'flex',
-    justifyContent:
-      'center',
-    alignItems:
-      'center',
-    scrollSnapAlign:
-      'center',
-  };
-
   const canvasStyle:
     CSSProperties = {
-    position:
-      'relative',
+    position: 'relative',
     width:
       'min(94vw, 620px)',
     aspectRatio:
@@ -1673,8 +1169,7 @@ export function QuranReader({
       'center',
     overflow:
       'hidden',
-    borderRadius:
-      8,
+    borderRadius: 8,
     boxShadow:
       '0 8px 35px rgba(0,0,0,0.18)',
     background:
@@ -1687,10 +1182,8 @@ export function QuranReader({
       style={{
         position:
           'relative',
-        width:
-          '100%',
-        height:
-          '100%',
+        width: '100%',
+        height: '100%',
         overflow:
           'hidden',
         background:
@@ -1699,10 +1192,6 @@ export function QuranReader({
         ...bgStyle,
       }}
     >
-      {/* ---------------------------------- */}
-      {/* AUDIO ELEMENT */}
-      {/* ---------------------------------- */}
-
       <audio
         ref={audioRef}
         preload="auto"
@@ -1722,15 +1211,11 @@ export function QuranReader({
           setIsPlaying(false)
         }
         style={{
-          display:
-            'none',
+          display: 'none',
         }}
       />
 
-      {/* ---------------------------------- */}
-      {/* TOP BAR */}
-      {/* ---------------------------------- */}
-
+      {/* Header */}
       <div
         style={{
           position:
@@ -1752,8 +1237,7 @@ export function QuranReader({
             'rgba(20,20,20,0.82)',
           backdropFilter:
             'blur(12px)',
-          color:
-            '#fff',
+          color: '#fff',
         }}
       >
         <button
@@ -1765,10 +1249,8 @@ export function QuranReader({
             border: 'none',
             background:
               'rgba(255,255,255,0.12)',
-            color:
-              '#fff',
-            borderRadius:
-              10,
+            color: '#fff',
+            borderRadius: 10,
             padding:
               '8px 12px',
             cursor:
@@ -1783,10 +1265,8 @@ export function QuranReader({
             flex: 1,
             textAlign:
               'center',
-            fontSize:
-              15,
-            fontWeight:
-              700,
+            fontSize: 15,
+            fontWeight: 700,
           }}
         >
           لاپەڕەی{' '}
@@ -1798,7 +1278,7 @@ export function QuranReader({
           onClick={() =>
             setShowReciters(
               value =>
-                !value,
+                !value
             )
           }
           style={{
@@ -1806,16 +1286,13 @@ export function QuranReader({
               '1px solid rgba(255,255,255,0.18)',
             background:
               'rgba(255,255,255,0.10)',
-            color:
-              '#fff',
-            borderRadius:
-              10,
+            color: '#fff',
+            borderRadius: 10,
             padding:
               '8px 10px',
             cursor:
               'pointer',
-            maxWidth:
-              150,
+            maxWidth: 150,
             overflow:
               'hidden',
             textOverflow:
@@ -1829,10 +1306,7 @@ export function QuranReader({
         </button>
       </div>
 
-      {/* ---------------------------------- */}
-      {/* RECITER PANEL */}
-      {/* ---------------------------------- */}
-
+      {/* Reciters */}
       {showReciters && (
         <div
           style={{
@@ -1849,24 +1323,19 @@ export function QuranReader({
               'auto',
             background:
               'rgba(25,25,25,0.97)',
-            color:
-              '#fff',
-            borderRadius:
-              16,
+            color: '#fff',
+            borderRadius: 16,
             boxShadow:
               '0 15px 50px rgba(0,0,0,0.4)',
-            padding:
-              10,
+            padding: 10,
           }}
         >
           <div
             style={{
               padding:
                 '8px 10px 12px',
-              fontWeight:
-                800,
-              fontSize:
-                16,
+              fontWeight: 800,
+              fontSize: 16,
             }}
           >
             قورئانخوێن
@@ -1886,7 +1355,7 @@ export function QuranReader({
                   type="button"
                   onClick={() =>
                     selectReciter(
-                      reciter,
+                      reciter
                     )
                   }
                   style={{
@@ -1915,8 +1384,7 @@ export function QuranReader({
                       active
                         ? 'rgba(255,183,0,0.22)'
                         : 'rgba(255,255,255,0.06)',
-                    color:
-                      '#fff',
+                    color: '#fff',
                   }}
                 >
                   <span>
@@ -1950,15 +1418,12 @@ export function QuranReader({
                   )}
                 </button>
               );
-            },
+            }
           )}
         </div>
       )}
 
-      {/* ---------------------------------- */}
-      {/* PAGE VIEW */}
-      {/* ---------------------------------- */}
-
+      {/* Pages */}
       <div
         ref={scrollRef}
         onScroll={
@@ -1994,7 +1459,7 @@ export function QuranReader({
           },
           (
             _,
-            index,
+            index
           ) => {
             const page =
               PAGE_COUNT -
@@ -2003,9 +1468,26 @@ export function QuranReader({
             return (
               <div
                 key={page}
-                style={
-                  pageShellStyle
-                }
+                style={{
+                  position:
+                    'relative',
+                  flex:
+                    '0 0 100%',
+                  width:
+                    '100%',
+                  minWidth:
+                    '100%',
+                  height:
+                    '100%',
+                  display:
+                    'flex',
+                  justifyContent:
+                    'center',
+                  alignItems:
+                    'center',
+                  scrollSnapAlign:
+                    'center',
+                }}
               >
                 <div
                   style={{
@@ -2019,7 +1501,7 @@ export function QuranReader({
                 >
                   <img
                     src={getPageImageUrl(
-                      page,
+                      page
                     )}
                     alt={`Quran page ${page}`}
                     draggable={
@@ -2048,7 +1530,7 @@ export function QuranReader({
 
                   {page ===
                     currentPage &&
-                    renderAyahBoxes()}
+                    renderAyahAreas()}
 
                   {page ===
                     currentPage &&
@@ -2078,14 +1560,11 @@ export function QuranReader({
                 </div>
               </div>
             );
-          },
+          }
         )}
       </div>
 
-      {/* ---------------------------------- */}
-      {/* ERROR */}
-      {/* ---------------------------------- */}
-
+      {/* Error */}
       {errorText && (
         <div
           style={{
@@ -2097,26 +1576,20 @@ export function QuranReader({
             zIndex: 150,
             padding:
               '9px 12px',
-            borderRadius:
-              10,
+            borderRadius: 10,
             background:
               'rgba(170,30,30,0.92)',
-            color:
-              '#fff',
+            color: '#fff',
             textAlign:
               'center',
-            fontSize:
-              13,
+            fontSize: 13,
           }}
         >
           {errorText}
         </div>
       )}
 
-      {/* ---------------------------------- */}
-      {/* AUDIO CONTROL BAR */}
-      {/* ---------------------------------- */}
-
+      {/* Audio controls */}
       <div
         style={{
           position:
@@ -2125,16 +1598,14 @@ export function QuranReader({
           right: 10,
           bottom: 10,
           zIndex: 120,
-          borderRadius:
-            18,
+          borderRadius: 18,
           padding:
             '10px 12px',
           background:
             'rgba(25,25,25,0.91)',
           backdropFilter:
             'blur(15px)',
-          color:
-            '#fff',
+          color: '#fff',
           boxShadow:
             '0 10px 35px rgba(0,0,0,0.28)',
         }}
@@ -2158,16 +1629,13 @@ export function QuranReader({
               height: 44,
               flex:
                 '0 0 44px',
-              border:
-                'none',
+              border: 'none',
               borderRadius:
                 '50%',
               background:
-                'rgba(255,190,0,0.95)',
-              color:
-                '#111',
-              fontSize:
-                18,
+                '#ffbe00',
+              color: '#111',
+              fontSize: 18,
               cursor:
                 'pointer',
             }}
@@ -2190,20 +1658,16 @@ export function QuranReader({
                 'none',
               background:
                 'rgba(255,255,255,0.09)',
-              color:
-                '#fff',
-              borderRadius:
-                10,
+              color: '#fff',
+              borderRadius: 10,
               width: 38,
               height: 38,
               cursor:
-                currentPage <=
-                1
+                currentPage <= 1
                   ? 'default'
                   : 'pointer',
               opacity:
-                currentPage <=
-                1
+                currentPage <= 1
                   ? 0.35
                   : 1,
             }}
@@ -2224,31 +1688,28 @@ export function QuranReader({
                 justifyContent:
                   'space-between',
                 gap: 8,
-                fontSize:
-                  12,
-                opacity:
-                  0.8,
-                marginBottom:
-                  5,
+                fontSize: 12,
+                opacity: 0.8,
+                marginBottom: 5,
               }}
             >
               <span>
                 {playingAyahIndex !==
                 null
-                  ? `ئایەتی ${
-                      getLocalAyahNumber(
-                        ayahs[
-                          playingAyahIndex
-                        ],
-                        playingAyahIndex +
-                          1,
-                      )
-                    }`
+                  ? `ئایەتی ${getLocalAyahNumber(
+                      ayahs[
+                        playingAyahIndex
+                      ],
+                      playingAyahIndex +
+                        1
+                    )}`
                   : 'ئامادەیە'}
               </span>
 
               <span>
-                {selectedReciter.name}
+                {
+                  selectedReciter.name
+                }
               </span>
             </div>
 
@@ -2266,8 +1727,7 @@ export function QuranReader({
               <div
                 style={{
                   width: `${progress}%`,
-                  height:
-                    '100%',
+                  height: '100%',
                   background:
                     '#ffbe00',
                   borderRadius:
@@ -2293,10 +1753,8 @@ export function QuranReader({
                 'none',
               background:
                 'rgba(255,255,255,0.09)',
-              color:
-                '#fff',
-              borderRadius:
-                10,
+              color: '#fff',
+              borderRadius: 10,
               width: 38,
               height: 38,
               cursor:
@@ -2324,10 +1782,8 @@ export function QuranReader({
                 'none',
               background:
                 'rgba(255,255,255,0.09)',
-              color:
-                '#fff',
-              borderRadius:
-                10,
+              color: '#fff',
+              borderRadius: 10,
               width: 38,
               height: 38,
               cursor:
@@ -2338,10 +1794,6 @@ export function QuranReader({
           </button>
         </div>
       </div>
-
-      {/* ---------------------------------- */}
-      {/* PAGE NUMBER */}
-      {/* ---------------------------------- */}
 
       {showNumbers && (
         <div
@@ -2359,10 +1811,8 @@ export function QuranReader({
               99,
             background:
               'rgba(0,0,0,0.62)',
-            color:
-              '#fff',
-            fontSize:
-              12,
+            color: '#fff',
+            fontSize: 12,
           }}
         >
           {currentPage}
