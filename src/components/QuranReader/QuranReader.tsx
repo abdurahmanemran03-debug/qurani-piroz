@@ -127,7 +127,7 @@ const RECITER_ALIASES: Array<{
   {
     id: 'wishear_hayder_arbili',
     aliases: ['wishear hayder arbili', 'wishear haydar arbili', 'وشيار حيدر اربيلي', 'وشيار حيدر أربيلي'],
-    kurdishName: 'ویشیار حەیدەر ئەربیلی',
+    kurdishName: 'ویشیar حەیدەر ئەربیلی',
   },
   {
     id: 'rizgar_kurdi',
@@ -408,8 +408,42 @@ async function fetchMp3QuranTiming(readId: string, surahNumber: number): Promise
   return timings;
 }
 
-const makeSurahAudioUrl = (reciter: DynamicReciter, surahNumber: number): string =>
-  `${normalizeUrl(reciter.server)}${String(surahNumber).padStart(3, '0')}.mp3`;
+/*
+ * multi-source Fallback URLs generator
+ * ئەگەر سێرڤەری سەرەکی کاری نەکرد، ئەم سەرچاوە جێگرەوانە تاقی دەکرێنەوە
+ */
+const getAudioFallbackSources = (reciter: DynamicReciter, surahNumber: number): string[] => {
+  const formattedSurah = String(surahNumber).padStart(3, '0');
+  const sources: string[] = [];
+
+  // ١. سەرچاوەی سەرەکی
+  if (reciter.server) {
+    sources.push(`${normalizeUrl(reciter.server)}${formattedSurah}.mp3`);
+  }
+
+  // ٢. سەرچاوەی تایبەت بە محەمەد ئەیوب و قارییە جیهانییەکان
+  if (reciter.id === 'muhammad_ayyub') {
+    sources.push(`https://cdn.islamic.network/quran/audio-surah/128/ar.muhammadayyoob/${surahNumber}.mp3`);
+    sources.push(`https://server8.mp3quran.net/ayyub/${formattedSurah}.mp3`);
+  } else if (reciter.id === 'alafasy') {
+    sources.push(`https://cdn.islamic.network/quran/audio-surah/128/ar.alafasy/${surahNumber}.mp3`);
+  } else if (reciter.id === 'abdul_basit_murattal') {
+    sources.push(`https://cdn.islamic.network/quran/audio-surah/128/ar.abdulbasitmurattal/${surahNumber}.mp3`);
+  } else if (reciter.id === 'minshawy_murattal') {
+    sources.push(`https://cdn.islamic.network/quran/audio-surah/128/ar.minshawi/${surahNumber}.mp3`);
+  } else if (reciter.id === 'husary_murattal') {
+    sources.push(`https://cdn.islamic.network/quran/audio-surah/128/ar.husary/${surahNumber}.mp3`);
+  } else if (reciter.id === 'maher_muaiqly') {
+    sources.push(`https://cdn.islamic.network/quran/audio-surah/128/ar.mahermuaiqly/${surahNumber}.mp3`);
+  } else if (reciter.id === 'saad_ghamdi') {
+    sources.push(`https://cdn.islamic.network/quran/audio-surah/128/ar.saadghamdi/${surahNumber}.mp3`);
+  }
+
+  // ٣. سەرچاوەی گشتی یەدەگ لە MP3Quran Server 10
+  sources.push(`https://server10.mp3quran.net/${reciter.id}/${formattedSurah}.mp3`);
+
+  return sources;
+};
 
 const getInitialReciter = (reciters: DynamicReciter[]): DynamicReciter | null => {
   try {
@@ -574,7 +608,10 @@ export function QuranReader({
   }, []);
 
   /*
-   * playAyah: پشکنین لە IndexedDB دەکات، ئەگەر نەبوو لە سێرڤەر دایدەگرێت و پاشانیش هەڵی دەگرێت.
+   * playAyah:
+   * ١. سەرەتا لە IndexedDB دەگەڕێت
+   * ٢. ئەگەر نەبوو، زنجیرەیەک لە سێرڤەرەکان (Fallback System) تاقی دەکاتەوە
+   * ٣. دەنگەکە هەڵدەگرێت لەر ئامێرەکە بۆ داهاتوو
    */
   const playAyah = useCallback(
     async (index: number) => {
@@ -598,25 +635,34 @@ export function QuranReader({
         const ayahNumber = Number(ayahs[index]?.ayah ?? ayahs[index]?.numberInSurah ?? index + 1);
         let audioUrl = '';
 
-        // ١. لە IndexedDB دەگەڕێت
+        // ١. لە داتابەیسی ناوخۆیی (IndexedDB) دەگەڕێت
         const localBlob = await getSurahAudio(selectedReciter.id, surahNumber);
 
         if (localBlob) {
           audioUrl = URL.createObjectURL(localBlob);
         } else {
-          // ٢. داواکردن لە ئینتەرنێت و هەڵگرتن بۆ جارەکانی تر
-          const rawSrc = makeSurahAudioUrl(selectedReciter, surahNumber);
-          try {
-            const response = await fetch(rawSrc);
-            if (response.ok) {
-              const blob = await response.blob();
-              await saveSurahAudio(selectedReciter.id, surahNumber, blob);
-              audioUrl = URL.createObjectURL(blob);
-            } else {
-              audioUrl = rawSrc;
+          // ٢. پشکنینی سێرڤەرە جیاوازەکان (Fallback System)
+          const fallbackSources = getAudioFallbackSources(selectedReciter, surahNumber);
+          let downloadedBlob: Blob | null = null;
+
+          for (const src of fallbackSources) {
+            try {
+              const res = await fetch(src);
+              if (res.ok) {
+                downloadedBlob = await res.blob();
+                break; // ئەگەر سێرڤەرێک کاری کرد، بەکار دەهێنرێت و کۆتایی بە گەڕان دێت
+              }
+            } catch {
+              // ئەگەر سێرڤەرەکە کێشەی هەبوو، دەچێتە سەر یەکە داهاتووەکە
+              continue;
             }
-          } catch {
-            audioUrl = rawSrc;
+          }
+
+          if (downloadedBlob) {
+            await saveSurahAudio(selectedReciter.id, surahNumber, downloadedBlob);
+            audioUrl = URL.createObjectURL(downloadedBlob);
+          } else {
+            throw new Error('دەنگی ئەم سۆرەتە لە هیچ سێرڤەرێک نەدۆزرایەوە.');
           }
         }
 
@@ -657,7 +703,7 @@ export function QuranReader({
         setError(
           err instanceof Error
             ? `هەڵە: ${err.message}`
-            : 'سێرڤەرەکە خاوە یان دەنگەکە بەردەست نییە. تکایە قارییەکی تر تاقیبکەرەوە.'
+            : 'سێرڤەرەکە خاوە یان دەنگەکە بەردەست نییە.'
         );
       } finally {
         loadingPlayRef.current = false;
