@@ -97,6 +97,12 @@ export interface ReciterItem {
   category: 'kurdish' | 'kurdish_tafsir' | 'famous' | 'riwayat' | 'teaching';
   riwayah: string;
   serverKey: string;
+  /** جۆری سەرچاوەی دەنگ: mp3quran = فایلی جیاواز بۆ هەر سورەت (٠٠١.mp3...١١٤.mp3) */
+  audioSource?: 'mp3quran' | 'everyayah';
+  /** بنەڕەتی لینکی دابەزاندنی دەنگ (کۆتایی بە / بێت) */
+  audioBaseUrl?: string;
+  /** ئەگەر نەبوو، واتە هەموو ١١٤ سورەت بەردەستن. ئەگەر بوو، تەنها ژمارە سورەتەکانی ناو ئەم لیستە بەردەستن. */
+  availableSurahs?: number[];
 }
 
 export interface TafsirItem {
