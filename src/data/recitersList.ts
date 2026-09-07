@@ -123,13 +123,14 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     audioSource: 'everyayah'
   },
   {
-    id: 'ahmed_ajamy',
+    id: 'ahmed_al_ajmi',
     name: 'أحمد بن علي العجمي',
     subName: 'Ahmed Al-Ajamy',
     category: 'famous',
     riwayah: 'حفص عن عاصم',
-    serverKey: 'Ahmed_ibn_Ali_al-Ajamy_128kbps_ketaballah',
-    audioSource: 'everyayah'
+    serverKey: 'ahmed_al_ajmi',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server10.mp3quran.net/ajm/'
   },
   {
     id: 'abu_bakr_shatri',
