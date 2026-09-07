@@ -96,6 +96,11 @@ const RECITER_ALIASES: Array<{
     kurdishName: 'ئەحمەد ئەلعەجەمی',
   },
   {
+    id: 'idrees_abkar',
+    aliases: ['idrees abkar', 'idris abkar', 'إدريس أبكر', 'ادريس ابكر'],
+    kurdishName: 'إدريس أبكر',
+  },
+  {
     id: 'peshawa_kurdi',
     aliases: ['peshawa qadr al-kurdi', 'peshawa kurdi', 'peshawa', 'بيشة وا قادر الكردي', 'بيشةوا قادر الكردي'],
     kurdishName: 'پێشەوا قادر کوردی',
@@ -301,26 +306,31 @@ async function fetchDynamicReciters(): Promise<DynamicReciter[]> {
 }
 
 /*
- * وەرگرتنی هەم قارییە کوردەکان و هەم قارییەکانی تر وەک ئەحمەد ئەلعەجەمی لە ALL_RECITERS_DIRECTORY
+ * وەرگرتنی هەم قارییە کوردەکان و هەم قارییەکانی تر وەک ئەحمەد ئەلعەجەمی و ئیدریس ئەبکەر لە ALL_RECITERS_DIRECTORY
  */
 const getStaticReciters = (): DynamicReciter[] => {
   return ALL_RECITERS_DIRECTORY.filter(
     (reciter) =>
       reciter.audioSource === 'mp3quran' &&
       reciter.audioBaseUrl
-  ).map((reciter) => ({
-    id: reciter.id,
-    sourceId: reciter.id,
-    name: reciter.name,
-    riwayah: reciter.riwayah || 'حفص',
-    server: normalizeUrl(reciter.audioBaseUrl as string),
-    surahList: reciter.availableSurahs && reciter.availableSurahs.length
-      ? reciter.availableSurahs
-      : Array.from({ length: 114 }, (_, i) => i + 1),
-    surahTotal: reciter.availableSurahs?.length ?? 114,
-    moshafId: `static-${reciter.id}`,
-    source: 'mp3quran',
-  }));
+  ).map((reciter) => {
+    const rawAvailable = (reciter as any).availableSurahs;
+    const surahList = Array.isArray(rawAvailable) && rawAvailable.length > 0
+      ? rawAvailable
+      : Array.from({ length: 114 }, (_, i) => i + 1);
+
+    return {
+      id: reciter.id,
+      sourceId: reciter.id,
+      name: reciter.name,
+      riwayah: reciter.riwayah || 'حفص',
+      server: normalizeUrl(reciter.audioBaseUrl as string),
+      surahList,
+      surahTotal: surahList.length,
+      moshafId: reciter.serverKey || reciter.id,
+      source: 'mp3quran',
+    };
+  });
 };
 
 const mergeReciters = (dynamic: DynamicReciter[], staticList: DynamicReciter[]): DynamicReciter[] => {
