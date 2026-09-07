@@ -5,10 +5,13 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { ALL_RECITERS_DIRECTORY } from '../../data/recitersList';
+import { ALL_RECITERS_DIRECTORY, ReciterItem } from '../../data/recitersList';
+import {
+  getSurahAudio,
+  saveSurahAudio,
+} from '../../utils/audioStorage';
 
 const PAGE_COUNT = 604;
-
 const QURAN_PAGE_BASE = 'https://android.quran.com/data/width_1260/';
 const QURAN_API_BASE = 'https://api.alquran.cloud/v1';
 const MP3QURAN_API_BASE = 'https://mp3quran.net/api/v3';
@@ -41,7 +44,7 @@ interface DynamicReciter {
   surahList: number[];
   surahTotal: number;
   moshafId: string;
-  source: 'mp3quran';
+  source: 'mp3quran' | 'everyayah';
 }
 
 interface SurahItem {
@@ -148,8 +151,7 @@ const normalizeText = (value: unknown): string =>
     .replace(/\s+/g, ' ')
     .trim();
 
-const normalizeUrl = (url: string): string =>
-  url.endsWith('/') ? url : `${url}/`;
+const normalizeUrl = (url: string): string => (url.endsWith('/') ? url : `${url}/`);
 
 const parseSurahList = (value: unknown): number[] => {
   if (typeof value !== 'string') return [];
@@ -301,40 +303,29 @@ async function fetchDynamicReciters(): Promise<DynamicReciter[]> {
   return ordered;
 }
 
-/*
- * وەرگرتنی تەواوی قارییەکانی nav ALL_RECITERS_DIRECTORY بە شێوازی پارسکردنی دروست
- */
 const getStaticReciters = (): DynamicReciter[] => {
   const list: DynamicReciter[] = [];
 
-  for (const reciter of ALL_RECITERS_DIRECTORY as any[]) {
-    const moshafList = Array.isArray(reciter.moshaf) ? reciter.moshaf : [];
-    const bestMoshaf = moshafList.find((m: any) => m?.server) || moshafList[0];
-
-    let serverUrl = reciter.audioBaseUrl || bestMoshaf?.server || '';
+  for (const reciter of ALL_RECITERS_DIRECTORY as ReciterItem[]) {
+    let serverUrl = reciter.audioBaseUrl || '';
+    if (!serverUrl && reciter.serverKey) {
+      serverUrl = `https://everyayah.com/data/${reciter.serverKey}/`;
+    }
     if (!serverUrl) continue;
 
     serverUrl = normalizeUrl(serverUrl);
-
-    let surahs: number[] = [];
-    if (bestMoshaf?.surah_list) {
-      surahs = parseSurahList(bestMoshaf.surah_list);
-    } else if (Array.isArray(reciter.availableSurahs) && reciter.availableSurahs.length > 0) {
-      surahs = reciter.availableSurahs;
-    } else {
-      surahs = Array.from({ length: 114 }, (_, i) => i + 1);
-    }
+    const surahs = Array.from({ length: 114 }, (_, i) => i + 1);
 
     list.push({
       id: String(reciter.id),
       sourceId: String(reciter.id),
-      name: reciter.name || reciter.kurdishName || 'قاری',
-      riwayah: reciter.riwayah || bestMoshaf?.name || 'حفص',
+      name: reciter.name,
+      riwayah: reciter.riwayah || 'حفص عن عاصم',
       server: serverUrl,
       surahList: surahs,
       surahTotal: surahs.length,
-      moshafId: String(bestMoshaf?.id || reciter.serverKey || reciter.id),
-      source: 'mp3quran',
+      moshafId: String(reciter.serverKey || reciter.id),
+      source: reciter.audioSource || 'everyayah',
     });
   }
 
@@ -582,6 +573,9 @@ export function QuranReader({
     return -1;
   }, []);
 
+  /*
+   * playAyah: پشکنین لە IndexedDB دەکات، ئەگەر نەبوو لە سێرڤەر دایدەگرێت و پاشانیش هەڵی دەگرێت.
+   */
   const playAyah = useCallback(
     async (index: number) => {
       if (!selectedReciter || !ayahs[index]) return;
@@ -602,15 +596,36 @@ export function QuranReader({
 
       try {
         const ayahNumber = Number(ayahs[index]?.ayah ?? ayahs[index]?.numberInSurah ?? index + 1);
-        const src = makeSurahAudioUrl(selectedReciter, surahNumber);
+        let audioUrl = '';
 
-        if (audio.src !== src) {
-          audio.src = src;
+        // ١. لە IndexedDB دەگەڕێت
+        const localBlob = await getSurahAudio(selectedReciter.id, surahNumber);
+
+        if (localBlob) {
+          audioUrl = URL.createObjectURL(localBlob);
+        } else {
+          // ٢. داواکردن لە ئینتەرنێت و هەڵگرتن بۆ جارەکانی تر
+          const rawSrc = makeSurahAudioUrl(selectedReciter, surahNumber);
+          try {
+            const response = await fetch(rawSrc);
+            if (response.ok) {
+              const blob = await response.blob();
+              await saveSurahAudio(selectedReciter.id, surahNumber, blob);
+              audioUrl = URL.createObjectURL(blob);
+            } else {
+              audioUrl = rawSrc;
+            }
+          } catch {
+            audioUrl = rawSrc;
+          }
+        }
+
+        if (audio.src !== audioUrl) {
+          audio.src = audioUrl;
           audio.load();
         }
 
         setPlayingAyahIndex(index);
-
         await audio.play();
         setIsPlaying(true);
 
