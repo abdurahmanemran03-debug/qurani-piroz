@@ -5,7 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { ALL_RECITERS_DIRECTORY } from '../data/recitersList';
+import { ALL_RECITERS_DIRECTORY } from '../../data/recitersList';
 
 const PAGE_COUNT = 604;
 
