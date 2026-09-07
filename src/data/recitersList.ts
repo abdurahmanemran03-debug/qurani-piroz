@@ -11,8 +11,8 @@ export interface ReciterItem {
 
   /**
    * Audio source type.
-   * everyayah: Per-ayah MP3 (001001.mp3)
-   * mp3quran: Per-surah MP3 (001.mp3)
+   * everyayah: Per-ayah MP3
+   * mp3quran: Per-surah MP3
    */
   audioSource?: 'everyayah' | 'mp3quran';
 
@@ -92,6 +92,17 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     serverKey: 'Husary',
     audioSource: 'mp3quran',
     audioBaseUrl: 'https://server13.mp3quran.net/husr/'
+  },
+
+  {
+    id: 'husary_mujawwad',
+    name: 'محمود خليل الحصري (مجود)',
+    subName: 'Al-Husary (Mujawwad)',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Husary_Mujawwad',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server13.mp3quran.net/husr_mjwd/'
   },
 
   {
@@ -194,6 +205,94 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
   },
 
   {
+    id: 'ali_jaber',
+    name: 'علي عبد الله جابر',
+    subName: 'Ali Jaber',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Ali_Jaber',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server11.mp3quran.net/a_jbr/'
+  },
+
+  {
+    id: 'muhammad_ayyub',
+    name: 'محمد أيوب',
+    subName: 'Muhammad Ayyub',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Muhammad_Ayyoob',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server8.mp3quran.net/ayyub/'
+  },
+
+  {
+    id: 'muhammad_jibreel',
+    name: 'محمد جبريل',
+    subName: 'Muhammad Jibreel',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Muhammad_Jibreel',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server8.mp3quran.net/jbrl/'
+  },
+
+  {
+    id: 'khalid_jalil',
+    name: 'خالد الجليل',
+    subName: 'Khalid Al-Jaleel',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Khalid_AlJaleel',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server10.mp3quran.net/jleel/'
+  },
+
+  {
+    id: 'khalid_qahtani',
+    name: 'خالد القحطاني',
+    subName: 'Khalid Al-Qahtani',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Khaalid_Al-Qahtaanee',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server10.mp3quran.net/qht/'
+  },
+
+  {
+    id: 'abdullah_juhany',
+    name: 'عبد الله الجهني',
+    subName: 'Abdullah Al-Juhany',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Abdullah_Al-Juhany',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server13.mp3quran.net/jhn/'
+  },
+
+  {
+    id: 'abdullah_basfar',
+    name: 'عبد الله بصفر',
+    subName: 'Abdullah Basfar',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Abdullah_Basfar',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server6.mp3quran.net/bsfr/'
+  },
+
+  {
+    id: 'abdulmohsen_qasim',
+    name: 'عبد المحسن القاسم',
+    subName: 'Abdulmohsen Al-Qasim',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Abdulmohsen_Al-Qasim',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server8.mp3quran.net/qasm/'
+  },
+
+  {
     id: 'fares_abbad',
     name: 'فارس عباد',
     subName: 'Fares Abbad',
@@ -216,6 +315,28 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
   },
 
   {
+    id: 'hani_rifai',
+    name: 'هاني الرفاعي',
+    subName: 'Hani Ar-Rifai',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Hani_Rifai',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server8.mp3quran.net/hani/'
+  },
+
+  {
+    id: 'tariq_ibrahim',
+    name: 'إبراهيم الأخضر',
+    subName: 'Ibrahim Al-Akhdar',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'Ibrahim_Akhdar',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server6.mp3quran.net/akhdr/'
+  },
+
+  {
     id: 'wadih_yamani',
     name: 'وديع اليمني',
     subName: 'Wadih Al-Yamani',
@@ -224,6 +345,17 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     serverKey: 'Wadih_Al-Yamani',
     audioSource: 'mp3quran',
     audioBaseUrl: 'https://server6.mp3quran.net/wd3/'
+  },
+
+  {
+    id: 'nourin_siddeeq',
+    name: 'نورين محمد صديق',
+    subName: 'Nourin Mohamed Siddiq',
+    category: 'famous',
+    riwayah: 'الدوري عن أبي عمرو',
+    serverKey: 'Nourin_Siddiq',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server11.mp3quran.net/nourin/'
   },
 
   // ==========================================
@@ -239,6 +371,39 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     serverKey: 'Yassin_AlJazaery_Warsh',
     audioSource: 'mp3quran',
     audioBaseUrl: 'https://server11.mp3quran.net/jza/Rewayat-Warsh-A-n-Nafi/'
+  },
+
+  {
+    id: 'miftah_saltany_duri',
+    name: 'مفتاح السلطني (رواية الدوري)',
+    subName: 'Miftah As-Saltany (Al-Duri)',
+    category: 'riwayat',
+    riwayah: 'الدوري عن أبي عمرو',
+    serverKey: 'Saltany_Duri',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server10.mp3quran.net/Alafasy/Rewayat-AlDouri-A-n-Abu-Amr/'
+  },
+
+  {
+    id: 'abdulrashid_sofi_susi',
+    name: 'عبد الرشيد صوفي (رواية السوسي)',
+    subName: 'Abdulrasheed Soufi (Al-Susi)',
+    category: 'riwayat',
+    riwayah: 'السوسي عن أبي عمرو',
+    serverKey: 'Soufi_Susi',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server16.mp3quran.net/sofi/Rewayat-AlSoosi-A-n-Abi-Amr/'
+  },
+
+  {
+    id: 'abdulrashid_sofi_khalaf',
+    name: 'عبد الرشيد صوفي (رواية خلف عن حمزة)',
+    subName: 'Abdulrasheed Soufi (Khalaf)',
+    category: 'riwayat',
+    riwayah: 'خلف عن حمزة',
+    serverKey: 'Soufi_Khalaf',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server16.mp3quran.net/sofi/Rewayat-Khalaf-A-n-Hamzah/'
   },
 
   // ==========================================
