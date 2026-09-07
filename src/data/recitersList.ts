@@ -3,8 +3,6 @@ export interface ReciterItem {
   name: string;
   subName?: string;
   category:
-    | 'kurdish'
-    | 'kurdish_tafsir'
     | 'famous'
     | 'riwayat'
     | 'teaching';
@@ -35,168 +33,7 @@ export interface ReciterItem {
 
 export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
   // ==========================================
-  // ١. قورئانخوێنە دەنگخۆشەکانی کوردستان
-  // ==========================================
-
-  {
-    id: 'peshawa_kurdi',
-    name: 'پێشەوا قادر کوردی',
-    subName: 'Peshawa Qadr Al-Kurdi',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Peshawa_Kurdi',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://server16.mp3quran.net/peshawa/Rewayat-Hafs-A-n-Assem/'
-  },
-
-  {
-    id: 'raad_kurdi',
-    name: 'ڕەعد محەمەد کوردی',
-    subName: 'Raad Al-Kurdi',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Raad_Al_Kurdi',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://server6.mp3quran.net/kurdi/'
-  },
-
-  {
-    id: 'rizgar_kurdi',
-    name: 'ڕزگار محەمەد کوردی',
-    subName: 'Rizgar Muhammad Kurdi',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Rizgar_Kurdi',
-    audioSource: 'mp3quran',
-    audioBaseUrl: 'https://archive.org/download/Rizgar-Kurdy/',
-    /* تێبینی: تەنها بەشێک لە سورەتەکان (نزیکەی ٥٤ لە ١١٤) بەردەستن لەم سەرچاوەیەدا. */
-    availableSurahs: [
-      1, 2, 3, 6, 7, 8, 11, 12, 13, 14, 15, 16, 18, 19, 20, 24, 27, 31, 34, 37,
-      38, 39, 40, 44, 45, 47, 48, 50, 51, 52, 53, 54, 55, 56, 59, 60, 62, 63,
-      67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 86, 89, 91
-    ]
-  },
-
-  {
-    id: 'abdulhadi_kurdi',
-    name: 'عەبدولهادی کوردی',
-    subName: 'Abdulhadi Kurdi',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Abdulhadi_Kurdi'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  {
-    id: 'dilshad_kurdi',
-    name: 'دڵشاد ئەحمەد کوردی',
-    subName: 'Dilshad Ahmad Kurdi',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Dilshad_Kurdi'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  {
-    id: 'farman_shwani',
-    name: 'فەرمان شوانی کوردی',
-    subName: 'Farman Shwani',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Farman_Shwani'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  {
-    id: 'hamza_barzanji',
-    name: 'حەمزە بەرزنجی کوردی',
-    subName: 'Hamza Barzanji',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Hamza_Barzanji'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  {
-    id: 'sherzad_kurdi',
-    name: 'شێرزاد عەبدولڕەحمان کوردی',
-    subName: 'Sherzad Abdulrahman',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Sherzad_Kurdi'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  {
-    id: 'ubaydah_kurdi',
-    name: 'عوبەیدە موەفەق کوردی',
-    subName: 'Ubaydah Muwaffaq',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Ubaydah_Kurdi'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  {
-    id: 'ramazan_shukur',
-    name: 'ڕەمەزان شکوور کوردی',
-    subName: 'Ramazan Shakur',
-    category: 'kurdish',
-    riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Ramazan_Shukur',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://server6.mp3quran.net/shakoor/'
-  },
-
-  // ==========================================
-  // ٢. دەنگی قورئان لەگەڵ تەفسیری کوردی
-  // ==========================================
-
-  {
-    id: 'handren_tafsir',
-    name: 'هەندڕێن کوردی (تەنها تەفسیری دەنگی)',
-    subName: 'Handren (Kurdish Audio Tafsir)',
-    category: 'kurdish_tafsir',
-    riwayah: 'تەفسیری کوردی',
-    serverKey: 'Handren_Tafsir'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  {
-    id: 'ghamdi_handren_asan',
-    name: 'سەعد غامدی و هەندڕێن کوردی',
-    subName: 'Ghamdi with Kurdish Tafsir Asan',
-    category: 'kurdish_tafsir',
-    riwayah: 'قورئان + تەفسیری ئاسان',
-    serverKey: 'Ghamdi_Handren_Asan'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  {
-    id: 'ghamdi_tahsin_badini',
-    name: 'تەحسین دۆسکی و سەعد غامدی',
-    subName: 'Ghamdi with Kurdish Tafsir Badini',
-    category: 'kurdish_tafsir',
-    riwayah: 'قورئان + تەفسیری سەناهی بادینی',
-    serverKey: 'Tahsin_Doski_Sanahi'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  {
-    id: 'naqshbandi_badini',
-    name: 'د. محەمەد سەعید نەقشبەندی کوردی',
-    subName: 'Dr. Muhammad Said (Tafsir Badini)',
-    category: 'kurdish_tafsir',
-    riwayah: 'تەفسیری بادینی',
-    serverKey: 'Naqshbandi_Badini'
-    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
-  },
-
-  // ==========================================
-  // ٣. قورئانخوێنە ناودارە جیهانییەکان
+  // ١. قورئانخوێنە ناودارە جیهانییەکان
   // ==========================================
 
   {
@@ -510,7 +347,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
   },
 
   // ==========================================
-  // ٤. خوێندنەوە بە ڕیوایەتە جیاوازەکان
+  // ٢. خوێندنەوە بە ڕیوایەتە جیاوازەکان
   // ==========================================
 
   {
@@ -564,7 +401,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
   },
 
   // ==========================================
-  // ٥. دەنگی فێرکاری و منداڵان
+  // ٣. دەنگی فێرکاری و منداڵان
   // ==========================================
 
   {
