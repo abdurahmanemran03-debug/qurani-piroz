@@ -5,7 +5,6 @@ import React, {
   useRef,
   useState,
 } from 'react';
-import { ALL_RECITERS_DIRECTORY } from '../../data/recitersList';
 
 const PAGE_COUNT = 604;
 
@@ -13,7 +12,7 @@ const QURAN_PAGE_BASE = 'https://android.quran.com/data/width_1260/';
 const QURAN_API_BASE = 'https://api.alquran.cloud/v1';
 const MP3QURAN_API_BASE = 'https://mp3quran.net/api/v3';
 
-const RECITERS_CACHE_KEY = 'quran_dynamic_kurdish_reciters_v2';
+const RECITERS_CACHE_KEY = 'quran_dynamic_reciters_v2';
 const TIMING_CACHE_KEY = 'quran_mp3quran_timing_v2';
 
 interface AyahData {
@@ -81,57 +80,6 @@ interface Mp3Reciter {
   }>;
 }
 
-/*
- * لیستی ناوەکانی قورئان خوێنە کوردەکان فراوانتر کراوە
- * بۆ ئەوەی APIـی MP3Quran بتوانێت بیان دۆزێتەوە.
- */
-const KURDISH_RECITER_ALIASES: Array<{
-  id: string;
-  aliases: string[];
-  kurdishName: string;
-}> = [
-  {
-    id: 'peshawa_kurdi',
-    aliases: ['peshawa qadr al-kurdi', 'peshawa kurdi', 'peshawa', 'بيشة وا قادر الكردي', 'بيشةوا قادر الكردي'],
-    kurdishName: 'پێشەوا قادر کوردی',
-  },
-  {
-    id: 'raad_kurdi',
-    aliases: ['raad al kurdi', 'raad al-kurdi', 'raad kurdi', 'رعد محمد الكردي', 'رعد الكردي'],
-    kurdishName: 'ڕەعد کوردی',
-  },
-  {
-    id: 'ramazan_shukur',
-    aliases: ['ramadan shakoor', 'ramadan shakur', 'ramazan shukur', 'رمضان شكور'],
-    kurdishName: 'ڕەمەزان شکوور کوردی',
-  },
-  {
-    id: 'farman_shwani',
-    aliases: ['farman shawani', 'farman shwani', 'فِرمان شواني', 'فرمان شواني'],
-    kurdishName: 'فەرمان شوانی کوردی',
-  },
-  {
-    id: 'sherzad_kurdi',
-    aliases: ['shirazad taher', 'shirzad taher', 'sherzad abdulrahman', 'شيرزاد عبدالرحمن طاهر', 'شيرزاد طاهر'],
-    kurdishName: 'شێرزاد عەبدولڕەحمان کوردی',
-  },
-  {
-    id: 'wishear_hayder_arbili',
-    aliases: ['wishear hayder arbili', 'wishear haydar arbili', 'وشيار حيدر اربيلي', 'وشيار حيدر أربيلي'],
-    kurdishName: 'ویشیار حەیدەر ئەربیلی',
-  },
-  {
-    id: 'rizgar_kurdi',
-    aliases: ['rizgar kurdi', 'rizgar muhammad', 'رزكار محمد الكردي', 'رزغار الكردي'],
-    kurdishName: 'ڕزگار محەمەد کوردی',
-  },
-  {
-    id: 'dilshad_kurdi',
-    aliases: ['dilshad ahmad', 'dilshad kurdi', 'دلشاد احمد', 'دلشاد کردي'],
-    kurdishName: 'دڵشاد ئەحمەد کوردی',
-  },
-];
-
 const normalizeText = (value: unknown): string =>
   String(value ?? '')
     .toLowerCase()
@@ -144,6 +92,7 @@ const normalizeText = (value: unknown): string =>
 
 const normalizeUrl = (url: string): string =>
   url.endsWith('/') ? url : `${url}/`;
+
 const parseSurahList = (value: unknown): number[] => {
   if (typeof value !== 'string') return [];
   return value
@@ -205,18 +154,6 @@ const getPageSurahNumber = (page: number, surahsList?: SurahItem[]): number => {
   return result;
 };
 
-const findKurdishAlias = (name: string) => {
-  const normalized = normalizeText(name);
-  return KURDISH_RECITER_ALIASES.find((entry) =>
-    entry.aliases.some(
-      (alias) =>
-        normalized === normalizeText(alias) ||
-        normalized.includes(normalizeText(alias)) ||
-        normalizeText(alias).includes(normalized)
-    )
-  );
-};
-
 const chooseBestMoshaf = (moshaf: Mp3Reciter['moshaf']) => {
   if (!Array.isArray(moshaf)) return null;
 
@@ -230,7 +167,7 @@ const chooseBestMoshaf = (moshaf: Mp3Reciter['moshaf']) => {
   return usable[0] ?? null;
 };
 
-async function fetchDynamicKurdishReciters(): Promise<DynamicReciter[]> {
+async function fetchDynamicReciters(): Promise<DynamicReciter[]> {
   const response = await fetch(`${MP3QURAN_API_BASE}/reciters?language=eng`, { cache: 'no-store' });
 
   if (!response.ok) {
@@ -251,91 +188,35 @@ async function fetchDynamicKurdishReciters(): Promise<DynamicReciter[]> {
     const name = String(reciter?.name ?? '').trim();
     if (!name) continue;
 
-    const alias = findKurdishAlias(name);
-    if (!alias) continue;
-
     const moshaf = chooseBestMoshaf(reciter?.moshaf);
     if (!moshaf?.server) continue;
 
     const surahList = parseSurahList(moshaf.surah_list);
     if (!surahList.length) continue;
 
+    const id = String(reciter.id ?? name.toLowerCase().replace(/\s+/g, '_'));
+
     result.push({
-      id: alias.id,
-      sourceId: String(reciter.id ?? alias.id),
-      name: alias.kurdishName,
+      id,
+      sourceId: id,
+      name,
       nameAr: name,
       riwayah: 'حفص',
       server: normalizeUrl(String(moshaf.server)),
       surahList,
       surahTotal: surahList.length,
-      moshafId: String(moshaf.id ?? reciter.id ?? alias.id),
+      moshafId: String(moshaf.id ?? reciter.id ?? id),
       source: 'mp3quran',
     });
   }
 
-  const unique = new Map<string, DynamicReciter>();
-  for (const item of result) {
-    const old = unique.get(item.id);
-    if (!old || item.surahTotal > old.surahTotal) {
-      unique.set(item.id, item);
-    }
+  if (!result.length) {
+    throw new Error('هیچ قارییەک لە MP3Quran نەدۆزرایەوە.');
   }
 
-  const ordered = KURDISH_RECITER_ALIASES.map((alias) => unique.get(alias.id)).filter(
-    (item): item is DynamicReciter => Boolean(item)
-  );
-
-  if (!ordered.length) {
-    throw new Error('هیچ قارییەکی کورد لە MP3Quran نەدۆزرایەوە.');
-  }
-
-  writeJsonCache(RECITERS_CACHE_KEY, ordered);
-  return ordered;
+  writeJsonCache(RECITERS_CACHE_KEY, result);
+  return result;
 }
-
-/*
- * قارییە کوردەکانی static (بنچینەیان GitHub Releases یان mp3quran.net ـە،
- * لە recitersList.ts وە هاتوون) وەک هەمان شێوازی DynamicReciter دروست دەکرێن
- * بۆ ئەوەی بتوانرێت وەک یەک لیست لەگەڵ ئەوانەی لە APIـی mp3quran دۆزراونەتەوە
- * پیشان بدرێن و لێدرێن. ئەمانە هەمیشە بەردەستن تەنانەت ئەگەر API نەکارابوو.
- */
-const getStaticKurdishReciters = (): DynamicReciter[] => {
-  return ALL_RECITERS_DIRECTORY.filter(
-    (reciter) =>
-      (reciter.category === 'kurdish' || reciter.category === 'kurdish_tafsir') &&
-      reciter.audioSource === 'mp3quran' &&
-      reciter.audioBaseUrl
-  ).map((reciter) => ({
-    id: reciter.id,
-    sourceId: reciter.id,
-    name: reciter.name,
-    riwayah: reciter.riwayah,
-    server: normalizeUrl(reciter.audioBaseUrl as string),
-    surahList: reciter.availableSurahs && reciter.availableSurahs.length
-      ? reciter.availableSurahs
-      : Array.from({ length: 114 }, (_, i) => i + 1),
-    surahTotal: reciter.availableSurahs?.length ?? 114,
-    moshafId: `static-${reciter.id}`,
-    source: 'mp3quran',
-  }));
-};
-
-/*
- * تێکەڵکردنی قارییە دۆزراوەکان (لە API) لەگەڵ قارییە static ـەکان.
- * ئەگەر هەمان id لە هەردووکیاندا هەبوو، ئەوەی لە API هاتووە (زیندووە) پێشینە دەدرێت،
- * چونکە دڵنیاترە لە ڕاستی.
- */
-const mergeReciters = (dynamic: DynamicReciter[], staticList: DynamicReciter[]): DynamicReciter[] => {
-  const merged = new Map<string, DynamicReciter>();
-  for (const reciter of staticList) {
-    merged.set(reciter.id, reciter);
-  }
-  for (const reciter of dynamic) {
-    merged.set(reciter.id, reciter);
-  }
-  return Array.from(merged.values());
-};
 
 async function fetchPageAyahs(page: number): Promise<AyahData[]> {
   const response = await fetch(`${QURAN_API_BASE}/page/${page}/editions/quran-uthmani`, { cache: 'force-cache' });
@@ -435,13 +316,12 @@ export function QuranReader({
   const loadingPlayRef = useRef(false);
 
   const [reciters, setReciters] = useState<DynamicReciter[]>(() => {
-    const cached = readJsonCache<DynamicReciter[]>(RECITERS_CACHE_KEY) ?? [];
-    return mergeReciters(cached, getStaticKurdishReciters());
+    return readJsonCache<DynamicReciter[]>(RECITERS_CACHE_KEY) ?? [];
   });
 
   const [selectedReciter, setSelectedReciter] = useState<DynamicReciter | null>(() => {
     const cached = readJsonCache<DynamicReciter[]>(RECITERS_CACHE_KEY) ?? [];
-    return getInitialReciter(mergeReciters(cached, getStaticKurdishReciters()));
+    return getInitialReciter(cached);
   });
 
   const [ayahs, setAyahs] = useState<AyahData[]>([]);
@@ -456,21 +336,19 @@ export function QuranReader({
     let cancelled = false;
     const load = async () => {
       try {
-        const fresh = await fetchDynamicKurdishReciters();
+        const fresh = await fetchDynamicReciters();
         if (cancelled) return;
-        const combined = mergeReciters(fresh, getStaticKurdishReciters());
-        setReciters(combined);
+        setReciters(fresh);
         setSelectedReciter((old) => {
-          if (!old) return getInitialReciter(combined);
-          return combined.find((item) => item.id === old.id) ?? getInitialReciter(combined);
+          if (!old) return getInitialReciter(fresh);
+          return fresh.find((item) => item.id === old.id) ?? getInitialReciter(fresh);
         });
       } catch (err) {
         if (cancelled) return;
         const cached = readJsonCache<DynamicReciter[]>(RECITERS_CACHE_KEY) ?? [];
-        const combined = mergeReciters(cached, getStaticKurdishReciters());
-        if (combined.length) {
-          setReciters(combined);
-          setSelectedReciter((old) => old ?? getInitialReciter(combined));
+        if (cached.length) {
+          setReciters(cached);
+          setSelectedReciter((old) => old ?? getInitialReciter(cached));
           return;
         }
         setError(err instanceof Error ? err.message : 'کێشە لە هێنانی قارییەکان.');
@@ -539,12 +417,6 @@ export function QuranReader({
     const local = timingCacheRef.current.get(key);
     if (local) return local;
 
-    /*
-     * قارییە static ـەکان (GitHub Releases) وی id ـی moshaf ی ڕاستەقینەیان نییە،
-     * هەر بۆیە APIی ئایەت-تایمینگ هەرگیز داتایان بۆ نایەت. لێرەدا هەڵە
-     * هەرگیز نابێتە هۆی وەستانی لێدانی دەنگ — تەنها بەبێ هایلایتکردنی
-     * ئایەت بە ئایەت دەنگ لێدەدرێت.
-     */
     try {
       const rows = await fetchMp3QuranTiming(reciter.moshafId, surahNumber);
       timingCacheRef.current.set(key, rows);
@@ -573,10 +445,6 @@ export function QuranReader({
     return -1;
   }, []);
 
-  /*
-   * چاککراو: چاوەڕوانکردنی باربوونی دەنگ پێش گۆڕینی کات (Seeking)
-   * ئەمە ڕێگری لە وەستان و هەڵەی دەنگ دەکات.
-   */
   const playAyah = useCallback(
     async (index: number) => {
       if (!selectedReciter || !ayahs[index]) return;
@@ -606,17 +474,9 @@ export function QuranReader({
 
         setPlayingAyahIndex(index);
 
-        /*
-         * play() دەبێت ڕاستەوخۆ لێرە بانگبکرێت، بەبێ هیچ await‌ێکی پێشتر،
-         * بۆ ئەوەی وێبگەڕەکە هێشتا وەک "کرتەی بەکارهێنەر" ناسیبێتەوە.
-         * ئەگەر await بکەین بۆ هێنانی داتای کاتی ئایەت یان چاوەڕوانی
-         * ئامادەبوونی دەنگ پێش play()، زۆربەی وێبگەڕەکان (بەتایبەت مۆبایل)
-         * ڕێگە بە لێدانی دەنگ نادەن و هیچ هەڵەیەکیش دیار ناکەن.
-         */
         await audio.play();
         setIsPlaying(true);
 
-        // هێنانی کاتی ئایەت و گەڕان بۆی، بەبێ کۆسپکردنی play()ی سەرەوە.
         timingForCurrentSurah(selectedReciter, surahNumber)
           .then((rows) => {
             if (audioRef.current !== audio) return;
@@ -854,6 +714,7 @@ export function QuranReader({
           ))}
         </select>
       </div>
+
       {/* ERROR / STATUS */}
       {(error || !availableForCurrentSurah) && selectedReciter && (
         <div
@@ -1042,6 +903,7 @@ export function QuranReader({
             {playingAyahIndex !== null ? `ئایەت ${playingAyahIndex + 1}` : 'ئایەتێک هەڵبژێرە'}
           </div>
         </div>
+
         <button
           type="button"
           onClick={() => onPrevPage()}
