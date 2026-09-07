@@ -2,7 +2,7 @@ export interface ReciterItem {
   id: string;
   name: string;
   subName?: string;
-  category: 'famous' | 'riwayat' | 'teaching';
+  category: 'famous' | 'riwayat' | 'teaching' | 'kurdish';
   riwayah: string;
   serverKey: string;
   audioSource?: 'everyayah' | 'mp3quran';
@@ -11,7 +11,7 @@ export interface ReciterItem {
 
 export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
   // ==========================================
-  // ١. قورئانخوێنە ناودارە جیهانییەکان
+  // ١. قورئانخوێنە ناودارە جیهانییەکان (EveryAyah API)
   // ==========================================
 
   {
@@ -20,8 +20,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Mishary Rashid Alafasy',
     category: 'famous',
     riwayah: 'حفص عن عاصم',
-    serverKey: 'Alafasy_64kbps',
-    audioSource: 'everyayah'
+    serverKey: 'Alafasy_128kbps',
+    audioSource: 'everyayah',
   },
   {
     id: 'abdul_basit_murattal',
@@ -30,7 +30,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Abdul_Basit_Murattal_192kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'abdul_basit_mujawwad',
@@ -39,7 +39,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'AbdulSamad_64kbps_Mujawwad',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'minshawy_murattal',
@@ -48,7 +48,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Minshawy_Murattal_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'minshawy_mujawwad',
@@ -57,7 +57,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Minshawy_Mujawwad_192kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'husary_murattal',
@@ -66,7 +66,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Husary_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'husary_mujawwad',
@@ -75,7 +75,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Husary_128kbps_Mujawwad',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'maher_muaiqly',
@@ -84,7 +84,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'MaherAlMuaiqly128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'saad_ghamdi',
@@ -93,7 +93,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Ghamadi_40kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'yasser_dosari',
@@ -102,7 +102,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Yasser_Ad-Dussary_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'sudais',
@@ -111,7 +111,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Abdurrahmaan_As-Sudais_192kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'shuraim',
@@ -120,17 +120,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Saood_ash-Shuraym_128kbps',
-    audioSource: 'everyayah'
-  },
-  {
-    id: 'ahmed_al_ajmi',
-    name: 'أحمد بن علي العجمي',
-    subName: 'Ahmed Al-Ajamy',
-    category: 'famous',
-    riwayah: 'حفص عن عاصم',
-    serverKey: 'ahmed_al_ajmi',
-    audioSource: 'mp3quran',
-    audioBaseUrl: 'https://server10.mp3quran.net/ajm/'
+    audioSource: 'everyayah',
   },
   {
     id: 'abu_bakr_shatri',
@@ -139,17 +129,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Abu_Bakr_Ash-Shaatree_128kbps',
-    audioSource: 'everyayah'
-  },
-  {
-    id: 'idrees_abkar',
-    name: 'إدريس أبكر',
-    subName: 'Idrees Abkar',
-    category: 'famous',
-    riwayah: 'حفص عن عاصم',
-    serverKey: 'idrees_abkar',
-    audioSource: 'mp3quran',
-    audioBaseUrl: 'https://server6.mp3quran.net/abkar/'
+    audioSource: 'everyayah',
   },
   {
     id: 'nasser_qatami',
@@ -158,7 +138,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Nasser_Alqatami_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'ali_jaber',
@@ -167,7 +147,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Ali_Jaber_64kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'muhammad_ayyub',
@@ -176,7 +156,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Muhammad_Ayyoob_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'muhammad_jibreel',
@@ -185,17 +165,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Muhammad_Jibreel_128kbps',
-    audioSource: 'everyayah'
-  },
-  {
-    id: 'khalid_jalil',
-    name: 'خالد الجليل',
-    subName: 'Khalid Al-Jaleel',
-    category: 'famous',
-    riwayah: 'حفص عن عاصم',
-    serverKey: 'khalid_al_jaleel',
-    audioSource: 'mp3quran',
-    audioBaseUrl: 'https://server10.mp3quran.net/jleel/'
+    audioSource: 'everyayah',
   },
   {
     id: 'khalid_qahtani',
@@ -204,7 +174,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Khaalid_Abdullaah_al-Qahtaanee_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'abdullah_juhany',
@@ -213,7 +183,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Abdullaah_3awwaad_Al-Juhanee_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'abdullah_basfar',
@@ -222,7 +192,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Abdullah_Basfar_192kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'abdulmohsen_qasim',
@@ -231,7 +201,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Abdul_Muhsin_Al_Qasim_192kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'fares_abbad',
@@ -240,7 +210,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Fares_Abbad_64kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'hudhaify',
@@ -249,7 +219,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Hudhaify_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'hani_rifai',
@@ -258,7 +228,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Hani_Rifai_192kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'tariq_ibrahim',
@@ -267,7 +237,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Ibrahim_Akhdar_32kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'wadih_yamani',
@@ -276,7 +246,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'حفص عن عاصم',
     serverKey: 'Wadi3_Yemeni_64kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'nourin_siddeeq',
@@ -285,11 +255,66 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'famous',
     riwayah: 'الدوري عن أبي عمرو',
     serverKey: 'Nourin_Mohamed_Siddiq_64kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
 
   // ==========================================
-  // ٢. خوێندنەوە بە ڕیوایەتە جیاوازەکان
+  // ٢. قورئانخوێنەکانی MP3Quran API (بە قارییە کوردەکانیشەوە)
+  // ==========================================
+
+  {
+    id: 'ahmed_al_ajmi',
+    name: 'أحمد بن علي العجمي',
+    subName: 'Ahmed Al-Ajamy',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'ajm',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server10.mp3quran.net/ajm/',
+  },
+  {
+    id: 'idrees_abkar',
+    name: 'إدريس أبكر',
+    subName: 'Idrees Abkar',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'abkar',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server6.mp3quran.net/abkar/',
+  },
+  {
+    id: 'khalid_jalil',
+    name: 'خالد الجليل',
+    subName: 'Khalid Al-Jaleel',
+    category: 'famous',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'jleel',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server10.mp3quran.net/jleel/',
+  },
+  {
+    id: 'peshawa_kurdi',
+    name: 'پێشەوا قادر کوردی',
+    subName: 'Peshawa Kurdi',
+    category: 'kurdish',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'peshawa',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server16.mp3quran.net/peshawa/',
+  },
+  {
+    id: 'raad_kurdi',
+    name: 'ڕەعد محەمەد کوردی',
+    subName: 'Raad Al Kurdi',
+    category: 'kurdish',
+    riwayah: 'حفص عن عاصم',
+    serverKey: 'raad',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server6.mp3quran.net/raad/',
+  },
+
+  // ==========================================
+  // ٣. خوێندنەوە بە ڕیوایەتە جیاوازەکان
   // ==========================================
 
   {
@@ -299,7 +324,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'riwayat',
     riwayah: 'ورش عن نافع',
     serverKey: 'Yassin_Al_Jabori_64kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'miftah_saltany_duri',
@@ -308,7 +333,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'riwayat',
     riwayah: 'الدوري عن أبي عمرو',
     serverKey: 'Miftah_Sultany_Duri_64kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'abdulrashid_sofi_susi',
@@ -317,7 +342,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'riwayat',
     riwayah: 'السوسي عن أبي عمرو',
     serverKey: 'Abdul_Rasheed_Sofee_Sosi_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'abdulrashid_sofi_khalaf',
@@ -326,11 +351,11 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'riwayat',
     riwayah: 'خلف عن حمزة',
     serverKey: 'Abdul_Rasheed_Sofee_Khalaf_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
 
   // ==========================================
-  // ٣. دەنگی فێرکاری و منداڵان
+  // ٤. دەنگی فێرکاری و منداڵان
   // ==========================================
 
   {
@@ -340,7 +365,7 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'teaching',
     riwayah: 'حفص (معلم)',
     serverKey: 'Husary_Muallim_128kbps',
-    audioSource: 'everyayah'
+    audioSource: 'everyayah',
   },
   {
     id: 'minshawy_children',
@@ -349,6 +374,6 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     category: 'teaching',
     riwayah: 'حفص (ترديد)',
     serverKey: 'Minshawy_Teacher_128kbps',
-    audioSource: 'everyayah'
-  }
+    audioSource: 'everyayah',
+  },
 ];
