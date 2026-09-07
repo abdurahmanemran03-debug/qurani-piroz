@@ -70,8 +70,13 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     riwayah: 'حەفس لەسەر عاسم',
     serverKey: 'Rizgar_Kurdi',
     audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/qari_kurdi_mutasil/releases/download/rzgar_kurdi_mutasil/'
+    audioBaseUrl: 'https://archive.org/download/Rizgar-Kurdy/',
+    /* تێبینی: تەنها بەشێک لە سورەتەکان (نزیکەی ٥٤ لە ١١٤) بەردەستن لەم سەرچاوەیەدا. */
+    availableSurahs: [
+      1, 2, 3, 6, 7, 8, 11, 12, 13, 14, 15, 16, 18, 19, 20, 24, 27, 31, 34, 37,
+      38, 39, 40, 44, 45, 47, 48, 50, 51, 52, 53, 54, 55, 56, 59, 60, 62, 63,
+      67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 86, 89, 91
+    ]
   },
 
   {
@@ -80,10 +85,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Abdulhadi Kurdi',
     category: 'kurdish',
     riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Abdulhadi_Kurdi',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/qari_kurdi_mutasil/releases/download/abdulhadi_kurdi_mutasil/'
+    serverKey: 'Abdulhadi_Kurdi'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   {
@@ -92,10 +95,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Dilshad Ahmad Kurdi',
     category: 'kurdish',
     riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Dilshad_Kurdi',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/qari_kurdi_mutasil/releases/download/dlshad/'
+    serverKey: 'Dilshad_Kurdi'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   {
@@ -104,10 +105,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Farman Shwani',
     category: 'kurdish',
     riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Farman_Shwani',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/qari_kurdi_mutasil/releases/download/farman/'
+    serverKey: 'Farman_Shwani'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   {
@@ -116,10 +115,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Hamza Barzanji',
     category: 'kurdish',
     riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Hamza_Barzanji',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/qari_kurdi_mutasil/releases/download/hamza/'
+    serverKey: 'Hamza_Barzanji'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   {
@@ -128,10 +125,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Sherzad Abdulrahman',
     category: 'kurdish',
     riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Sherzad_Kurdi',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/qari_kurdi_mutasil/releases/download/sherzad/'
+    serverKey: 'Sherzad_Kurdi'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   {
@@ -140,10 +135,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Ubaydah Muwaffaq',
     category: 'kurdish',
     riwayah: 'حەفس لەسەر عاسم',
-    serverKey: 'Ubaydah_Kurdi',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/qari_kurdi_mutasil/releases/download/ubeda_kurdi_mutasil/'
+    serverKey: 'Ubaydah_Kurdi'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   {
@@ -168,10 +161,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Handren (Kurdish Audio Tafsir)',
     category: 'kurdish_tafsir',
     riwayah: 'تەفسیری کوردی',
-    serverKey: 'Handren_Tafsir',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/sounds010/releases/download/handren_tanha_tafser/'
+    serverKey: 'Handren_Tafsir'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   {
@@ -180,10 +171,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Ghamdi with Kurdish Tafsir Asan',
     category: 'kurdish_tafsir',
     riwayah: 'قورئان + تەفسیری ئاسان',
-    serverKey: 'Ghamdi_Handren_Asan',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/qari_kurdi_mutasil/releases/download/ghamdi_handren_kurdi/'
+    serverKey: 'Ghamdi_Handren_Asan'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   {
@@ -192,10 +181,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Ghamdi with Kurdish Tafsir Badini',
     category: 'kurdish_tafsir',
     riwayah: 'قورئان + تەفسیری سەناهی بادینی',
-    serverKey: 'Tahsin_Doski_Sanahi',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/audio002/releases/download/Tahsin_doski_sanahi/'
+    serverKey: 'Tahsin_Doski_Sanahi'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   {
@@ -204,10 +191,8 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Dr. Muhammad Said (Tafsir Badini)',
     category: 'kurdish_tafsir',
     riwayah: 'تەفسیری بادینی',
-    serverKey: 'Naqshbandi_Badini',
-    audioSource: 'mp3quran',
-    audioBaseUrl:
-      'https://github.com/Hiwaselah/audio002/releases/download/d_mhamad_sa3id/'
+    serverKey: 'Naqshbandi_Badini'
+    // تێبینی: هیچ سەرچاوەیەکی گشتی و پشتڕاستکراوی دەنگی ئەم قارییە نەدۆزرایەوە.
   },
 
   // ==========================================
