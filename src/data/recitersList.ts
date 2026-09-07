@@ -11,7 +11,7 @@ export interface ReciterItem {
 
 export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
   // ==========================================
-  // ١. قورئانخوێنە ناودارە جیهانییەکان (تەواوی ٣١ قارییەکە)
+  // ١. قورئانخوێنە ناودارە جیهانییەکان
   // ==========================================
 
   {
@@ -193,8 +193,9 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Khalid Al-Jaleel',
     category: 'famous',
     riwayah: 'حفص عن عاصم',
-    serverKey: 'Khaalid_Abdullaah_al-Qahtaanee_128kbps',
-    audioSource: 'everyayah'
+    serverKey: 'khalid_al_jaleel',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server10.mp3quran.net/jleel/'
   },
   {
     id: 'khalid_qahtani',
