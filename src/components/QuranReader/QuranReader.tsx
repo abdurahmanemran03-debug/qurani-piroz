@@ -598,11 +598,7 @@ export function QuranReader({
       setError(null);
 
       try {
-        const rows = await timingForCurrentSurah(selectedReciter, surahNumber);
-        setTimingRows(rows);
-
         const ayahNumber = Number(ayahs[index]?.ayah ?? ayahs[index]?.numberInSurah ?? index + 1);
-        const timing = rows.find((row) => row.ayah === ayahNumber);
         const src = makeSurahAudioUrl(selectedReciter, surahNumber);
 
         if (audio.src !== src) {
@@ -612,44 +608,40 @@ export function QuranReader({
 
         setPlayingAyahIndex(index);
 
-        if (timing) {
-          const seekTo = Math.max(0, timing.start);
-
-          // چاوەڕوانکردن تا دەنگەکە ئامادە دەبێت بۆ گۆڕینی کات
-          const waitForAudio = () => {
-            return new Promise<void>((resolve, reject) => {
-              if (audio.readyState >= 2) {
-                resolve();
-              } else {
-                const onReady = () => {
-                  audio.removeEventListener('loadeddata', onReady);
-                  audio.removeEventListener('canplay', onReady);
-                  resolve();
-                };
-                audio.addEventListener('loadeddata', onReady, { once: true });
-                audio.addEventListener('canplay', onReady, { once: true });
-                
-                // کاتی چاوەڕوانی (٨ چرکە)
-                setTimeout(() => {
-                  audio.removeEventListener('loadeddata', onReady);
-                  audio.removeEventListener('canplay', onReady);
-                  reject(new Error('کاتی چاوەڕوانی دەنگەکە تەواو بوو، تکایە دووبارە هەوڵبدەرەوە.'));
-                }, 8000);
-              }
-            });
-          };
-
-          await waitForAudio();
-
-          try {
-            audio.currentTime = seekTo;
-          } catch (err) {
-            console.warn('Seeking failed, playing from start', err);
-          }
-        }
-
+        /*
+         * play() دەبێت ڕاستەوخۆ لێرە بانگبکرێت، بەبێ هیچ await‌ێکی پێشتر،
+         * بۆ ئەوەی وێبگەڕەکە هێشتا وەک "کرتەی بەکارهێنەر" ناسیبێتەوە.
+         * ئەگەر await بکەین بۆ هێنانی داتای کاتی ئایەت یان چاوەڕوانی
+         * ئامادەبوونی دەنگ پێش play()، زۆربەی وێبگەڕەکان (بەتایبەت مۆبایل)
+         * ڕێگە بە لێدانی دەنگ نادەن و هیچ هەڵەیەکیش دیار ناکەن.
+         */
         await audio.play();
         setIsPlaying(true);
+
+        // هێنانی کاتی ئایەت و گەڕان بۆی، بەبێ کۆسپکردنی play()ی سەرەوە.
+        timingForCurrentSurah(selectedReciter, surahNumber)
+          .then((rows) => {
+            if (audioRef.current !== audio) return;
+            setTimingRows(rows);
+            const timing = rows.find((row) => row.ayah === ayahNumber);
+            if (!timing) return;
+            const seekTo = Math.max(0, timing.start);
+            const applySeek = () => {
+              try {
+                audio.currentTime = seekTo;
+              } catch (err) {
+                console.warn('Seeking failed, playing from start', err);
+              }
+            };
+            if (audio.readyState >= 2) {
+              applySeek();
+            } else {
+              audio.addEventListener('loadeddata', applySeek, { once: true });
+            }
+          })
+          .catch((err) => {
+            console.warn('Timing fetch failed, continuing without ayah sync', err);
+          });
       } catch (err) {
         setIsPlaying(false);
         setError(
