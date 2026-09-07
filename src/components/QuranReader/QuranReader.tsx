@@ -81,10 +81,6 @@ interface Mp3Reciter {
   }>;
 }
 
-/*
- * لیستی ناوەکانی قورئان خوێنەکان فراوانتر کراوە
- * بۆ ئەوەی قارییە بەناوبانگەکانی وەک ئەحمەد ئەلعەجەمیش بگرێتەوە.
- */
 const RECITER_ALIASES: Array<{
   id: string;
   aliases: string[];
@@ -306,31 +302,43 @@ async function fetchDynamicReciters(): Promise<DynamicReciter[]> {
 }
 
 /*
- * وەرگرتنی هەم قارییە کوردەکان و هەم قارییەکانی تر وەک ئەحمەد ئەلعەجەمی و ئیدریس ئەبکەر لە ALL_RECITERS_DIRECTORY
+ * وەرگرتنی تەواوی قارییەکانی nav ALL_RECITERS_DIRECTORY بە شێوازی پارسکردنی دروست
  */
 const getStaticReciters = (): DynamicReciter[] => {
-  return ALL_RECITERS_DIRECTORY.filter(
-    (reciter) =>
-      reciter.audioSource === 'mp3quran' &&
-      reciter.audioBaseUrl
-  ).map((reciter) => {
-    const rawAvailable = (reciter as any).availableSurahs;
-    const surahList = Array.isArray(rawAvailable) && rawAvailable.length > 0
-      ? rawAvailable
-      : Array.from({ length: 114 }, (_, i) => i + 1);
+  const list: DynamicReciter[] = [];
 
-    return {
-      id: reciter.id,
-      sourceId: reciter.id,
-      name: reciter.name,
-      riwayah: reciter.riwayah || 'حفص',
-      server: normalizeUrl(reciter.audioBaseUrl as string),
-      surahList,
-      surahTotal: surahList.length,
-      moshafId: reciter.serverKey || reciter.id,
+  for (const reciter of ALL_RECITERS_DIRECTORY as any[]) {
+    const moshafList = Array.isArray(reciter.moshaf) ? reciter.moshaf : [];
+    const bestMoshaf = moshafList.find((m: any) => m?.server) || moshafList[0];
+
+    let serverUrl = reciter.audioBaseUrl || bestMoshaf?.server || '';
+    if (!serverUrl) continue;
+
+    serverUrl = normalizeUrl(serverUrl);
+
+    let surahs: number[] = [];
+    if (bestMoshaf?.surah_list) {
+      surahs = parseSurahList(bestMoshaf.surah_list);
+    } else if (Array.isArray(reciter.availableSurahs) && reciter.availableSurahs.length > 0) {
+      surahs = reciter.availableSurahs;
+    } else {
+      surahs = Array.from({ length: 114 }, (_, i) => i + 1);
+    }
+
+    list.push({
+      id: String(reciter.id),
+      sourceId: String(reciter.id),
+      name: reciter.name || reciter.kurdishName || 'قاری',
+      riwayah: reciter.riwayah || bestMoshaf?.name || 'حفص',
+      server: serverUrl,
+      surahList: surahs,
+      surahTotal: surahs.length,
+      moshafId: String(bestMoshaf?.id || reciter.serverKey || reciter.id),
       source: 'mp3quran',
-    };
-  });
+    });
+  }
+
+  return list;
 };
 
 const mergeReciters = (dynamic: DynamicReciter[], staticList: DynamicReciter[]): DynamicReciter[] => {
@@ -1032,6 +1040,7 @@ export function QuranReader({
             {playingAyahIndex !== null ? `ئایەت ${playingAyahIndex + 1}` : 'ئایەتێک هەڵبژێرە'}
           </div>
         </div>
+
         <button
           type="button"
           onClick={() => onPrevPage()}
