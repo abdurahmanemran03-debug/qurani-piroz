@@ -5,6 +5,7 @@ import React, {
   useRef,
   useState,
 } from 'react';
+import { ALL_RECITERS_DIRECTORY } from '../../data/recitersList';
 
 const PAGE_COUNT = 604;
 
@@ -12,7 +13,7 @@ const QURAN_PAGE_BASE = 'https://android.quran.com/data/width_1260/';
 const QURAN_API_BASE = 'https://api.alquran.cloud/v1';
 const MP3QURAN_API_BASE = 'https://mp3quran.net/api/v3';
 
-const RECITERS_CACHE_KEY = 'quran_dynamic_reciters_v2';
+const RECITERS_CACHE_KEY = 'quran_dynamic_kurdish_reciters_v2';
 const TIMING_CACHE_KEY = 'quran_mp3quran_timing_v2';
 
 interface AyahData {
@@ -79,6 +80,62 @@ interface Mp3Reciter {
     moshaf_type?: number | string;
   }>;
 }
+
+/*
+ * لیستی ناوەکانی قورئان خوێنەکان فراوانتر کراوە
+ * بۆ ئەوەی قارییە بەناوبانگەکانی وەک ئەحمەد ئەلعەجەمیش بگرێتەوە.
+ */
+const RECITER_ALIASES: Array<{
+  id: string;
+  aliases: string[];
+  kurdishName: string;
+}> = [
+  {
+    id: 'ahmed_al_ajmi',
+    aliases: ['ahmed al ajmi', 'ahmed ajmi', 'ahmad alajmi', 'أحمد بن علي العجمي', 'أحمد العجمي', 'احمد العجمي'],
+    kurdishName: 'ئەحمەد ئەلعەجەمی',
+  },
+  {
+    id: 'peshawa_kurdi',
+    aliases: ['peshawa qadr al-kurdi', 'peshawa kurdi', 'peshawa', 'بيشة وا قادر الكردي', 'بيشةوا قادر الكردي'],
+    kurdishName: 'پێشەوا قادر کوردی',
+  },
+  {
+    id: 'raad_kurdi',
+    aliases: ['raad al kurdi', 'raad al-kurdi', 'raad kurdi', 'رعد محمد الكردي', 'رعد الكردي'],
+    kurdishName: 'ڕەعد کوردی',
+  },
+  {
+    id: 'ramazan_shukur',
+    aliases: ['ramadan shakoor', 'ramadan shakur', 'ramazan shukur', 'رمضان شكور'],
+    kurdishName: 'ڕەمەزان شکوور کوردی',
+  },
+  {
+    id: 'farman_shwani',
+    aliases: ['farman shawani', 'farman shwani', 'فِرمان شواني', 'فرمان شواني'],
+    kurdishName: 'فەرمان شوانی کوردی',
+  },
+  {
+    id: 'sherzad_kurdi',
+    aliases: ['shirazad taher', 'shirzad taher', 'sherzad abdulrahman', 'شيرزاد عبدالرحمن طاهر', 'شيرزاد طاهر'],
+    kurdishName: 'شێرزاد عەبدولڕەحمان کوردی',
+  },
+  {
+    id: 'wishear_hayder_arbili',
+    aliases: ['wishear hayder arbili', 'wishear haydar arbili', 'وشيار حيدر اربيلي', 'وشيار حيدر أربيلي'],
+    kurdishName: 'ویشیار حەیدەر ئەربیلی',
+  },
+  {
+    id: 'rizgar_kurdi',
+    aliases: ['rizgar kurdi', 'rizgar muhammad', 'رزكار محمد الكردي', 'رزغار الكردي'],
+    kurdishName: 'ڕزگار محەمەد کوردی',
+  },
+  {
+    id: 'dilshad_kurdi',
+    aliases: ['dilshad ahmad', 'dilshad kurdi', 'دلشاد احمد', 'دلشاد کردي'],
+    kurdishName: 'دڵشاد ئەحمەد کوردی',
+  },
+];
 
 const normalizeText = (value: unknown): string =>
   String(value ?? '')
@@ -154,6 +211,18 @@ const getPageSurahNumber = (page: number, surahsList?: SurahItem[]): number => {
   return result;
 };
 
+const findReciterAlias = (name: string) => {
+  const normalized = normalizeText(name);
+  return RECITER_ALIASES.find((entry) =>
+    entry.aliases.some(
+      (alias) =>
+        normalized === normalizeText(alias) ||
+        normalized.includes(normalizeText(alias)) ||
+        normalizeText(alias).includes(normalized)
+    )
+  );
+};
+
 const chooseBestMoshaf = (moshaf: Mp3Reciter['moshaf']) => {
   if (!Array.isArray(moshaf)) return null;
 
@@ -188,35 +257,82 @@ async function fetchDynamicReciters(): Promise<DynamicReciter[]> {
     const name = String(reciter?.name ?? '').trim();
     if (!name) continue;
 
+    const alias = findReciterAlias(name);
+    if (!alias) continue;
+
     const moshaf = chooseBestMoshaf(reciter?.moshaf);
     if (!moshaf?.server) continue;
 
     const surahList = parseSurahList(moshaf.surah_list);
     if (!surahList.length) continue;
 
-    const id = String(reciter.id ?? name.toLowerCase().replace(/\s+/g, '_'));
-
     result.push({
-      id,
-      sourceId: id,
-      name,
+      id: alias.id,
+      sourceId: String(reciter.id ?? alias.id),
+      name: alias.kurdishName,
       nameAr: name,
       riwayah: 'حفص',
       server: normalizeUrl(String(moshaf.server)),
       surahList,
       surahTotal: surahList.length,
-      moshafId: String(moshaf.id ?? reciter.id ?? id),
+      moshafId: String(moshaf.id ?? reciter.id ?? alias.id),
       source: 'mp3quran',
     });
   }
 
-  if (!result.length) {
+  const unique = new Map<string, DynamicReciter>();
+  for (const item of result) {
+    const old = unique.get(item.id);
+    if (!old || item.surahTotal > old.surahTotal) {
+      unique.set(item.id, item);
+    }
+  }
+
+  const ordered = RECITER_ALIASES.map((alias) => unique.get(alias.id)).filter(
+    (item): item is DynamicReciter => Boolean(item)
+  );
+
+  if (!ordered.length) {
     throw new Error('هیچ قارییەک لە MP3Quran نەدۆزرایەوە.');
   }
 
-  writeJsonCache(RECITERS_CACHE_KEY, result);
-  return result;
+  writeJsonCache(RECITERS_CACHE_KEY, ordered);
+  return ordered;
 }
+
+/*
+ * وەرگرتنی هەم قارییە کوردەکان و هەم قارییەکانی تر وەک ئەحمەد ئەلعەجەمی لە ALL_RECITERS_DIRECTORY
+ */
+const getStaticReciters = (): DynamicReciter[] => {
+  return ALL_RECITERS_DIRECTORY.filter(
+    (reciter) =>
+      reciter.audioSource === 'mp3quran' &&
+      reciter.audioBaseUrl
+  ).map((reciter) => ({
+    id: reciter.id,
+    sourceId: reciter.id,
+    name: reciter.name,
+    riwayah: reciter.riwayah || 'حفص',
+    server: normalizeUrl(reciter.audioBaseUrl as string),
+    surahList: reciter.availableSurahs && reciter.availableSurahs.length
+      ? reciter.availableSurahs
+      : Array.from({ length: 114 }, (_, i) => i + 1),
+    surahTotal: reciter.availableSurahs?.length ?? 114,
+    moshafId: `static-${reciter.id}`,
+    source: 'mp3quran',
+  }));
+};
+
+const mergeReciters = (dynamic: DynamicReciter[], staticList: DynamicReciter[]): DynamicReciter[] => {
+  const merged = new Map<string, DynamicReciter>();
+  for (const reciter of staticList) {
+    merged.set(reciter.id, reciter);
+  }
+  for (const reciter of dynamic) {
+    merged.set(reciter.id, reciter);
+  }
+  return Array.from(merged.values());
+};
 
 async function fetchPageAyahs(page: number): Promise<AyahData[]> {
   const response = await fetch(`${QURAN_API_BASE}/page/${page}/editions/quran-uthmani`, { cache: 'force-cache' });
@@ -316,12 +432,13 @@ export function QuranReader({
   const loadingPlayRef = useRef(false);
 
   const [reciters, setReciters] = useState<DynamicReciter[]>(() => {
-    return readJsonCache<DynamicReciter[]>(RECITERS_CACHE_KEY) ?? [];
+    const cached = readJsonCache<DynamicReciter[]>(RECITERS_CACHE_KEY) ?? [];
+    return mergeReciters(cached, getStaticReciters());
   });
 
   const [selectedReciter, setSelectedReciter] = useState<DynamicReciter | null>(() => {
     const cached = readJsonCache<DynamicReciter[]>(RECITERS_CACHE_KEY) ?? [];
-    return getInitialReciter(cached);
+    return getInitialReciter(mergeReciters(cached, getStaticReciters()));
   });
 
   const [ayahs, setAyahs] = useState<AyahData[]>([]);
@@ -338,17 +455,19 @@ export function QuranReader({
       try {
         const fresh = await fetchDynamicReciters();
         if (cancelled) return;
-        setReciters(fresh);
+        const combined = mergeReciters(fresh, getStaticReciters());
+        setReciters(combined);
         setSelectedReciter((old) => {
-          if (!old) return getInitialReciter(fresh);
-          return fresh.find((item) => item.id === old.id) ?? getInitialReciter(fresh);
+          if (!old) return getInitialReciter(combined);
+          return combined.find((item) => item.id === old.id) ?? getInitialReciter(combined);
         });
       } catch (err) {
         if (cancelled) return;
         const cached = readJsonCache<DynamicReciter[]>(RECITERS_CACHE_KEY) ?? [];
-        if (cached.length) {
-          setReciters(cached);
-          setSelectedReciter((old) => old ?? getInitialReciter(cached));
+        const combined = mergeReciters(cached, getStaticReciters());
+        if (combined.length) {
+          setReciters(combined);
+          setSelectedReciter((old) => old ?? getInitialReciter(combined));
           return;
         }
         setError(err instanceof Error ? err.message : 'کێشە لە هێنانی قارییەکان.');
@@ -903,7 +1022,6 @@ export function QuranReader({
             {playingAyahIndex !== null ? `ئایەت ${playingAyahIndex + 1}` : 'ئایەتێک هەڵبژێرە'}
           </div>
         </div>
-
         <button
           type="button"
           onClick={() => onPrevPage()}
