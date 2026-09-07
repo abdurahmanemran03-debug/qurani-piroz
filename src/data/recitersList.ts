@@ -147,8 +147,9 @@ export const ALL_RECITERS_DIRECTORY: ReciterItem[] = [
     subName: 'Idrees Abkar',
     category: 'famous',
     riwayah: 'حفص عن عاصم',
-    serverKey: 'Idrees_Abkar_64kbps',
-    audioSource: 'everyayah'
+    serverKey: 'idrees_abkar',
+    audioSource: 'mp3quran',
+    audioBaseUrl: 'https://server6.mp3quran.net/abkar/'
   },
   {
     id: 'nasser_qatami',
