@@ -157,10 +157,6 @@ const TAFSIR_API_EDITION: Record<
   uz_yusuf: 'uz.sodik'
 };
 
-/* =========================================================
-   INITIAL RECITER
-========================================================= */
-
 const getInitialReciter =
   (): ReciterItem => {
     try {
@@ -189,10 +185,6 @@ const getInitialReciter =
     );
   };
 
-/* =========================================================
-   NORMALIZE
-========================================================= */
-
 const normalizeUrl = (
   value: string
 ) =>
@@ -200,10 +192,6 @@ const normalizeUrl = (
     .trim()
     .replace(/\/+$/, '')
     .toLowerCase();
-
-/* =========================================================
-   EVERYAYAH
-========================================================= */
 
 const makeEveryAyahUrl = (
   reciter: ReciterItem,
@@ -222,10 +210,6 @@ const makeEveryAyahUrl = (
     `${surah}${ayah}.mp3`
   );
 };
-
-/* =========================================================
-   MP3QURAN SURAH
-========================================================= */
 
 const makeMp3QuranSurahUrl = (
   reciter: ReciterItem,
@@ -247,10 +231,6 @@ const makeMp3QuranSurahUrl = (
   );
 };
 
-/* =========================================================
-   TIME NORMALIZER
-========================================================= */
-
 const normalizeTimingValue = (
   value: number
 ) => {
@@ -258,23 +238,12 @@ const normalizeTimingValue = (
     return 0;
   }
 
-  /*
-   * MP3Quran usually returns milliseconds.
-   * Some endpoints/versions may return seconds.
-   *
-   * Large values => milliseconds.
-   * Small values => seconds.
-   */
   if (value > 10000) {
     return value / 1000;
   }
 
   return value;
 };
-
-/* =========================================================
-   COMPONENT
-========================================================= */
 
 export const MushafPageView: React.FC<
   MushafPageViewProps
@@ -388,10 +357,6 @@ export const MushafPageView: React.FC<
   const audioRequestIdRef =
     useRef(0);
 
-  /* =========================================================
-     MP3QURAN CACHE
-  ========================================================= */
-
   const mp3TimingCacheRef =
     useRef<
       Record<
@@ -414,10 +379,6 @@ export const MushafPageView: React.FC<
       requestId: number;
     } | null>(null);
 
-  /* =========================================================
-     DOWNLOAD
-  ========================================================= */
-
   const [
     surahDownloadState,
     setSurahDownloadState
@@ -434,10 +395,6 @@ export const MushafPageView: React.FC<
 
   const downloadSessionRef =
     useRef(0);
-
-  /* =========================================================
-     AUDIO URL CLEANUP
-  ========================================================= */
 
   const clearAudioObjectUrl =
     () => {
@@ -456,10 +413,6 @@ export const MushafPageView: React.FC<
           null;
       }
     };
-
-  /* =========================================================
-     STOP AUDIO COMPLETELY
-  ========================================================= */
 
   const stopAudioCompletely =
     () => {
@@ -493,10 +446,6 @@ export const MushafPageView: React.FC<
 
       setPageAudioIndex(-1);
     };
-
-  /* =========================================================
-     GET MP3QURAN READ
-  ========================================================= */
 
   const getMp3QuranRead =
     async (
@@ -651,10 +600,6 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /* =========================================================
-     GET MP3QURAN TIMING
-  ========================================================= */
-
   const getMp3QuranTiming =
     async (
       reciter: ReciterItem,
@@ -701,10 +646,6 @@ export const MushafPageView: React.FC<
         const data =
           await response.json();
 
-        /*
-         * Different API responses can expose
-         * the timing array under different names.
-         */
         let raw: any[] = [];
 
         if (
@@ -809,7 +750,7 @@ export const MushafPageView: React.FC<
     };
 
   /* =========================================================
-     GET AUDIO SOURCE
+     GET AUDIO SOURCE (دەستکاریکراو بۆ چاککردنی قارییە کوردەکان)
   ========================================================= */
 
   const getAudioSource =
@@ -818,11 +759,6 @@ export const MushafPageView: React.FC<
       surahNumber: number,
       ayahNumber: number
     ): Promise<AudioSource> => {
-      /*
-       * ===============================================
-       * MP3QURAN
-       * ===============================================
-       */
 
       if (
         reciter.audioSource ===
@@ -841,21 +777,25 @@ export const MushafPageView: React.FC<
               ayahNumber
           );
 
-        /*
-         * VERY IMPORTANT:
-         *
-         * If timing does not exist, DO NOT
-         * play the whole surah from second 0.
-         */
+        // چاکسازی: ئەگەر تایمینگی ئایەتەکە نەبوو، سەرتاپای فایلی سوورەتەکە دەخاتە کار
         if (!timing) {
-          throw new Error(
-            `Timing بۆ ${surahNumber}:${ayahNumber} نەدۆزرایەوە`
-          );
+          const onlineUrl =
+            makeMp3QuranSurahUrl(
+              reciter,
+              surahNumber
+            );
+
+          if (!onlineUrl) {
+            throw new Error(
+              `URL بۆ ${reciter.name} نەدۆزرایەوە`
+            );
+          }
+
+          return {
+            url: onlineUrl
+          };
         }
 
-        /*
-         * First try offline audio.
-         */
         try {
           const localSurah =
             await getSurahAudio(
@@ -889,9 +829,6 @@ export const MushafPageView: React.FC<
           );
         }
 
-        /*
-         * Online MP3Quran.
-         */
         const onlineUrl =
           makeMp3QuranSurahUrl(
             reciter,
@@ -912,12 +849,6 @@ export const MushafPageView: React.FC<
             timing.end_time
         };
       }
-
-      /*
-       * ===============================================
-       * EVERYAYAH
-       * ===============================================
-       */
 
       const localBlob =
         await getAyahAudio(
@@ -961,10 +892,6 @@ export const MushafPageView: React.FC<
         url: onlineUrl
       };
     };
-
-  /* =========================================================
-     PAGE AUDIO
-  ========================================================= */
 
   const [
     pageAudioIndex,
@@ -1011,10 +938,6 @@ export const MushafPageView: React.FC<
     >
   >({});
 
-  /* =========================================================
-     AYAH DATA
-  ========================================================= */
-
   useEffect(() => {
     fetch(
       `${import.meta.env.BASE_URL}ayahdata/ayahdata.json`
@@ -1040,10 +963,6 @@ export const MushafPageView: React.FC<
     allAyahData[
       String(currentPage)
     ] || [];
-
-  /* =========================================================
-     AYAH BOOKMARKS
-  ========================================================= */
 
   const [
     ayahBookmarks,
@@ -1107,10 +1026,6 @@ export const MushafPageView: React.FC<
     navigator.vibrate?.(35);
   };
 
-  /* =========================================================
-     SAVE RECITER
-  ========================================================= */
-
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -1123,10 +1038,6 @@ export const MushafPageView: React.FC<
   }, [
     selectedReciter.id
   ]);
-
-  /* =========================================================
-     RECITER SYNC
-  ========================================================= */
 
   useEffect(() => {
     const handleReciterChanged =
@@ -1170,10 +1081,6 @@ export const MushafPageView: React.FC<
     };
   }, []);
 
-  /* =========================================================
-     TAFSIR
-  ========================================================= */
-
   const getTafsirApiEdition =
     (
       tafsir: TafsirItem
@@ -1181,10 +1088,6 @@ export const MushafPageView: React.FC<
       TAFSIR_API_EDITION[
         tafsir.id
       ] || null;
-
-  /* =========================================================
-     CURRENT SURAH
-  ========================================================= */
 
   const currentSurah =
     surahsList
@@ -1204,10 +1107,6 @@ export const MushafPageView: React.FC<
   const currentSurahAyahCount =
     currentSurah?.ayahs ||
     0;
-
-  /* =========================================================
-     REFRESH DOWNLOAD
-  ========================================================= */
 
   const refreshCurrentSurahDownload =
     async () => {
@@ -1290,10 +1189,6 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /* =========================================================
-     SURAH / RECITER CHANGED
-  ========================================================= */
-
   useEffect(() => {
     downloadSessionRef.current++;
 
@@ -1317,10 +1212,6 @@ export const MushafPageView: React.FC<
     currentSurahAyahCount,
     selectedReciter.id
   ]);
-
-  /* =========================================================
-     DOWNLOAD CURRENT SURAH
-  ========================================================= */
 
   const downloadCurrentSurah =
     async () => {
@@ -1356,12 +1247,6 @@ export const MushafPageView: React.FC<
         controller;
 
       try {
-        /*
-         * ===============================================
-         * MP3QURAN
-         * ===============================================
-         */
-
         if (
           reciterAtStart.audioSource ===
           'mp3quran'
@@ -1481,12 +1366,6 @@ export const MushafPageView: React.FC<
 
           return;
         }
-
-        /*
-         * ===============================================
-         * EVERYAYAH
-         * ===============================================
-         */
 
         let currentCount =
           await getDownloadedAyahCount(
@@ -1759,18 +1638,10 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /* =========================================================
-     PAUSE
-  ========================================================= */
-
   const pauseCurrentSurahDownload =
     () => {
       downloadAbortControllerRef.current?.abort();
     };
-
-  /* =========================================================
-     DELETE
-  ========================================================= */
 
   const removeCurrentSurahAudio =
     async () => {
@@ -1829,10 +1700,6 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /* =========================================================
-     DOWNLOAD PROGRESS
-  ========================================================= */
-
   const downloadProgress =
     surahDownloadState.total >
     0
@@ -1848,10 +1715,6 @@ export const MushafPageView: React.FC<
       0 &&
     surahDownloadState.downloaded >=
       surahDownloadState.total;
-
-  /* =========================================================
-     DOWNLOAD UI
-  ========================================================= */
 
   const renderCurrentSurahDownload =
     () => {
@@ -1995,10 +1858,6 @@ export const MushafPageView: React.FC<
       );
     };
 
-  /* =========================================================
-     PLAY SINGLE AYAH
-  ========================================================= */
-
   const playAyahAudio =
     async (
       a: any
@@ -2084,9 +1943,6 @@ export const MushafPageView: React.FC<
             requestId
           };
 
-        /*
-         * MP3Quran segment.
-         */
         if (
           source.startTime !==
           undefined
@@ -2213,10 +2069,6 @@ export const MushafPageView: React.FC<
         }
       }
     };
-
-  /* =========================================================
-     PAGE AUDIO
-  ========================================================= */
 
   const playPageAyahAtIndex =
     async (
@@ -2462,10 +2314,6 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /* =========================================================
-     SHARE
-  ========================================================= */
-
   const shareAyah = async (
     a: any
   ) => {
@@ -2490,10 +2338,6 @@ export const MushafPageView: React.FC<
       // Cancelled
     }
   };
-
-  /* =========================================================
-     LONG PRESS
-  ========================================================= */
 
   const startLongPress = (
     boxKey: string,
@@ -2560,10 +2404,6 @@ export const MushafPageView: React.FC<
       );
     };
 
-  /* =========================================================
-     SCROLL
-  ========================================================= */
-
   const scrollContainerRef =
     useRef<HTMLDivElement | null>(
       null
@@ -2595,10 +2435,6 @@ export const MushafPageView: React.FC<
     Math.ceil(
       currentPage / 20
     );
-
-  /* =========================================================
-     PAGE DATA
-  ========================================================= */
 
   useEffect(() => {
     let cancelled =
@@ -2752,10 +2588,6 @@ export const MushafPageView: React.FC<
     selectedTafsir.id
   ]);
 
-  /* =========================================================
-     UPDATE HIGHLIGHT
-  ========================================================= */
-
   useEffect(() => {
     if (
       !highlightedAyah
@@ -2792,10 +2624,6 @@ export const MushafPageView: React.FC<
     pageAyahsData
   ]);
 
-  /* =========================================================
-     PAGE AUDIO RESET
-  ========================================================= */
-
   useEffect(() => {
     stopAudioCompletely();
 
@@ -2805,25 +2633,11 @@ export const MushafPageView: React.FC<
     currentPage
   ]);
 
-  /* =========================================================
-     RECITER RESET
-  ========================================================= */
-
   useEffect(() => {
     stopAudioCompletely();
-
-    /*
-     * Timing cache stays available,
-     * but the currently playing source
-     * must always stop.
-     */
   }, [
     selectedReciter.id
   ]);
-
-  /* =========================================================
-     CLEANUP
-  ========================================================= */
 
   useEffect(() => {
     return () => {
@@ -2859,10 +2673,6 @@ export const MushafPageView: React.FC<
       }
     };
   }, []);
-
-  /* =========================================================
-     SCROLL TO CURRENT PAGE
-  ========================================================= */
 
   useEffect(() => {
     if (
@@ -2979,10 +2789,6 @@ export const MushafPageView: React.FC<
     currentPage
   ]);
 
-  /* =========================================================
-     TOGGLE PAGE AUDIO
-  ========================================================= */
-
   const togglePageAudio =
     () => {
       if (
@@ -3043,10 +2849,6 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /* =========================================================
-     TIME UPDATE
-  ========================================================= */
-
   const handleAudioTimeUpdate =
     () => {
       const segment =
@@ -3088,10 +2890,6 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /* =========================================================
-     ENDED
-  ========================================================= */
-
   const handleAudioEnded =
     () => {
       activeSegmentRef.current =
@@ -3100,10 +2898,6 @@ export const MushafPageView: React.FC<
       const currentIndex =
         pageAudioIndexRef.current;
 
-      /*
-       * Single ayah playback:
-       * stop after the ayah.
-       */
       if (
         currentIndex < 0
       ) {
@@ -3178,10 +2972,6 @@ export const MushafPageView: React.FC<
       }
     };
 
-  /* =========================================================
-     AUDIO ERROR
-  ========================================================= */
-
   const handleAudioError =
     () => {
       const audio =
@@ -3206,10 +2996,6 @@ export const MushafPageView: React.FC<
         false
       );
     };
-
-  /* =========================================================
-     SCROLL HANDLER
-  ========================================================= */
 
   const handleScroll = (
     e: React.UIEvent<HTMLDivElement>
@@ -3282,10 +3068,6 @@ export const MushafPageView: React.FC<
     }
   };
 
-  /* =========================================================
-     BOOKMARK
-  ========================================================= */
-
   const toggleBookmark =
     () => {
       let updated:
@@ -3327,10 +3109,6 @@ export const MushafPageView: React.FC<
     selectedTafsir.title ||
     selectedTafsir.id;
 
-  /* =========================================================
-     UI
-  ========================================================= */
-
   return (
     <div
       className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden"
@@ -3361,7 +3139,6 @@ export const MushafPageView: React.FC<
       />
 
       {/* HEADER */}
-
       <header
         className={`absolute top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
           showControls
@@ -3448,7 +3225,6 @@ export const MushafPageView: React.FC<
       </header>
 
       {/* MUSHAF */}
-
       {viewMode ===
         'mushaf' && (
         <div
@@ -3754,7 +3530,6 @@ export const MushafPageView: React.FC<
           </div>
 
           {/* TAFSIR SHEET */}
-
           {highlightedAyah &&
             tafsirSheetOpen && (
               <div
@@ -3852,7 +3627,6 @@ export const MushafPageView: React.FC<
       )}
 
       {/* TAFSIR VIEW */}
-
       {viewMode ===
         'tafsir' && (
         <div
@@ -3942,7 +3716,6 @@ export const MushafPageView: React.FC<
       )}
 
       {/* FOOTER */}
-
       <footer
         className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-lg transition-all duration-300 ${
           showControls
@@ -3989,7 +3762,6 @@ export const MushafPageView: React.FC<
       </footer>
 
       {/* RECITER MODAL */}
-
       <RecitersModal
         isOpen={
           isRecitersModalOpen
@@ -4031,7 +3803,6 @@ export const MushafPageView: React.FC<
       />
 
       {/* TAFSIR SELECTOR */}
-
       <TafsirSelectorModal
         isOpen={
           isTafsirSelectorOpen
