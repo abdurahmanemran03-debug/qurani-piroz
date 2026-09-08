@@ -750,7 +750,7 @@ export const MushafPageView: React.FC<
     };
 
   /* =========================================================
-     GET AUDIO SOURCE (دەستکاریکراو بۆ چاککردنی قارییە کوردەکان)
+     GET AUDIO SOURCE
   ========================================================= */
 
   const getAudioSource =
@@ -777,7 +777,6 @@ export const MushafPageView: React.FC<
               ayahNumber
           );
 
-        // چاکسازی: ئەگەر تایمینگی ئایەتەکە نەبوو، سەرتاپای فایلی سوورەتەکە دەخاتە کار
         if (!timing) {
           const onlineUrl =
             makeMp3QuranSurahUrl(
