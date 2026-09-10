@@ -1,10 +1,10 @@
-Import React, {
+import React, {
   useState,
   useEffect,
   useRef
 } from 'react';
 
-Import {
+import {
   ArrowRight,
   Loader2,
   BookOpen,
@@ -20,26 +20,26 @@ Import {
   Trash2
 } from 'lucide-react';
 
-Import {
+import {
   BgThemeType,
   AppLangType,
   SurahItem
 } from '../types';
 
-Import {
+import {
   ALL_RECITERS_DIRECTORY,
   ReciterItem
 } from '../data/recitersList';
 
-Import {
+import {
   ALL_TAFSIRS_DIRECTORY,
   TafsirItem
 } from '../data/tafsirList';
 
-Import { RecitersModal } from './RecitersModal';
+import { RecitersModal } from './RecitersModal';
 import { TafsirSelectorModal } from './TafsirSelectorModal';
 
-Import {
+import {
   getAyahAudio,
   saveAyahAudio,
   getSurahAudio,
@@ -49,1792 +49,1792 @@ Import {
   isSurahAudioDownloaded
 } from '../utils/audioStorage';
 
-Interface MushafPageViewProps {
-  CurrentPage: number;
-  OnNextPage: () => void;
-  OnPrevPage: () => void;
-  OnBackToIndex: () => void;
-  BgStyle: BgThemeType;
-  AppLang: AppLangType;
-  ShowNumbers: boolean;
-  SurahsList?: SurahItem[];
-  OnJumpToPage?: (page: number) => void;
+interface MushafPageViewProps {
+  currentPage: number;
+  onNextPage: () => void;
+  onPrevPage: () => void;
+  onBackToIndex: () => void;
+  bgStyle: BgThemeType;
+  appLang: AppLangType;
+  showNumbers: boolean;
+  surahsList?: SurahItem[];
+  onJumpToPage?: (page: number) => void;
 }
 
-Const formatPageNum = (n: number) =>
+const formatPageNum = (n: number) =>
   String(n).padStart(3, '0');
 
-Const pageImgUrl = (n: number) =>
+const pageImgUrl = (n: number) =>
   `https://android.quran.com/data/width_1260/page${formatPageNum(n)}.png`;
 
-Const AYAH_CANVAS_WIDTH = 1260;
+const AYAH_CANVAS_WIDTH = 1260;
 const AYAH_CANVAS_HEIGHT = 2020;
 
-Type AyahBoxObj = {
-  S: number;
-  A: number;
-  L: number;
-  X0: number;
-  X1: number;
-  Y0: number;
-  Y1: number;
+type AyahBoxObj = {
+  s: number;
+  a: number;
+  l: number;
+  x0: number;
+  x1: number;
+  y0: number;
+  y1: number;
 };
 
-Type SurahDownloadState = {
-  Downloaded: number;
-  Total: number;
-  Downloading: boolean;
-  Paused: boolean;
-  Error?: boolean;
+type SurahDownloadState = {
+  downloaded: number;
+  total: number;
+  downloading: boolean;
+  paused: boolean;
+  error?: boolean;
 };
 
-Type AudioSource = {
-  Url: string;
-  StartTime?: number;
-  EndTime?: number;
+type AudioSource = {
+  url: string;
+  startTime?: number;
+  endTime?: number;
 };
 
-Type Mp3QuranTiming = {
-  Ayah: number;
-  Start_time: number;
-  End_time: number;
+type Mp3QuranTiming = {
+  ayah: number;
+  start_time: number;
+  end_time: number;
 };
 
-Type Mp3QuranRead = {
-  Id: number;
-  Server: string;
-  Surah_total?: number;
-  Surah_list?: string;
+type Mp3QuranRead = {
+  id: number;
+  server: string;
+  surah_total?: number;
+  surah_list?: string;
 };
 
-Type EstimatedAyahRange = {
-  Ayah: number;
-  Start: number;
-  End: number;
+type EstimatedAyahRange = {
+  ayah: number;
+  start: number;
+  end: number;
 };
 
-Type EstimatedTiming = {
-  ReciterId: string;
-  SurahNumber: number;
-  Ranges: EstimatedAyahRange[];
+type EstimatedTiming = {
+  reciterId: string;
+  surahNumber: number;
+  ranges: EstimatedAyahRange[];
 };
 
-Const surahWordCountsCache: Record<
-  Number,
-  Number[]
+const surahWordCountsCache: Record<
+  number,
+  number[]
 > = {};
 
-Const getSurahWordCounts = async (
-  SurahNumber: number
+const getSurahWordCounts = async (
+  surahNumber: number
 ): Promise<number[]> => {
-  If (
-    SurahWordCountsCache[surahNumber]
+  if (
+    surahWordCountsCache[surahNumber]
   ) {
-    Return surahWordCountsCache[
-      SurahNumber
+    return surahWordCountsCache[
+      surahNumber
     ];
   }
 
-  Try {
-    Const res = await fetch(
+  try {
+    const res = await fetch(
       `https://api.alquran.cloud/v1/surah/${surahNumber}/quran-uthmani`
     );
 
-    Const data = await res.json();
+    const data = await res.json();
 
-    Const ayahs = Array.isArray(
-      Data?.data?.ayahs
+    const ayahs = Array.isArray(
+      data?.data?.ayahs
     )
-      ? Data.data.ayahs
+      ? data.data.ayahs
       : [];
 
-    Const counts = ayahs.map(
+    const counts = ayahs.map(
       (a: any) => {
-        Const text = String(
-          A?.text || ''
+        const text = String(
+          a?.text || ''
         ).trim();
 
-        Const words = text
+        const words = text
           .split(/\s+/)
           .filter(Boolean);
 
-        Return Math.max(
+        return Math.max(
           1,
-          Words.length
+          words.length
         );
       }
     );
 
-    SurahWordCountsCache[
-      SurahNumber
+    surahWordCountsCache[
+      surahNumber
     ] = counts;
 
-    Return counts;
+    return counts;
   } catch (error) {
-    Console.warn(
+    console.warn(
       'Estimated timing: surah word counts fetch failed',
-      Error
+      error
     );
 
-    Return [];
+    return [];
   }
 };
 
-Const buildEstimatedRanges = (
-  Counts: number[],
-  Duration: number
+const buildEstimatedRanges = (
+  counts: number[],
+  duration: number
 ): EstimatedAyahRange[] => {
-  Const totalWords = counts.reduce(
+  const totalWords = counts.reduce(
     (sum, c) => sum + c,
     0
   );
 
-  If (
+  if (
     !totalWords ||
     !Number.isFinite(duration) ||
-    Duration <= 0
+    duration <= 0
   ) {
-    Return [];
+    return [];
   }
 
-  Let elapsed = 0;
+  let elapsed = 0;
 
-  Return counts.map(
+  return counts.map(
     (count, idx) => {
-      Const share =
+      const share =
         (count / totalWords) *
-        Duration;
+        duration;
 
-      Const start = elapsed;
-      Const end = elapsed + share;
+      const start = elapsed;
+      const end = elapsed + share;
 
-      Elapsed = end;
+      elapsed = end;
 
-      Return {
-        Ayah: idx + 1,
-        Start,
-        End
+      return {
+        ayah: idx + 1,
+        start,
+        end
       };
     }
   );
 };
 
-Const LONG_PRESS_MS = 550;
+const LONG_PRESS_MS = 550;
 
-Const TAFSIR_API_EDITION: Record<
-  String,
-  String
+const TAFSIR_API_EDITION: Record<
+  string,
+  string
 > = {
-  Ku_asan: 'ku.asan',
-  Ar_muyassar: 'ar.muyassar',
-  Ar_jalalayn: 'ar.jalalayn',
-  En_sahih: 'en.sahih',
-  En_pickthall: 'en.pickthall',
-  En_yusuf_ali: 'en.yusufali',
-  En_hilali_khan: 'en.hilali',
-  En_maududi: 'en.maududi',
-  En_transliteration: 'en.transliteration',
-  Fa_ahsan_kalam: 'fa.ansarian',
-  Tr_diyanet: 'tr.diyanet',
-  Tr_elmali: 'tr.yazir',
-  De_bubenheim: 'de.bubenheim',
-  Fr_hamidullah: 'fr.hamidullah',
-  Ru_kuliev: 'ru.kuliev',
-  Ru_abu_adel: 'ru.abuadel',
-  Es_cortes: 'es.cortes',
-  Ur_maududi: 'ur.maududi',
-  Ur_junagarhi: 'ur.junagarhi',
-  Id_sabeq: 'id.indonesian',
-  Ms_basmeih: 'ms.basmeih',
-  Sq_nahi: 'sq.nahi',
-  Am_sadiq: 'am.sadiq',
-  Az_musayev: 'az.musayev',
-  Bn_zakaria: 'bn.bengali',
-  Bs_korkut: 'bs.korkut',
-  Zh_majian: 'zh.jian',
-  Nl_abdalsalaam: 'nl.keyzer',
-  Ha_gumi: 'ha.gumi',
-  Hi_umari: 'hi.hindi',
-  It_piccardo: 'it.piccardo',
-  Ja_mita: 'ja.japanese',
-  Ko_choi: 'ko.korean',
-  Ml_parappoor: 'ml.abdulhameed',
-  Ps_abdulsalam: 'ps.abdulsalam',
-  So_abduh: 'so.abduh',
-  Sw_barwani: 'sw.barwani',
-  Sv_bernstrom: 'sv.bernstrom',
-  Tg_rowwad: 'tg.ayati',
-  Th_kingfahad: 'th.thai',
-  Ug_saleh: 'ug.saleh',
-  Uz_yusuf: 'uz.sodik'
+  ku_asan: 'ku.asan',
+  ar_muyassar: 'ar.muyassar',
+  ar_jalalayn: 'ar.jalalayn',
+  en_sahih: 'en.sahih',
+  en_pickthall: 'en.pickthall',
+  en_yusuf_ali: 'en.yusufali',
+  en_hilali_khan: 'en.hilali',
+  en_maududi: 'en.maududi',
+  en_transliteration: 'en.transliteration',
+  fa_ahsan_kalam: 'fa.ansarian',
+  tr_diyanet: 'tr.diyanet',
+  tr_elmali: 'tr.yazir',
+  de_bubenheim: 'de.bubenheim',
+  fr_hamidullah: 'fr.hamidullah',
+  ru_kuliev: 'ru.kuliev',
+  ru_abu_adel: 'ru.abuadel',
+  es_cortes: 'es.cortes',
+  ur_maududi: 'ur.maududi',
+  ur_junagarhi: 'ur.junagarhi',
+  id_sabeq: 'id.indonesian',
+  ms_basmeih: 'ms.basmeih',
+  sq_nahi: 'sq.nahi',
+  am_sadiq: 'am.sadiq',
+  az_musayev: 'az.musayev',
+  bn_zakaria: 'bn.bengali',
+  bs_korkut: 'bs.korkut',
+  zh_majian: 'zh.jian',
+  nl_abdalsalaam: 'nl.keyzer',
+  ha_gumi: 'ha.gumi',
+  hi_umari: 'hi.hindi',
+  it_piccardo: 'it.piccardo',
+  ja_mita: 'ja.japanese',
+  ko_choi: 'ko.korean',
+  ml_parappoor: 'ml.abdulhameed',
+  ps_abdulsalam: 'ps.abdulsalam',
+  so_abduh: 'so.abduh',
+  sw_barwani: 'sw.barwani',
+  sv_bernstrom: 'sv.bernstrom',
+  tg_rowwad: 'tg.ayati',
+  th_kingfahad: 'th.thai',
+  ug_saleh: 'ug.saleh',
+  uz_yusuf: 'uz.sodik'
 };
 
-Const getInitialReciter =
+const getInitialReciter =
   (): ReciterItem => {
-    Try {
-      Const savedId =
-        LocalStorage.getItem(
+    try {
+      const savedId =
+        localStorage.getItem(
           'quran_selected_reciter'
         );
 
-      If (savedId) {
-        Const savedReciter =
+      if (savedId) {
+        const savedReciter =
           ALL_RECITERS_DIRECTORY.find(
-            R => r.id === savedId
+            r => r.id === savedId
           );
 
-        If (savedReciter) {
-          Return savedReciter;
+        if (savedReciter) {
+          return savedReciter;
         }
       }
     } catch {
       // Ignore
     }
 
-    Return (
+    return (
       ALL_RECITERS_DIRECTORY[18] ||
       ALL_RECITERS_DIRECTORY[0]
     );
   };
 
-Const normalizeUrl = (
-  Value: string
+const normalizeUrl = (
+  value: string
 ) =>
-  Value
+  value
     .trim()
     .replace(/\/+$/, '')
     .toLowerCase();
 
-Const makeEveryAyahUrl = (
-  Reciter: ReciterItem,
-  SurahNumber: number,
-  AyahNumber: number
+const makeEveryAyahUrl = (
+  reciter: ReciterItem,
+  surahNumber: number,
+  ayahNumber: number
 ) => {
-  Const surah =
+  const surah =
     String(surahNumber).padStart(3, '0');
 
-  Const ayah =
+  const ayah =
     String(ayahNumber).padStart(3, '0');
 
-  Return (
+  return (
     `https://everyayah.com/data/` +
     `${reciter.serverKey}/` +
     `${surah}${ayah}.mp3`
   );
 };
 
-Const makeMp3QuranSurahUrl = (
-  Reciter: ReciterItem,
-  SurahNumber: number
+const makeMp3QuranSurahUrl = (
+  reciter: ReciterItem,
+  surahNumber: number
 ) => {
-  If (!reciter.audioBaseUrl) {
-    Return null;
+  if (!reciter.audioBaseUrl) {
+    return null;
   }
 
-  Const base =
-    Reciter.audioBaseUrl.endsWith('/')
-      ? Reciter.audioBaseUrl
+  const base =
+    reciter.audioBaseUrl.endsWith('/')
+      ? reciter.audioBaseUrl
       : `${reciter.audioBaseUrl}/`;
 
-  Return (
+  return (
     `${base}${String(
-      SurahNumber
+      surahNumber
     ).padStart(3, '0')}.mp3`
   );
 };
 
-Const normalizeTimingValue = (
-  Value: number
+const normalizeTimingValue = (
+  value: number
 ) => {
-  If (!Number.isFinite(value)) {
-    Return 0;
+  if (!Number.isFinite(value)) {
+    return 0;
   }
 
-  If (value > 10000) {
-    Return value / 1000;
+  if (value > 10000) {
+    return value / 1000;
   }
 
-  Return value;
+  return value;
 };
 
-Export const MushafPageView: React.FC<
+export const MushafPageView: React.FC<
   MushafPageViewProps
 > = ({
-  CurrentPage,
-  OnNextPage,
-  OnPrevPage,
-  OnBackToIndex,
-  BgStyle,
-  AppLang,
-  ShowNumbers,
-  SurahsList = [],
-  OnJumpToPage
+  currentPage,
+  onNextPage,
+  onPrevPage,
+  onBackToIndex,
+  bgStyle,
+  appLang,
+  showNumbers,
+  surahsList = [],
+  onJumpToPage
 }) => {
-  Const [
-    ViewMode,
-    SetViewMode
+  const [
+    viewMode,
+    setViewMode
   ] = useState<
     'mushaf' | 'tafsir'
   >('mushaf');
 
-  Const [
-    ShowControls,
-    SetShowControls
+  const [
+    showControls,
+    setShowControls
   ] = useState(true);
 
-  Const [
-    IsRecitersModalOpen,
-    SetIsRecitersModalOpen
+  const [
+    isRecitersModalOpen,
+    setIsRecitersModalOpen
   ] = useState(false);
 
-  Const [
-    IsTafsirSelectorOpen,
-    SetIsTafsirSelectorOpen
+  const [
+    isTafsirSelectorOpen,
+    setIsTafsirSelectorOpen
   ] = useState(false);
 
-  Const [
-    SelectedReciter,
-    SetSelectedReciter
+  const [
+    selectedReciter,
+    setSelectedReciter
   ] = useState<ReciterItem>(
-    GetInitialReciter
+    getInitialReciter
   );
 
-  Const [
-    SelectedTafsir,
-    SetSelectedTafsir
+  const [
+    selectedTafsir,
+    setSelectedTafsir
   ] = useState<TafsirItem>(
     ALL_TAFSIRS_DIRECTORY[0]
   );
 
-  Const [
-    PageAyahsData,
-    SetPageAyahsData
+  const [
+    pageAyahsData,
+    setPageAyahsData
   ] = useState<any[]>([]);
 
-  Const [
-    LoadingTafsir,
-    SetLoadingTafsir
+  const [
+    loadingTafsir,
+    setLoadingTafsir
   ] = useState(false);
 
-  Const [
-    AyahApiError,
-    SetAyahApiError
+  const [
+    ayahApiError,
+    setAyahApiError
   ] = useState<string | null>(null);
 
-  Const [
-    TafsirApiError,
-    SetTafsirApiError
+  const [
+    tafsirApiError,
+    setTafsirApiError
   ] = useState<string | null>(null);
 
-  Const [
-    Bookmarks,
-    SetBookmarks
+  const [
+    bookmarks,
+    setBookmarks
   ] = useState<number[]>(
     () => {
-      Try {
-        Const saved =
-          LocalStorage.getItem(
+      try {
+        const saved =
+          localStorage.getItem(
             'quran_bookmarks'
           );
 
-        Return saved
+        return saved
           ? JSON.parse(saved)
           : [];
       } catch {
-        Return [];
+        return [];
       }
     }
   );
 
-  Const [
-    IsPlayingAudio,
-    SetIsPlayingAudio
+  const [
+    isPlayingAudio,
+    setIsPlayingAudio
   ] = useState(false);
 
-  Const audioRef =
-    UseRef<HTMLAudioElement | null>(
-      Null
+  const audioRef =
+    useRef<HTMLAudioElement | null>(
+      null
     );
 
-  Const [
-    PlayingAyahKey,
-    SetPlayingAyahKey
+  const [
+    playingAyahKey,
+    setPlayingAyahKey
   ] = useState<string | null>(
-    Null
+    null
   );
 
-  Const audioObjectUrlRef =
-    UseRef<string | null>(null);
+  const audioObjectUrlRef =
+    useRef<string | null>(null);
 
-  Const audioRequestIdRef =
-    UseRef(0);
+  const audioRequestIdRef =
+    useRef(0);
 
-  Const mp3TimingCacheRef =
-    UseRef<
+  const mp3TimingCacheRef =
+    useRef<
       Record<
-        String,
+        string,
         Mp3QuranTiming[]
       >
     >({});
 
-  Const mp3ReadCacheRef =
-    UseRef<
+  const mp3ReadCacheRef =
+    useRef<
       Record<
-        String,
+        string,
         Mp3QuranRead | null
       >
     >({});
 
-  Const activeSegmentRef =
-    UseRef<{
-      EndTime: number | null;
-      RequestId: number;
+  const activeSegmentRef =
+    useRef<{
+      endTime: number | null;
+      requestId: number;
     } | null>(null);
 
-  Const estimatedTimingRef =
-    UseRef<EstimatedTiming | null>(
-      Null
+  const estimatedTimingRef =
+    useRef<EstimatedTiming | null>(
+      null
     );
 
-  Const [
-    SurahDownloadState,
-    SetSurahDownloadState
+  const [
+    surahDownloadState,
+    setSurahDownloadState
   ] = useState<SurahDownloadState>({
-    Downloaded: 0,
-    Total: 0,
-    Downloading: false,
-    Paused: false,
-    Error: false
+    downloaded: 0,
+    total: 0,
+    downloading: false,
+    paused: false,
+    error: false
   });
 
-  Const downloadAbortControllerRef =
-    UseRef<AbortController | null>(null);
+  const downloadAbortControllerRef =
+    useRef<AbortController | null>(null);
 
-  Const downloadSessionRef =
-    UseRef(0);
+  const downloadSessionRef =
+    useRef(0);
 
-  Const clearAudioObjectUrl =
+  const clearAudioObjectUrl =
     () => {
-      If (
-        AudioObjectUrlRef.current
+      if (
+        audioObjectUrlRef.current
       ) {
-        Try {
+        try {
           URL.revokeObjectURL(
-            AudioObjectUrlRef.current
+            audioObjectUrlRef.current
           );
         } catch {
           // Ignore
         }
 
-        AudioObjectUrlRef.current =
-          Null;
+        audioObjectUrlRef.current =
+          null;
       }
     };
 
-  Const stopAudioCompletely =
+  const stopAudioCompletely =
     () => {
-      AudioRequestIdRef.current++;
+      audioRequestIdRef.current++;
 
-      ActiveSegmentRef.current =
-        Null;
+      activeSegmentRef.current =
+        null;
 
-      EstimatedTimingRef.current =
-        Null;
+      estimatedTimingRef.current =
+        null;
 
-      If (
-        AudioRef.current
+      if (
+        audioRef.current
       ) {
-        Try {
-          AudioRef.current.pause();
-          AudioRef.current.currentTime = 0;
-          AudioRef.current.removeAttribute(
+        try {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          audioRef.current.removeAttribute(
             'src'
           );
-          AudioRef.current.load();
+          audioRef.current.load();
         } catch {
           // Ignore
         }
       }
 
-      ClearAudioObjectUrl();
+      clearAudioObjectUrl();
 
-      SetIsPlayingAudio(false);
-      SetPlayingAyahKey(null);
+      setIsPlayingAudio(false);
+      setPlayingAyahKey(null);
 
-      PageAudioIndexRef.current =
+      pageAudioIndexRef.current =
         -1;
 
-      SetPageAudioIndex(-1);
+      setPageAudioIndex(-1);
     };
 
-  Const getMp3QuranRead =
-    Async (
-      Reciter: ReciterItem
+  const getMp3QuranRead =
+    async (
+      reciter: ReciterItem
     ): Promise<Mp3QuranRead | null> => {
-      Const cacheKey =
-        Reciter.id;
+      const cacheKey =
+        reciter.id;
 
-      If (
+      if (
         Object.prototype.hasOwnProperty.call(
-          Mp3ReadCacheRef.current,
-          CacheKey
+          mp3ReadCacheRef.current,
+          cacheKey
         )
       ) {
-        Return (
-          Mp3ReadCacheRef.current[
-            CacheKey
+        return (
+          mp3ReadCacheRef.current[
+            cacheKey
           ]
         );
       }
 
-      If (
+      if (
         !reciter.audioBaseUrl
       ) {
-        Mp3ReadCacheRef.current[
-          CacheKey
+        mp3ReadCacheRef.current[
+          cacheKey
         ] = null;
 
-        Return null;
+        return null;
       }
 
-      Try {
-        Const response =
-          Await fetch(
+      try {
+        const response =
+          await fetch(
             'https://mp3quran.net/api/v3/reciters?language=eng'
           );
 
-        If (!response.ok) {
-          Throw new Error(
+        if (!response.ok) {
+          throw new Error(
             `MP3Quran API HTTP ${response.status}`
           );
         }
 
-        Const data =
-          Await response.json();
+        const data =
+          await response.json();
 
-        Const remoteReciters =
+        const remoteReciters =
           Array.isArray(
-            Data?.reciters
+            data?.reciters
           )
-            ? Data.reciters
+            ? data.reciters
             : [];
 
-        Const localBase =
-          NormalizeUrl(
-            Reciter.audioBaseUrl
+        const localBase =
+          normalizeUrl(
+            reciter.audioBaseUrl
           );
 
-        Let found:
+        let found:
           | Mp3QuranRead
           | null = null;
 
-        For (
-          Const remoteReciter of remoteReciters
+        for (
+          const remoteReciter of remoteReciters
         ) {
-          Const moshafs =
+          const moshafs =
             Array.isArray(
-              RemoteReciter?.moshaf
+              remoteReciter?.moshaf
             )
-              ? RemoteReciter.moshaf
+              ? remoteReciter.moshaf
               : [];
 
-          For (
-            Const moshaf of moshafs
+          for (
+            const moshaf of moshafs
           ) {
-            Const server =
+            const server =
               String(
-                Moshaf?.server || ''
+                moshaf?.server || ''
               );
 
-            Const remoteServer =
-              NormalizeUrl(server);
+            const remoteServer =
+              normalizeUrl(server);
 
-            If (
+            if (
               !remoteServer ||
               !localBase
             ) {
-              Continue;
+              continue;
             }
 
-            Const matches =
-              LocalBase ===
-                RemoteServer ||
-              LocalBase.includes(
-                RemoteServer
+            const matches =
+              localBase ===
+                remoteServer ||
+              localBase.includes(
+                remoteServer
               ) ||
-              RemoteServer.includes(
-                LocalBase
+              remoteServer.includes(
+                localBase
               );
 
-            If (!matches) {
-              Continue;
+            if (!matches) {
+              continue;
             }
 
-            Const id =
+            const id =
               Number(moshaf?.id);
 
-            If (
+            if (
               !Number.isFinite(id)
             ) {
-              Continue;
+              continue;
             }
 
-            Found = {
-              Id,
-              Server,
-              Surah_total:
+            found = {
+              id,
+              server,
+              surah_total:
                 Number(
-                  Moshaf?.surah_total
+                  moshaf?.surah_total
                 ),
-              Surah_list:
+              surah_list:
                 String(
-                  Moshaf?.surah_list ||
+                  moshaf?.surah_list ||
                     ''
                 )
             };
 
-            Break;
+            break;
           }
 
-          If (found) {
-            Break;
+          if (found) {
+            break;
           }
         }
 
-        Mp3ReadCacheRef.current[
-          CacheKey
+        mp3ReadCacheRef.current[
+          cacheKey
         ] = found;
 
-        Return found;
+        return found;
       } catch (error) {
-        Console.error(
+        console.error(
           'MP3Quran read lookup failed:',
-          Error
+          error
         );
 
-        Mp3ReadCacheRef.current[
-          CacheKey
+        mp3ReadCacheRef.current[
+          cacheKey
         ] = null;
 
-        Return null;
+        return null;
       }
     };
 
-  Const getMp3QuranTiming =
-    Async (
-      Reciter: ReciterItem,
-      SurahNumber: number
+  const getMp3QuranTiming =
+    async (
+      reciter: ReciterItem,
+      surahNumber: number
     ): Promise<
       Mp3QuranTiming[]
     > => {
-      Const cacheKey =
+      const cacheKey =
         `${reciter.id}_${surahNumber}`;
 
-      If (
-        Mp3TimingCacheRef.current[
-          CacheKey
+      if (
+        mp3TimingCacheRef.current[
+          cacheKey
         ]
       ) {
-        Return (
-          Mp3TimingCacheRef.current[
-            CacheKey
+        return (
+          mp3TimingCacheRef.current[
+            cacheKey
           ]
         );
       }
 
-      Const read =
-        Await getMp3QuranRead(
-          Reciter
+      const read =
+        await getMp3QuranRead(
+          reciter
         );
 
-      If (!read) {
-        Return [];
+      if (!read) {
+        return [];
       }
 
-      Try {
-        Const response =
-          Await fetch(
+      try {
+        const response =
+          await fetch(
             `https://mp3quran.net/api/v3/ayat_timing?surah=${surahNumber}&read=${read.id}`
           );
 
-        If (!response.ok) {
-          Throw new Error(
+        if (!response.ok) {
+          throw new Error(
             `MP3Quran timing HTTP ${response.status}`
           );
         }
 
-        Const data =
-          Await response.json();
+        const data =
+          await response.json();
 
-        Let raw: any[] = [];
+        let raw: any[] = [];
 
-        If (
+        if (
           Array.isArray(data)
         ) {
-          Raw = data;
+          raw = data;
         } else if (
           Array.isArray(data?.ayat)
         ) {
-          Raw = data.ayat;
+          raw = data.ayat;
         } else if (
           Array.isArray(data?.data)
         ) {
-          Raw = data.data;
+          raw = data.data;
         } else if (
           Array.isArray(
-            Data?.timing
+            data?.timing
           )
         ) {
-          Raw = data.timing;
+          raw = data.timing;
         } else if (
           Array.isArray(
-            Data?.ayahs
+            data?.ayahs
           )
         ) {
-          Raw = data.ayahs;
+          raw = data.ayahs;
         }
 
-        Const timings =
-          Raw
+        const timings =
+          raw
             .map(
               (item: any) => {
-                Const ayah =
+                const ayah =
                   Number(
-                    Item?.ayah ??
-                      Item?.ayah_number ??
-                      Item?.number
+                    item?.ayah ??
+                      item?.ayah_number ??
+                      item?.number
                   );
 
-                Const startRaw =
+                const startRaw =
                   Number(
-                    Item?.start_time ??
-                      Item?.start ??
-                      Item?.startTime
+                    item?.start_time ??
+                      item?.start ??
+                      item?.startTime
                   );
 
-                Const endRaw =
+                const endRaw =
                   Number(
-                    Item?.end_time ??
-                      Item?.end ??
-                      Item?.endTime
+                    item?.end_time ??
+                      item?.end ??
+                      item?.endTime
                   );
 
-                Return {
-                  Ayah,
-                  Start_time:
-                    NormalizeTimingValue(
-                      StartRaw
+                return {
+                  ayah,
+                  start_time:
+                    normalizeTimingValue(
+                      startRaw
                     ),
-                  End_time:
-                    NormalizeTimingValue(
-                      EndRaw
+                  end_time:
+                    normalizeTimingValue(
+                      endRaw
                     )
                 };
               }
             )
             .filter(
               (
-                Item: Mp3QuranTiming
+                item: Mp3QuranTiming
               ) =>
                 Number.isFinite(
-                  Item.ayah
+                  item.ayah
                 ) &&
-                Item.ayah > 0 &&
+                item.ayah > 0 &&
                 Number.isFinite(
-                  Item.start_time
+                  item.start_time
                 ) &&
                 Number.isFinite(
-                  Item.end_time
+                  item.end_time
                 ) &&
-                Item.end_time >
-                  Item.start_time
+                item.end_time >
+                  item.start_time
             );
 
-        Mp3TimingCacheRef.current[
-          CacheKey
+        mp3TimingCacheRef.current[
+          cacheKey
         ] = timings;
 
-        Return timings;
+        return timings;
       } catch (error) {
-        Console.error(
+        console.error(
           'MP3Quran timing error:',
-          Error
+          error
         );
 
-        Mp3TimingCacheRef.current[
-          CacheKey
+        mp3TimingCacheRef.current[
+          cacheKey
         ] = [];
 
-        Return [];
+        return [];
       }
     };
 
-  Const getAudioSource =
-    Async (
-      Reciter: ReciterItem,
-      SurahNumber: number,
-      AyahNumber: number
+  const getAudioSource =
+    async (
+      reciter: ReciterItem,
+      surahNumber: number,
+      ayahNumber: number
     ): Promise<AudioSource> => {
-      If (
-        Reciter.audioSource ===
+      if (
+        reciter.audioSource ===
         'mp3quran'
       ) {
-        Const timings =
-          Await getMp3QuranTiming(
-            Reciter,
-            SurahNumber
+        const timings =
+          await getMp3QuranTiming(
+            reciter,
+            surahNumber
           );
 
-        Const timing =
-          Timings.find(
-            Item =>
-              Item.ayah ===
-              AyahNumber
+        const timing =
+          timings.find(
+            item =>
+              item.ayah ===
+              ayahNumber
           );
 
-        Try {
-          Const localSurah =
-            Await getSurahAudio(
-              Reciter.id,
-              SurahNumber
+        try {
+          const localSurah =
+            await getSurahAudio(
+              reciter.id,
+              surahNumber
             );
 
-          If (localSurah) {
-            ClearAudioObjectUrl();
+          if (localSurah) {
+            clearAudioObjectUrl();
 
-            Const localUrl =
+            const localUrl =
               URL.createObjectURL(
-                LocalSurah
+                localSurah
               );
 
-            AudioObjectUrlRef.current =
-              LocalUrl;
+            audioObjectUrlRef.current =
+              localUrl;
 
-            Return {
-              Url: localUrl,
-              StartTime:
-                Timing?.start_time,
-              EndTime:
-                Timing?.end_time
+            return {
+              url: localUrl,
+              startTime:
+                timing?.start_time,
+              endTime:
+                timing?.end_time
             };
           }
         } catch (error) {
-          Console.warn(
+          console.warn(
             'Local MP3Quran audio unavailable:',
-            Error
+            error
           );
         }
 
-        Const onlineUrl =
-          MakeMp3QuranSurahUrl(
-            Reciter,
-            SurahNumber
+        const onlineUrl =
+          makeMp3QuranSurahUrl(
+            reciter,
+            surahNumber
           );
 
-        If (!onlineUrl) {
-          Throw new Error(
+        if (!onlineUrl) {
+          throw new Error(
             `URL ـی MP3Quran بۆ ${reciter.name} نەدۆزرایەوە`
           );
         }
 
-        Return {
-          Url: onlineUrl,
-          StartTime:
-            Timing?.start_time,
-          EndTime:
-            Timing?.end_time
+        return {
+          url: onlineUrl,
+          startTime:
+            timing?.start_time,
+          endTime:
+            timing?.end_time
         };
       }
 
-      Const localBlob =
-        Await getAyahAudio(
-          Reciter.id,
-          SurahNumber,
-          AyahNumber
+      const localBlob =
+        await getAyahAudio(
+          reciter.id,
+          surahNumber,
+          ayahNumber
         ).catch(
           () => null
         );
 
-      If (localBlob) {
-        ClearAudioObjectUrl();
+      if (localBlob) {
+        clearAudioObjectUrl();
 
-        Const localUrl =
+        const localUrl =
           URL.createObjectURL(
-            LocalBlob
+            localBlob
           );
 
-        AudioObjectUrlRef.current =
-          LocalUrl;
+        audioObjectUrlRef.current =
+          localUrl;
 
-        Return {
-          Url: localUrl
+        return {
+          url: localUrl
         };
       }
 
-      Const onlineUrl =
-        MakeEveryAyahUrl(
-          Reciter,
-          SurahNumber,
-          AyahNumber
+      const onlineUrl =
+        makeEveryAyahUrl(
+          reciter,
+          surahNumber,
+          ayahNumber
         );
 
-      If (!onlineUrl) {
-        Throw new Error(
+      if (!onlineUrl) {
+        throw new Error(
           `EveryAyah URL نەدروست بوو بۆ ${reciter.name}`
         );
       }
 
-      Return {
-        Url: onlineUrl
+      return {
+        url: onlineUrl
       };
     };
 
-  Const [
-    PageAudioIndex,
-    SetPageAudioIndex
+  const [
+    pageAudioIndex,
+    setPageAudioIndex
   ] = useState(-1);
 
-  Const pageAudioIndexRef =
-    UseRef(-1);
+  const pageAudioIndexRef =
+    useRef(-1);
 
-  Const [
-    PressingBox,
-    SetPressingBox
+  const [
+    pressingBox,
+    setPressingBox
   ] = useState<string | null>(
-    Null
+    null
   );
 
-  Const [
-    HighlightedAyah,
-    SetHighlightedAyah
+  const [
+    highlightedAyah,
+    setHighlightedAyah
   ] = useState<{
-    Ayah: any;
-    TopPercent: number;
+    ayah: any;
+    topPercent: number;
   } | null>(null);
 
-  Const [
-    TafsirSheetOpen,
-    SetTafsirSheetOpen
+  const [
+    tafsirSheetOpen,
+    setTafsirSheetOpen
   ] = useState(false);
 
-  Const longPressTimer =
-    UseRef<
+  const longPressTimer =
+    useRef<
       ReturnType<
-        Typeof setTimeout
+        typeof setTimeout
       > | null
     >(null);
 
-  Const [
-    AllAyahData,
-    SetAllAyahData
+  const [
+    allAyahData,
+    setAllAyahData
   ] = useState<
     Record<
-      String,
+      string,
       AyahBoxObj[]
     >
   >({});
 
-  UseEffect(() => {
-    Fetch(
+  useEffect(() => {
+    fetch(
       `${import.meta.env.BASE_URL}ayahdata/ayahdata.json`
     )
       .then(res => {
-        If (!res.ok) {
-          Throw new Error(
+        if (!res.ok) {
+          throw new Error(
             'ayahdata.json not found'
           );
         }
 
-        Return res.json();
+        return res.json();
       })
       .then(data => {
-        SetAllAyahData(data);
+        setAllAyahData(data);
       })
       .catch(() => {
-        SetAllAyahData({});
+        setAllAyahData({});
       });
   }, []);
 
-  Const ayahBoxes: AyahBoxObj[] =
-    AllAyahData[
+  const ayahBoxes: AyahBoxObj[] =
+    allAyahData[
       String(currentPage)
     ] || [];
 
-  Const [
-    AyahBookmarks,
-    SetAyahBookmarks
+  const [
+    ayahBookmarks,
+    setAyahBookmarks
   ] = useState<string[]>(
     () => {
-      Try {
-        Const saved =
-          LocalStorage.getItem(
+      try {
+        const saved =
+          localStorage.getItem(
             'quran_ayah_bookmarks'
           );
 
-        Return saved
+        return saved
           ? JSON.parse(saved)
           : [];
       } catch {
-        Return [];
+        return [];
       }
     }
   );
 
-  Const ayahKey = (
-    A: any
+  const ayahKey = (
+    a: any
   ) =>
     `${a.surahNumber}:${a.numberInSurah}`;
 
-  Const isAyahBookmarked = (
-    A: any
+  const isAyahBookmarked = (
+    a: any
   ) =>
-    AyahBookmarks.includes(
-      AyahKey(a)
+    ayahBookmarks.includes(
+      ayahKey(a)
     );
 
-  Const toggleAyahBookmark = (
-    A: any
+  const toggleAyahBookmark = (
+    a: any
   ) => {
-    Const key =
-      AyahKey(a);
+    const key =
+      ayahKey(a);
 
-    Const updated =
-      IsAyahBookmarked(a)
-        ? AyahBookmarks.filter(
-            K => k !== key
+    const updated =
+      isAyahBookmarked(a)
+        ? ayahBookmarks.filter(
+            k => k !== key
           )
         : [
             ...ayahBookmarks,
-            Key
+            key
           ];
 
-    SetAyahBookmarks(
-      Updated
+    setAyahBookmarks(
+      updated
     );
 
-    LocalStorage.setItem(
+    localStorage.setItem(
       'quran_ayah_bookmarks',
       JSON.stringify(
-        Updated
+        updated
       )
     );
 
-    Navigator.vibrate?.(35);
+    navigator.vibrate?.(35);
   };
 
-  UseEffect(() => {
-    Try {
-      LocalStorage.setItem(
+  useEffect(() => {
+    try {
+      localStorage.setItem(
         'quran_selected_reciter',
-        SelectedReciter.id
+        selectedReciter.id
       );
     } catch {
       // Ignore
     }
   }, [
-    SelectedReciter.id
+    selectedReciter.id
   ]);
 
-  UseEffect(() => {
-    Const handleReciterChanged =
+  useEffect(() => {
+    const handleReciterChanged =
       (
-        Event: Event
+        event: Event
       ) => {
-        Const customEvent =
-          Event as CustomEvent<string>;
+        const customEvent =
+          event as CustomEvent<string>;
 
-        Const reciterId =
-          CustomEvent.detail;
+        const reciterId =
+          customEvent.detail;
 
-        If (!reciterId) {
-          Return;
+        if (!reciterId) {
+          return;
         }
 
-        Const reciter =
+        const reciter =
           ALL_RECITERS_DIRECTORY.find(
-            R =>
-              R.id ===
-              ReciterId
+            r =>
+              r.id ===
+              reciterId
           );
 
-        If (reciter) {
-          SetSelectedReciter(
-            Reciter
+        if (reciter) {
+          setSelectedReciter(
+            reciter
           );
         }
       };
 
-    Window.addEventListener(
+    window.addEventListener(
       'quran-reciter-changed',
-      HandleReciterChanged
+      handleReciterChanged
     );
 
-    Return () => {
-      Window.removeEventListener(
+    return () => {
+      window.removeEventListener(
         'quran-reciter-changed',
-        HandleReciterChanged
+        handleReciterChanged
       );
     };
   }, []);
 
-  Const getTafsirApiEdition =
+  const getTafsirApiEdition =
     (
-      Tafsir: TafsirItem
+      tafsir: TafsirItem
     ): string | null =>
       TAFSIR_API_EDITION[
-        Tafsir.id
+        tafsir.id
       ] || null;
 
-  Const currentSurah =
-    SurahsList
+  const currentSurah =
+    surahsList
       .slice()
       .reverse()
       .find(
-        S =>
-          CurrentPage >=
-          S.startPage
+        s =>
+          currentPage >=
+          s.startPage
       ) ||
-    SurahsList[0];
+    surahsList[0];
 
-  Const currentSurahNumber =
-    CurrentSurah?.number ||
+  const currentSurahNumber =
+    currentSurah?.number ||
     0;
 
-  Const currentSurahAyahCount =
-    CurrentSurah?.ayahs ||
+  const currentSurahAyahCount =
+    currentSurah?.ayahs ||
     0;
 
-  Const refreshCurrentSurahDownload =
-    Async () => {
-      If (
+  const refreshCurrentSurahDownload =
+    async () => {
+      if (
         !currentSurahNumber ||
         !currentSurahAyahCount
       ) {
-        SetSurahDownloadState({
-          Downloaded: 0,
-          Total: 0,
-          Downloading: false,
-          Paused: false,
-          Error: false
+        setSurahDownloadState({
+          downloaded: 0,
+          total: 0,
+          downloading: false,
+          paused: false,
+          error: false
         });
 
-        Return;
+        return;
       }
 
-      Try {
-        If (
-          SelectedReciter.audioSource ===
+      try {
+        if (
+          selectedReciter.audioSource ===
           'mp3quran'
         ) {
-          Const downloaded =
-            Await isSurahAudioDownloaded(
-              SelectedReciter.id,
-              CurrentSurahNumber
+          const downloaded =
+            await isSurahAudioDownloaded(
+              selectedReciter.id,
+              currentSurahNumber
             );
 
-          SetSurahDownloadState(
-            Previous => ({
+          setSurahDownloadState(
+            previous => ({
               ...previous,
-              Downloaded:
-                Downloaded
-                  ? CurrentSurahAyahCount
+              downloaded:
+                downloaded
+                  ? currentSurahAyahCount
                   : 0,
-              Total:
-                CurrentSurahAyahCount,
-              Downloading: false,
-              Paused:
-                Previous.paused,
-              Error: false
+              total:
+                currentSurahAyahCount,
+              downloading: false,
+              paused:
+                previous.paused,
+              error: false
             })
           );
 
-          Return;
+          return;
         }
 
-        Const downloaded =
-          Await getDownloadedAyahCount(
-            SelectedReciter.id,
-            CurrentSurahNumber,
-            CurrentSurahAyahCount
+        const downloaded =
+          await getDownloadedAyahCount(
+            selectedReciter.id,
+            currentSurahNumber,
+            currentSurahAyahCount
           );
 
-        SetSurahDownloadState(
-          Previous => ({
+        setSurahDownloadState(
+          previous => ({
             ...previous,
-            Downloaded,
-            Total:
-              CurrentSurahAyahCount,
-            Downloading: false,
-            Error: false
+            downloaded,
+            total:
+              currentSurahAyahCount,
+            downloading: false,
+            error: false
           })
         );
       } catch (error) {
-        Console.error(
+        console.error(
           'Refresh download state error:',
-          Error
+          error
         );
 
-        SetSurahDownloadState(
-          Previous => ({
+        setSurahDownloadState(
+          previous => ({
             ...previous,
-            Total:
-              CurrentSurahAyahCount,
-            Downloading: false
+            total:
+              currentSurahAyahCount,
+            downloading: false
           })
         );
       }
     };
 
-  UseEffect(() => {
-    DownloadSessionRef.current++;
+  useEffect(() => {
+    downloadSessionRef.current++;
 
-    DownloadAbortControllerRef.current?.abort();
+    downloadAbortControllerRef.current?.abort();
 
-    DownloadAbortControllerRef.current =
-      Null;
+    downloadAbortControllerRef.current =
+      null;
 
-    SetSurahDownloadState({
-      Downloaded: 0,
-      Total:
-        CurrentSurahAyahCount,
-      Downloading: false,
-      Paused: false,
-      Error: false
+    setSurahDownloadState({
+      downloaded: 0,
+      total:
+        currentSurahAyahCount,
+      downloading: false,
+      paused: false,
+      error: false
     });
 
-    Void refreshCurrentSurahDownload();
+    void refreshCurrentSurahDownload();
   }, [
-    CurrentSurahNumber,
-    CurrentSurahAyahCount,
-    SelectedReciter.id
+    currentSurahNumber,
+    currentSurahAyahCount,
+    selectedReciter.id
   ]);
 
-  Const downloadCurrentSurah =
-    Async () => {
-      If (
+  const downloadCurrentSurah =
+    async () => {
+      if (
         !currentSurahNumber ||
         !currentSurahAyahCount
       ) {
-        Return;
+        return;
       }
 
-      If (
-        SurahDownloadState.downloading
+      if (
+        surahDownloadState.downloading
       ) {
-        Return;
+        return;
       }
 
-      Const reciterAtStart =
-        SelectedReciter;
+      const reciterAtStart =
+        selectedReciter;
 
-      Const surahNumberAtStart =
-        CurrentSurahNumber;
+      const surahNumberAtStart =
+        currentSurahNumber;
 
-      Const ayahCountAtStart =
-        CurrentSurahAyahCount;
+      const ayahCountAtStart =
+        currentSurahAyahCount;
 
-      Const session =
+      const session =
         ++downloadSessionRef.current;
 
-      Const controller =
-        New AbortController();
+      const controller =
+        new AbortController();
 
-      DownloadAbortControllerRef.current =
-        Controller;
+      downloadAbortControllerRef.current =
+        controller;
 
-      Try {
-        If (
-          ReciterAtStart.audioSource ===
+      try {
+        if (
+          reciterAtStart.audioSource ===
           'mp3quran'
         ) {
-          Const alreadyDownloaded =
-            Await isSurahAudioDownloaded(
-              ReciterAtStart.id,
-              SurahNumberAtStart
+          const alreadyDownloaded =
+            await isSurahAudioDownloaded(
+              reciterAtStart.id,
+              surahNumberAtStart
             );
 
-          If (
-            AlreadyDownloaded
+          if (
+            alreadyDownloaded
           ) {
-            If (
-              Session ===
-                DownloadSessionRef.current &&
-              SelectedReciter.id ===
-                ReciterAtStart.id
+            if (
+              session ===
+                downloadSessionRef.current &&
+              selectedReciter.id ===
+                reciterAtStart.id
             ) {
-              SetSurahDownloadState({
-                Downloaded:
-                  AyahCountAtStart,
-                Total:
-                  AyahCountAtStart,
-                Downloading:
-                  False,
-                Paused: false,
-                Error: false
+              setSurahDownloadState({
+                downloaded:
+                  ayahCountAtStart,
+                total:
+                  ayahCountAtStart,
+                downloading:
+                  false,
+                paused: false,
+                error: false
               });
             }
 
-            Return;
+            return;
           }
 
-          Const url =
-            MakeMp3QuranSurahUrl(
-              ReciterAtStart,
-              SurahNumberAtStart
+          const url =
+            makeMp3QuranSurahUrl(
+              reciterAtStart,
+              surahNumberAtStart
             );
 
-          If (!url) {
-            Throw new Error(
+          if (!url) {
+            throw new Error(
               'MP3Quran audioBaseUrl نەدۆزرایەوە'
             );
           }
 
-          SetSurahDownloadState({
-            Downloaded: 0,
-            Total:
-              AyahCountAtStart,
-            Downloading: true,
-            Paused: false,
-            Error: false
+          setSurahDownloadState({
+            downloaded: 0,
+            total:
+              ayahCountAtStart,
+            downloading: true,
+            paused: false,
+            error: false
           });
 
-          Const response =
-            Await fetch(url, {
-              Signal:
-                Controller.signal
+          const response =
+            await fetch(url, {
+              signal:
+                controller.signal
             });
 
-          If (!response.ok) {
-            Throw new Error(
+          if (!response.ok) {
+            throw new Error(
               `HTTP ${response.status}`
             );
           }
 
-          Const blob =
-            Await response.blob();
+          const blob =
+            await response.blob();
 
-          If (
-            Controller.signal.aborted
+          if (
+            controller.signal.aborted
           ) {
-            Throw new DOMException(
+            throw new DOMException(
               'Download paused',
               'AbortError'
             );
           }
 
-          If (
-            Blob.size === 0
+          if (
+            blob.size === 0
           ) {
-            Throw new Error(
+            throw new Error(
               'فایلی دەنگ بەتاڵە'
             );
           }
 
-          Await saveSurahAudio(
-            ReciterAtStart.id,
-            SurahNumberAtStart,
-            Blob
+          await saveSurahAudio(
+            reciterAtStart.id,
+            surahNumberAtStart,
+            blob
           );
 
-          If (
-            Session ===
-              DownloadSessionRef.current &&
-            SelectedReciter.id ===
-              ReciterAtStart.id
+          if (
+            session ===
+              downloadSessionRef.current &&
+            selectedReciter.id ===
+              reciterAtStart.id
           ) {
-            SetSurahDownloadState({
-              Downloaded:
-                AyahCountAtStart,
-              Total:
-                AyahCountAtStart,
-              Downloading:
-                False,
-              Paused: false,
-              Error: false
+            setSurahDownloadState({
+              downloaded:
+                ayahCountAtStart,
+              total:
+                ayahCountAtStart,
+              downloading:
+                false,
+              paused: false,
+              error: false
             });
 
-            Navigator.vibrate?.([
+            navigator.vibrate?.([
               40,
               60,
               40
             ]);
           }
 
-          Return;
+          return;
         }
 
-        Let currentCount =
-          Await getDownloadedAyahCount(
-            ReciterAtStart.id,
-            SurahNumberAtStart,
-            AyahCountAtStart
+        let currentCount =
+          await getDownloadedAyahCount(
+            reciterAtStart.id,
+            surahNumberAtStart,
+            ayahCountAtStart
           );
 
-        If (
-          Session !==
-          DownloadSessionRef.current
+        if (
+          session !==
+          downloadSessionRef.current
         ) {
-          Return;
+          return;
         }
 
-        SetSurahDownloadState({
-          Downloaded:
-            CurrentCount,
-          Total:
-            AyahCountAtStart,
-          Downloading: true,
-          Paused: false,
-          Error: false
+        setSurahDownloadState({
+          downloaded:
+            currentCount,
+          total:
+            ayahCountAtStart,
+          downloading: true,
+          paused: false,
+          error: false
         });
 
-        For (
-          Let ayah = 1;
-          Ayah <=
-          AyahCountAtStart;
-          Ayah++
+        for (
+          let ayah = 1;
+          ayah <=
+          ayahCountAtStart;
+          ayah++
         ) {
-          If (
-            Controller.signal.aborted
+          if (
+            controller.signal.aborted
           ) {
-            Throw new DOMException(
+            throw new DOMException(
               'Download paused',
               'AbortError'
             );
           }
 
-          If (
-            Session !==
-            DownloadSessionRef.current
+          if (
+            session !==
+            downloadSessionRef.current
           ) {
-            Return;
+            return;
           }
 
-          Const existing =
-            Await getAyahAudio(
-              ReciterAtStart.id,
-              SurahNumberAtStart,
-              Ayah
+          const existing =
+            await getAyahAudio(
+              reciterAtStart.id,
+              surahNumberAtStart,
+              ayah
             );
 
-          If (existing) {
-            Continue;
+          if (existing) {
+            continue;
           }
 
-          Const url =
-            MakeEveryAyahUrl(
-              ReciterAtStart,
-              SurahNumberAtStart,
-              Ayah
+          const url =
+            makeEveryAyahUrl(
+              reciterAtStart,
+              surahNumberAtStart,
+              ayah
             );
 
-          Const response =
-            Await fetch(url, {
-              Signal:
-                Controller.signal
+          const response =
+            await fetch(url, {
+              signal:
+                controller.signal
             });
 
-          If (!response.ok) {
-            Throw new Error(
+          if (!response.ok) {
+            throw new Error(
               `HTTP ${response.status} — ${url}`
             );
           }
 
-          Const blob =
-            Await response.blob();
+          const blob =
+            await response.blob();
 
-          If (
-            Controller.signal.aborted
+          if (
+            controller.signal.aborted
           ) {
-            Throw new DOMException(
+            throw new DOMException(
               'Download paused',
               'AbortError'
             );
           }
 
-          If (
-            Blob.size === 0
+          if (
+            blob.size === 0
           ) {
-            Throw new Error(
+            throw new Error(
               `فایلی ئایەتی ${ayah} بەتاڵە`
             );
           }
 
-          Await saveAyahAudio(
-            ReciterAtStart.id,
-            SurahNumberAtStart,
-            Ayah,
-            Blob
+          await saveAyahAudio(
+            reciterAtStart.id,
+            surahNumberAtStart,
+            ayah,
+            blob
           );
 
-          CurrentCount++;
+          currentCount++;
 
-          If (
-            Session ===
-              DownloadSessionRef.current &&
-            SelectedReciter.id ===
-              ReciterAtStart.id
+          if (
+            session ===
+              downloadSessionRef.current &&
+            selectedReciter.id ===
+              reciterAtStart.id
           ) {
-            SetSurahDownloadState({
-              Downloaded:
-                CurrentCount,
-              Total:
-                AyahCountAtStart,
-              Downloading: true,
-              Paused: false,
-              Error: false
+            setSurahDownloadState({
+              downloaded:
+                currentCount,
+              total:
+                ayahCountAtStart,
+              downloading: true,
+              paused: false,
+              error: false
             });
           }
         }
 
-        Const finalCount =
-          Await getDownloadedAyahCount(
-            ReciterAtStart.id,
-            SurahNumberAtStart,
-            AyahCountAtStart
+        const finalCount =
+          await getDownloadedAyahCount(
+            reciterAtStart.id,
+            surahNumberAtStart,
+            ayahCountAtStart
           );
 
-        If (
-          Session ===
-            DownloadSessionRef.current &&
-          SelectedReciter.id ===
-            ReciterAtStart.id
+        if (
+          session ===
+            downloadSessionRef.current &&
+          selectedReciter.id ===
+            reciterAtStart.id
         ) {
-          SetSurahDownloadState({
-            Downloaded:
-              FinalCount,
-            Total:
-              AyahCountAtStart,
-            Downloading: false,
-            Paused: false,
-            Error: false
+          setSurahDownloadState({
+            downloaded:
+              finalCount,
+            total:
+              ayahCountAtStart,
+            downloading: false,
+            paused: false,
+            error: false
           });
 
-          Navigator.vibrate?.([
+          navigator.vibrate?.([
             40,
             60,
             40
           ]);
         }
       } catch (error: any) {
-        If (
-          Error?.name ===
+        if (
+          error?.name ===
           'AbortError'
         ) {
-          Let current = 0;
+          let current = 0;
 
-          If (
-            ReciterAtStart.audioSource ===
+          if (
+            reciterAtStart.audioSource ===
             'mp3quran'
           ) {
-            Const downloaded =
-              Await isSurahAudioDownloaded(
-                ReciterAtStart.id,
-                SurahNumberAtStart
+            const downloaded =
+              await isSurahAudioDownloaded(
+                reciterAtStart.id,
+                surahNumberAtStart
               ).catch(
                 () => false
               );
 
-            Current =
-              Downloaded
-                ? AyahCountAtStart
+            current =
+              downloaded
+                ? ayahCountAtStart
                 : 0;
           } else {
-            Current =
-              Await getDownloadedAyahCount(
-                ReciterAtStart.id,
-                SurahNumberAtStart,
-                AyahCountAtStart
+            current =
+              await getDownloadedAyahCount(
+                reciterAtStart.id,
+                surahNumberAtStart,
+                ayahCountAtStart
               ).catch(
                 () => 0
               );
           }
 
-          If (
-            Session ===
-              DownloadSessionRef.current &&
-            SelectedReciter.id ===
-              ReciterAtStart.id
+          if (
+            session ===
+              downloadSessionRef.current &&
+            selectedReciter.id ===
+              reciterAtStart.id
           ) {
-            SetSurahDownloadState({
-              Downloaded:
-                Current,
-              Total:
-                AyahCountAtStart,
-              Downloading:
-                False,
-              Paused: true,
-              Error: false
+            setSurahDownloadState({
+              downloaded:
+                current,
+              total:
+                ayahCountAtStart,
+              downloading:
+                false,
+              paused: true,
+              error: false
             });
           }
         } else {
-          Console.error(
+          console.error(
             'Audio download error:',
-            Error
+            error
           );
 
-          Let current = 0;
+          let current = 0;
 
-          If (
-            ReciterAtStart.audioSource ===
+          if (
+            reciterAtStart.audioSource ===
             'mp3quran'
           ) {
-            Const downloaded =
-              Await isSurahAudioDownloaded(
-                ReciterAtStart.id,
-                SurahNumberAtStart
+            const downloaded =
+              await isSurahAudioDownloaded(
+                reciterAtStart.id,
+                surahNumberAtStart
               ).catch(
                 () => false
               );
 
-            Current =
-              Downloaded
-                ? AyahCountAtStart
+            current =
+              downloaded
+                ? ayahCountAtStart
                 : 0;
           } else {
-            Current =
-              Await getDownloadedAyahCount(
-                ReciterAtStart.id,
-                SurahNumberAtStart,
-                AyahCountAtStart
+            current =
+              await getDownloadedAyahCount(
+                reciterAtStart.id,
+                surahNumberAtStart,
+                ayahCountAtStart
               ).catch(
                 () => 0
               );
           }
 
-          If (
-            Session ===
-              DownloadSessionRef.current &&
-            SelectedReciter.id ===
-              ReciterAtStart.id
+          if (
+            session ===
+              downloadSessionRef.current &&
+            selectedReciter.id ===
+              reciterAtStart.id
           ) {
-            SetSurahDownloadState({
-              Downloaded:
-                Current,
-              Total:
-                AyahCountAtStart,
-              Downloading:
-                False,
-              Paused: false,
-              Error: true
+            setSurahDownloadState({
+              downloaded:
+                current,
+              total:
+                ayahCountAtStart,
+              downloading:
+                false,
+              paused: false,
+              error: true
             });
 
-            Alert(
+            alert(
               'دابەزاندنی دەنگ سەرکەوتوو نەبوو.\n\nلەوانەیە سەرچاوەی دەنگی ئەم قارییە بەردەست نەبێت یان ڕێگە بە دابەزاندنی ڕاستەوخۆ نەدات.'
             );
           }
         }
       } finally {
-        If (
-          DownloadAbortControllerRef.current ===
-          Controller
+        if (
+          downloadAbortControllerRef.current ===
+          controller
         ) {
-          DownloadAbortControllerRef.current =
-            Null;
+          downloadAbortControllerRef.current =
+            null;
         }
       }
     };
 
-  Const pauseCurrentSurahDownload =
+  const pauseCurrentSurahDownload =
     () => {
-      DownloadAbortControllerRef.current?.abort();
+      downloadAbortControllerRef.current?.abort();
     };
 
-  Const removeCurrentSurahAudio =
-    Async () => {
-      If (
+  const removeCurrentSurahAudio =
+    async () => {
+      if (
         !currentSurahNumber ||
         !currentSurahAyahCount
       ) {
-        Return;
+        return;
       }
 
-      If (
-        SurahDownloadState.downloading
+      if (
+        surahDownloadState.downloading
       ) {
-        DownloadAbortControllerRef.current?.abort();
+        downloadAbortControllerRef.current?.abort();
       }
 
-      Const confirmed =
-        Window.confirm(
-          AppLang === 'ar'
+      const confirmed =
+        window.confirm(
+          appLang === 'ar'
             ? 'هل تريد حذف صوت هذه السورة؟'
-            : AppLang === 'en'
+            : appLang === 'en'
               ? 'Delete downloaded audio for this surah?'
               : 'دڵنیایت دەتەوێت دەنگی ئەم سورەتە بسڕیتەوە؟'
         );
 
-      If (!confirmed) {
-        Return;
+      if (!confirmed) {
+        return;
       }
 
-      Try {
-        Await deleteSurahAudio(
-          SelectedReciter.id,
-          CurrentSurahNumber,
-          CurrentSurahAyahCount
+      try {
+        await deleteSurahAudio(
+          selectedReciter.id,
+          currentSurahNumber,
+          currentSurahAyahCount
         );
 
-        DownloadSessionRef.current++;
+        downloadSessionRef.current++;
 
-        SetSurahDownloadState({
-          Downloaded: 0,
-          Total:
-            CurrentSurahAyahCount,
-          Downloading: false,
-          Paused: false,
-          Error: false
+        setSurahDownloadState({
+          downloaded: 0,
+          total:
+            currentSurahAyahCount,
+          downloading: false,
+          paused: false,
+          error: false
         });
       } catch (error) {
-        Console.error(
+        console.error(
           'Delete audio error:',
-          Error
+          error
         );
 
-        Alert(
+        alert(
           'سڕینەوەی دەنگ سەرکەوتوو نەبوو.'
         );
       }
     };
 
-  Const downloadProgress =
-    SurahDownloadState.total >
+  const downloadProgress =
+    surahDownloadState.total >
     0
       ? Math.round(
           (surahDownloadState.downloaded /
-            SurahDownloadState.total) *
+            surahDownloadState.total) *
             100
         )
       : 0;
 
-  Const isSurahDownloadComplete =
-    SurahDownloadState.total >
+  const isSurahDownloadComplete =
+    surahDownloadState.total >
       0 &&
-    SurahDownloadState.downloaded >=
-      SurahDownloadState.total;
+    surahDownloadState.downloaded >=
+      surahDownloadState.total;
 
-  Const renderCurrentSurahDownload =
+  const renderCurrentSurahDownload =
     () => {
-      If (
+      if (
         !currentSurah ||
         !currentSurahNumber ||
         !currentSurahAyahCount
       ) {
-        Return null;
+        return null;
       }
 
-      If (
-        SurahDownloadState.downloading
+      if (
+        surahDownloadState.downloading
       ) {
-        Return (
+        return (
           <div className="flex items-center gap-2">
             <button
-              Type="button"
-              OnClick={e => {
-                E.stopPropagation();
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
 
-                PauseCurrentSurahDownload();
+                pauseCurrentSurahDownload();
               }}
-              ClassName="h-9 px-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.97] transition-all"
+              className="h-9 px-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.97] transition-all"
             >
               <Pause className="w-3.5 h-3.5" />
 
@@ -1850,11 +1850,11 @@ Export const MushafPageView: React.FC<
 
               <div className="text-[8px] text-slate-400">
                 {
-                  SurahDownloadState.downloaded
+                  surahDownloadState.downloaded
                 }
                 /
                 {
-                  SurahDownloadState.total
+                  surahDownloadState.total
                 }
               </div>
             </div>
@@ -1862,10 +1862,10 @@ Export const MushafPageView: React.FC<
         );
       }
 
-      If (
-        IsSurahDownloadComplete
+      if (
+        isSurahDownloadComplete
       ) {
-        Return (
+        return (
           <div className="flex items-center gap-1.5">
             <div className="h-9 px-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center gap-1.5">
               <Check className="w-3.5 h-3.5" />
@@ -1876,13 +1876,13 @@ Export const MushafPageView: React.FC<
             </div>
 
             <button
-              Type="button"
-              OnClick={e => {
-                E.stopPropagation();
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
 
-                Void removeCurrentSurahAudio();
+                void removeCurrentSurahAudio();
               }}
-              ClassName="h-9 px-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.97] transition-all"
+              className="h-9 px-2.5 rounded-xl bg-red-50 border border-red-200 text-red-600 flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.97] transition-all"
             >
               <Trash2 className="w-3.5 h-3.5" />
 
@@ -1894,20 +1894,20 @@ Export const MushafPageView: React.FC<
         );
       }
 
-      If (
-        SurahDownloadState.downloaded >
+      if (
+        surahDownloadState.downloaded >
         0
       ) {
-        Return (
+        return (
           <div className="flex items-center gap-2">
             <button
-              Type="button"
-              OnClick={e => {
-                E.stopPropagation();
+              type="button"
+              onClick={e => {
+                e.stopPropagation();
 
-                Void downloadCurrentSurah();
+                void downloadCurrentSurah();
               }}
-              ClassName="h-9 px-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.97] transition-all"
+              className="h-9 px-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.97] transition-all"
             >
               <Play className="w-3.5 h-3.5" />
 
@@ -1923,11 +1923,11 @@ Export const MushafPageView: React.FC<
 
               <div className="text-[8px] text-slate-400">
                 {
-                  SurahDownloadState.downloaded
+                  surahDownloadState.downloaded
                 }
                 /
                 {
-                  SurahDownloadState.total
+                  surahDownloadState.total
                 }
               </div>
             </div>
@@ -1935,15 +1935,15 @@ Export const MushafPageView: React.FC<
         );
       }
 
-      Return (
+      return (
         <button
-          Type="button"
-          OnClick={e => {
-            E.stopPropagation();
+          type="button"
+          onClick={e => {
+            e.stopPropagation();
 
-            Void downloadCurrentSurah();
+            void downloadCurrentSurah();
           }}
-          ClassName="h-9 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.97] transition-all"
+          className="h-9 px-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center gap-1.5 shadow-sm active:scale-[0.97] transition-all"
         >
           <Download className="w-3.5 h-3.5" />
 
@@ -1954,297 +1954,297 @@ Export const MushafPageView: React.FC<
       );
     };
 
-  Const playAyahAudio =
-    Async (
-      A: any
+  const playAyahAudio =
+    async (
+      a: any
     ) => {
-      Const key =
-        AyahKey(a);
+      const key =
+        ayahKey(a);
 
-      If (
-        PlayingAyahKey === key
+      if (
+        playingAyahKey === key
       ) {
-        StopAudioCompletely();
-        Return;
+        stopAudioCompletely();
+        return;
       }
 
-      Const requestId =
+      const requestId =
         ++audioRequestIdRef.current;
 
-      ActiveSegmentRef.current =
-        Null;
+      activeSegmentRef.current =
+        null;
 
-      PageAudioIndexRef.current =
+      pageAudioIndexRef.current =
         -1;
 
-      SetPageAudioIndex(-1);
+      setPageAudioIndex(-1);
 
-      Const ayahBox =
-        AyahBoxes.find(
-          B =>
-            B.s ===
-              A.surahNumber &&
-            B.a ===
-              A.numberInSurah
+      const ayahBox =
+        ayahBoxes.find(
+          b =>
+            b.s ===
+              a.surahNumber &&
+            b.a ===
+              a.numberInSurah
         );
 
-      If (ayahBox) {
-        Const topPct =
+      if (ayahBox) {
+        const topPct =
           (ayahBox.y0 /
             AYAH_CANVAS_HEIGHT) *
           100;
 
-        SetHighlightedAyah({
-          Ayah: a,
-          TopPercent:
-            TopPct
+        setHighlightedAyah({
+          ayah: a,
+          topPercent:
+            topPct
         });
       }
 
-      If (
+      if (
         !audioRef.current
       ) {
-        Return;
+        return;
       }
 
-      AudioRef.current.pause();
-      ClearAudioObjectUrl();
+      audioRef.current.pause();
+      clearAudioObjectUrl();
 
-      Try {
-        Const source =
-          Await getAudioSource(
-            SelectedReciter,
-            A.surahNumber,
-            A.numberInSurah
+      try {
+        const source =
+          await getAudioSource(
+            selectedReciter,
+            a.surahNumber,
+            a.numberInSurah
           );
 
-        If (
-          RequestId !==
-          AudioRequestIdRef.current
+        if (
+          requestId !==
+          audioRequestIdRef.current
         ) {
-          Return;
+          return;
         }
 
-        Const audio =
-          AudioRef.current;
+        const audio =
+          audioRef.current;
 
-        Audio.src =
-          Source.url;
+        audio.src =
+          source.url;
 
-        ActiveSegmentRef.current =
+        activeSegmentRef.current =
           {
-            EndTime:
-              Source.endTime ??
-              Null,
-            RequestId
+            endTime:
+              source.endTime ??
+              null,
+            requestId
           };
 
-        If (
-          Source.startTime !==
-          Undefined
+        if (
+          source.startTime !==
+          undefined
         ) {
-          Await new Promise<void>(
+          await new Promise<void>(
             (
-              Resolve,
-              Reject
+              resolve,
+              reject
             ) => {
-              Const audio =
-                AudioRef.current;
+              const audio =
+                audioRef.current;
 
-              If (!audio) {
-                Reject(
-                  New Error(
+              if (!audio) {
+                reject(
+                  new Error(
                     'Audio element نەدۆزرایەوە'
                   )
                 );
 
-                Return;
+                return;
               }
 
-              If (
-                Audio.readyState >=
+              if (
+                audio.readyState >=
                 1
               ) {
-                Resolve();
-                Return;
+                resolve();
+                return;
               }
 
-              Const onLoaded =
+              const onLoaded =
                 () => {
-                  Cleanup();
-                  Resolve();
+                  cleanup();
+                  resolve();
                 };
 
-              Const onError =
+              const onError =
                 () => {
-                  Cleanup();
+                  cleanup();
 
-                  Reject(
-                    New Error(
+                  reject(
+                    new Error(
                       'Audio metadata load failed'
                     )
                   );
                 };
 
-              Const cleanup =
+              const cleanup =
                 () => {
-                  Audio.removeEventListener(
+                  audio.removeEventListener(
                     'loadedmetadata',
-                    OnLoaded
+                    onLoaded
                   );
 
-                  Audio.removeEventListener(
+                  audio.removeEventListener(
                     'error',
-                    OnError
+                    onError
                   );
                 };
 
-              Audio.addEventListener(
+              audio.addEventListener(
                 'loadedmetadata',
-                OnLoaded
+                onLoaded
               );
 
-              Audio.addEventListener(
+              audio.addEventListener(
                 'error',
-                OnError
+                onError
               );
             }
           );
 
-          If (
-            RequestId !==
-            AudioRequestIdRef.current
+          if (
+            requestId !==
+            audioRequestIdRef.current
           ) {
-            Return;
+            return;
           }
 
-          Audio.currentTime =
-            Source.startTime;
+          audio.currentTime =
+            source.startTime;
         } else if (
-          SelectedReciter.audioSource ===
+          selectedReciter.audioSource ===
           'mp3quran'
         ) {
-          Await new Promise<void>(
-            Resolve => {
-              Const waitAudio =
-                AudioRef.current;
+          await new Promise<void>(
+            resolve => {
+              const waitAudio =
+                audioRef.current;
 
-              If (!waitAudio) {
-                Resolve();
-                Return;
+              if (!waitAudio) {
+                resolve();
+                return;
               }
 
-              If (
-                WaitAudio.readyState >=
+              if (
+                waitAudio.readyState >=
                   1 &&
                 Number.isFinite(
-                  WaitAudio.duration
+                  waitAudio.duration
                 )
               ) {
-                Resolve();
-                Return;
+                resolve();
+                return;
               }
 
-              Const onLoaded =
+              const onLoaded =
                 () => {
-                  Cleanup();
-                  Resolve();
+                  cleanup();
+                  resolve();
                 };
 
-              Const onError =
+              const onError =
                 () => {
-                  Cleanup();
-                  Resolve();
+                  cleanup();
+                  resolve();
                 };
 
-              Const cleanup =
+              const cleanup =
                 () => {
-                  WaitAudio.removeEventListener(
+                  waitAudio.removeEventListener(
                     'loadedmetadata',
-                    OnLoaded
+                    onLoaded
                   );
 
-                  WaitAudio.removeEventListener(
+                  waitAudio.removeEventListener(
                     'error',
-                    OnError
+                    onError
                   );
                 };
 
-              WaitAudio.addEventListener(
+              waitAudio.addEventListener(
                 'loadedmetadata',
-                OnLoaded
+                onLoaded
               );
 
-              WaitAudio.addEventListener(
+              waitAudio.addEventListener(
                 'error',
-                OnError
+                onError
               );
             }
           );
 
-          If (
-            RequestId !==
-            AudioRequestIdRef.current
+          if (
+            requestId !==
+            audioRequestIdRef.current
           ) {
-            Return;
+            return;
           }
 
-          Const estAudio =
-            AudioRef.current;
+          const estAudio =
+            audioRef.current;
 
-          Const duration =
-            EstAudio?.duration;
+          const duration =
+            estAudio?.duration;
 
-          If (
-            EstAudio &&
+          if (
+            estAudio &&
             Number.isFinite(
-              Duration
+              duration
             ) &&
             (duration as number) >
               0
           ) {
-            Const counts =
-              Await getSurahWordCounts(
-                A.surahNumber
+            const counts =
+              await getSurahWordCounts(
+                a.surahNumber
               );
 
-            If (
-              RequestId ===
-                AudioRequestIdRef.current &&
-              Counts.length
+            if (
+              requestId ===
+                audioRequestIdRef.current &&
+              counts.length
             ) {
-              Const ranges =
-                BuildEstimatedRanges(
-                  Counts,
-                  Duration as number
+              const ranges =
+                buildEstimatedRanges(
+                  counts,
+                  duration as number
                 );
 
-              If (
-                Ranges.length
+              if (
+                ranges.length
               ) {
-                EstimatedTimingRef.current =
+                estimatedTimingRef.current =
                   {
-                    ReciterId:
-                      SelectedReciter.id,
-                    SurahNumber:
-                      A.surahNumber,
-                    Ranges
+                    reciterId:
+                      selectedReciter.id,
+                    surahNumber:
+                      a.surahNumber,
+                    ranges
                   };
 
-                Const targetRange =
-                  Ranges.find(
-                    R =>
-                      R.ayah ===
-                      A.numberInSurah
+                const targetRange =
+                  ranges.find(
+                    r =>
+                      r.ayah ===
+                      a.numberInSurah
                   );
 
-                If (
-                  TargetRange &&
-                  AudioRef.current
+                if (
+                  targetRange &&
+                  audioRef.current
                 ) {
-                  Try {
-                    AudioRef.current.currentTime =
-                      TargetRange.start;
+                  try {
+                    audioRef.current.currentTime =
+                      targetRange.start;
                   } catch {
                     // Ignore
                   }
@@ -2254,396 +2254,396 @@ Export const MushafPageView: React.FC<
           }
         }
 
-        SetPlayingAyahKey(
-          Key
+        setPlayingAyahKey(
+          key
         );
 
-        Await audio.play();
+        await audio.play();
 
-        If (
-          RequestId ===
-          AudioRequestIdRef.current
+        if (
+          requestId ===
+          audioRequestIdRef.current
         ) {
-          SetIsPlayingAudio(true);
+          setIsPlayingAudio(true);
         }
       } catch (error) {
-        Console.error(
+        console.error(
           'Ayah audio error:',
           {
-            Reciter:
-              SelectedReciter,
-            Surah:
-              A.surahNumber,
-            Ayah:
-              A.numberInSurah,
-            Error
+            reciter:
+              selectedReciter,
+            surah:
+              a.surahNumber,
+            ayah:
+              a.numberInSurah,
+            error
           }
         );
 
-        If (
-          RequestId ===
-          AudioRequestIdRef.current
+        if (
+          requestId ===
+          audioRequestIdRef.current
         ) {
-          SetPlayingAyahKey(
-            Null
+          setPlayingAyahKey(
+            null
           );
 
-          SetIsPlayingAudio(
-            False
+          setIsPlayingAudio(
+            false
           );
 
-          ActiveSegmentRef.current =
-            Null;
+          activeSegmentRef.current =
+            null;
         }
       }
     };
 
-  Const playPageAyahAtIndex =
-    Async (
-      Index: number
+  const playPageAyahAtIndex =
+    async (
+      index: number
     ) => {
-      If (
-        Index < 0 ||
-        Index >=
-          PageAyahsData.length
+      if (
+        index < 0 ||
+        index >=
+          pageAyahsData.length
       ) {
-        PageAudioIndexRef.current =
+        pageAudioIndexRef.current =
           -1;
 
-        SetPageAudioIndex(-1);
+        setPageAudioIndex(-1);
 
-        SetPlayingAyahKey(
-          Null
+        setPlayingAyahKey(
+          null
         );
 
-        SetIsPlayingAudio(
-          False
+        setIsPlayingAudio(
+          false
         );
 
-        SetHighlightedAyah(
-          Null
+        setHighlightedAyah(
+          null
         );
 
-        ActiveSegmentRef.current =
-          Null;
+        activeSegmentRef.current =
+          null;
 
-        Return;
+        return;
       }
 
-      Const ayah =
-        PageAyahsData[index];
+      const ayah =
+        pageAyahsData[index];
 
-      If (!ayah) {
-        Return;
+      if (!ayah) {
+        return;
       }
 
-      Const requestId =
+      const requestId =
         ++audioRequestIdRef.current;
 
-      ActiveSegmentRef.current =
-        Null;
+      activeSegmentRef.current =
+        null;
 
-      PageAudioIndexRef.current =
-        Index;
+      pageAudioIndexRef.current =
+        index;
 
-      SetPageAudioIndex(
-        Index
+      setPageAudioIndex(
+        index
       );
 
-      Const key =
-        AyahKey(ayah);
+      const key =
+        ayahKey(ayah);
 
-      SetPlayingAyahKey(
-        Key
+      setPlayingAyahKey(
+        key
       );
 
-      Const ayahBox =
-        AyahBoxes.find(
-          B =>
-            B.s ===
-              Ayah.surahNumber &&
-            B.a ===
-              Ayah.numberInSurah
+      const ayahBox =
+        ayahBoxes.find(
+          b =>
+            b.s ===
+              ayah.surahNumber &&
+            b.a ===
+              ayah.numberInSurah
         );
 
-      If (ayahBox) {
-        Const topPct =
+      if (ayahBox) {
+        const topPct =
           (ayahBox.y0 /
             AYAH_CANVAS_HEIGHT) *
           100;
 
-        SetHighlightedAyah({
-          Ayah,
-          TopPercent:
-            TopPct
+        setHighlightedAyah({
+          ayah,
+          topPercent:
+            topPct
         });
       }
 
-      If (
+      if (
         !audioRef.current
       ) {
-        Return;
+        return;
       }
 
-      AudioRef.current.pause();
-      ClearAudioObjectUrl();
+      audioRef.current.pause();
+      clearAudioObjectUrl();
 
-      Try {
-        Const source =
-          Await getAudioSource(
-            SelectedReciter,
-            Ayah.surahNumber,
-            Ayah.numberInSurah
+      try {
+        const source =
+          await getAudioSource(
+            selectedReciter,
+            ayah.surahNumber,
+            ayah.numberInSurah
           );
 
-        If (
-          RequestId !==
-          AudioRequestIdRef.current
+        if (
+          requestId !==
+          audioRequestIdRef.current
         ) {
-          Return;
+          return;
         }
 
-        Const audio =
-          AudioRef.current;
+        const audio =
+          audioRef.current;
 
-        Audio.src =
-          Source.url;
+        audio.src =
+          source.url;
 
-        ActiveSegmentRef.current =
+        activeSegmentRef.current =
           {
-            EndTime:
-              Source.endTime ??
-              Null,
-            RequestId
+            endTime:
+              source.endTime ??
+              null,
+            requestId
           };
 
-        If (
-          Source.startTime !==
-          Undefined
+        if (
+          source.startTime !==
+          undefined
         ) {
-          Await new Promise<void>(
+          await new Promise<void>(
             (
-              Resolve,
-              Reject
+              resolve,
+              reject
             ) => {
-              Const audio =
-                AudioRef.current;
+              const audio =
+                audioRef.current;
 
-              If (!audio) {
-                Reject(
-                  New Error(
+              if (!audio) {
+                reject(
+                  new Error(
                     'Audio element نەدۆزرایەوە'
                   )
                 );
 
-                Return;
+                return;
               }
 
-              If (
-                Audio.readyState >=
+              if (
+                audio.readyState >=
                 1
               ) {
-                Resolve();
-                Return;
+                resolve();
+                return;
               }
 
-              Const onLoaded =
+              const onLoaded =
                 () => {
-                  Cleanup();
-                  Resolve();
+                  cleanup();
+                  resolve();
                 };
 
-              Const onError =
+              const onError =
                 () => {
-                  Cleanup();
+                  cleanup();
 
-                  Reject(
-                    New Error(
+                  reject(
+                    new Error(
                       'Audio metadata load failed'
                     )
                   );
                 };
 
-              Const cleanup =
+              const cleanup =
                 () => {
-                  Audio.removeEventListener(
+                  audio.removeEventListener(
                     'loadedmetadata',
-                    OnLoaded
+                    onLoaded
                   );
 
-                  Audio.removeEventListener(
+                  audio.removeEventListener(
                     'error',
-                    OnError
+                    onError
                   );
                 };
 
-              Audio.addEventListener(
+              audio.addEventListener(
                 'loadedmetadata',
-                OnLoaded
+                onLoaded
               );
 
-              Audio.addEventListener(
+              audio.addEventListener(
                 'error',
-                OnError
+                onError
               );
             }
           );
 
-          If (
-            RequestId !==
-            AudioRequestIdRef.current
+          if (
+            requestId !==
+            audioRequestIdRef.current
           ) {
-            Return;
+            return;
           }
 
-          Audio.currentTime =
-            Source.startTime;
+          audio.currentTime =
+            source.startTime;
         }
 
-        Await audio.play();
+        await audio.play();
 
-        If (
-          RequestId ===
-            AudioRequestIdRef.current &&
-          PageAudioIndexRef.current ===
-            Index
+        if (
+          requestId ===
+            audioRequestIdRef.current &&
+          pageAudioIndexRef.current ===
+            index
         ) {
-          SetIsPlayingAudio(true);
+          setIsPlayingAudio(true);
         }
 
-        If (
-          Source.startTime ===
-            Undefined &&
-          SelectedReciter.audioSource ===
+        if (
+          source.startTime ===
+            undefined &&
+          selectedReciter.audioSource ===
             'mp3quran'
         ) {
-          Const surahNumberForEstimate =
-            Ayah.surahNumber;
+          const surahNumberForEstimate =
+            ayah.surahNumber;
 
-          Const reciterIdForEstimate =
-            SelectedReciter.id;
+          const reciterIdForEstimate =
+            selectedReciter.id;
 
-          Const applyEstimated =
+          const applyEstimated =
             () => {
-              Const durationAudio =
-                AudioRef.current;
+              const durationAudio =
+                audioRef.current;
 
-              Const duration =
-                DurationAudio?.duration;
+              const duration =
+                durationAudio?.duration;
 
-              If (
+              if (
                 !durationAudio ||
                 !Number.isFinite(
-                  Duration
+                  duration
                 ) ||
                 (duration as number) <=
                   0
               ) {
-                Return;
+                return;
               }
 
-              Void getSurahWordCounts(
-                SurahNumberForEstimate
+              void getSurahWordCounts(
+                surahNumberForEstimate
               ).then(counts => {
-                If (
-                  RequestId !==
-                  AudioRequestIdRef.current
+                if (
+                  requestId !==
+                  audioRequestIdRef.current
                 ) {
-                  Return;
+                  return;
                 }
 
-                Const ranges =
-                  BuildEstimatedRanges(
-                    Counts,
-                    Duration as number
+                const ranges =
+                  buildEstimatedRanges(
+                    counts,
+                    duration as number
                   );
 
-                If (
+                if (
                   !ranges.length
                 ) {
-                  Return;
+                  return;
                 }
 
-                EstimatedTimingRef.current =
+                estimatedTimingRef.current =
                   {
-                    ReciterId:
-                      ReciterIdForEstimate,
-                    SurahNumber:
-                      SurahNumberForEstimate,
-                    Ranges
+                    reciterId:
+                      reciterIdForEstimate,
+                    surahNumber:
+                      surahNumberForEstimate,
+                    ranges
                   };
               });
             };
 
-          If (
-            Audio.readyState >=
+          if (
+            audio.readyState >=
               1 &&
             Number.isFinite(
-              Audio.duration
+              audio.duration
             )
           ) {
-            ApplyEstimated();
+            applyEstimated();
           } else {
-            Audio.addEventListener(
+            audio.addEventListener(
               'loadedmetadata',
-              ApplyEstimated,
+              applyEstimated,
               { once: true }
             );
           }
         } else {
-          EstimatedTimingRef.current =
-            Null;
+          estimatedTimingRef.current =
+            null;
         }
       } catch (error) {
-        Console.error(
+        console.error(
           'Page audio error:',
           {
-            Reciter:
-              SelectedReciter,
-            Surah:
-              Ayah.surahNumber,
-            Ayah:
-              Ayah.numberInSurah,
-            Error
+            reciter:
+              selectedReciter,
+            surah:
+              ayah.surahNumber,
+            ayah:
+              ayah.numberInSurah,
+            error
           }
         );
 
-        If (
-          RequestId ===
-          AudioRequestIdRef.current
+        if (
+          requestId ===
+          audioRequestIdRef.current
         ) {
-          SetIsPlayingAudio(
-            False
+          setIsPlayingAudio(
+            false
           );
 
-          SetPlayingAyahKey(
-            Null
+          setPlayingAyahKey(
+            null
           );
 
-          ActiveSegmentRef.current =
-            Null;
+          activeSegmentRef.current =
+            null;
         }
       }
     };
 
-  Const shareAyah = async (
-    A: any
+  const shareAyah = async (
+    a: any
   ) => {
-    Const text =
+    const text =
       `${a.arabic}\n\n` +
       `(${a.surahNumber}:${a.numberInSurah})\n\n` +
       `${a.tafsir}`;
 
-    Try {
-      If (
-        Navigator.share
+    try {
+      if (
+        navigator.share
       ) {
-        Await navigator.share({
-          Text
+        await navigator.share({
+          text
         });
       } else {
-        Await navigator.clipboard.writeText(
-          Text
+        await navigator.clipboard.writeText(
+          text
         );
       }
     } catch {
@@ -2651,224 +2651,224 @@ Export const MushafPageView: React.FC<
     }
   };
 
-  Const startLongPress = (
-    BoxKey: string,
-    Ayah: any,
-    TopPercent: number
+  const startLongPress = (
+    boxKey: string,
+    ayah: any,
+    topPercent: number
   ) => {
-    SetPressingBox(
-      BoxKey
+    setPressingBox(
+      boxKey
     );
 
-    If (
-      LongPressTimer.current
+    if (
+      longPressTimer.current
     ) {
-      ClearTimeout(
-        LongPressTimer.current
+      clearTimeout(
+        longPressTimer.current
       );
     }
 
-    LongPressTimer.current =
-      SetTimeout(() => {
-        SetHighlightedAyah({
-          Ayah,
-          TopPercent
+    longPressTimer.current =
+      setTimeout(() => {
+        setHighlightedAyah({
+          ayah,
+          topPercent
         });
 
-        SetPressingBox(
-          Null
+        setPressingBox(
+          null
         );
 
-        SetTafsirSheetOpen(
-          False
+        setTafsirSheetOpen(
+          false
         );
 
-        Navigator.vibrate?.(40);
+        navigator.vibrate?.(40);
       }, LONG_PRESS_MS);
   };
 
-  Const cancelLongPress =
+  const cancelLongPress =
     () => {
-      If (
-        LongPressTimer.current
+      if (
+        longPressTimer.current
       ) {
-        ClearTimeout(
-          LongPressTimer.current
+        clearTimeout(
+          longPressTimer.current
         );
 
-        LongPressTimer.current =
-          Null;
+        longPressTimer.current =
+          null;
       }
 
-      SetPressingBox(
-        Null
+      setPressingBox(
+        null
       );
     };
 
-  Const closeHighlight =
+  const closeHighlight =
     () => {
-      SetHighlightedAyah(
-        Null
+      setHighlightedAyah(
+        null
       );
 
-      SetTafsirSheetOpen(
-        False
+      setTafsirSheetOpen(
+        false
       );
     };
 
-  Const scrollContainerRef =
-    UseRef<HTMLDivElement | null>(
-      Null
+  const scrollContainerRef =
+    useRef<HTMLDivElement | null>(
+      null
     );
 
-  Const isUpdating =
-    UseRef(false);
+  const isUpdating =
+    useRef(false);
 
-  Const pageRefs =
-    UseRef<
+  const pageRefs =
+    useRef<
       Record<
-        Number,
+        number,
         HTMLDivElement | null
       >
     >({});
 
-  Const isFirstScroll =
-    UseRef(true);
+  const isFirstScroll =
+    useRef(true);
 
-  Const scrollInitiatedByUser =
-    UseRef(false);
+  const scrollInitiatedByUser =
+    useRef(false);
 
-  Const isBookmarked =
-    Bookmarks.includes(
-      CurrentPage
+  const isBookmarked =
+    bookmarks.includes(
+      currentPage
     );
 
-  Const currentJuz =
+  const currentJuz =
     Math.ceil(
-      CurrentPage / 20
+      currentPage / 20
     );
 
-  UseEffect(() => {
-    Let cancelled =
-      False;
+  useEffect(() => {
+    let cancelled =
+      false;
 
-    Async function loadPageVerses() {
-      SetLoadingTafsir(
-        True
+    async function loadPageVerses() {
+      setLoadingTafsir(
+        true
       );
 
-      SetAyahApiError(
-        Null
+      setAyahApiError(
+        null
       );
 
-      SetTafsirApiError(
-        Null
+      setTafsirApiError(
+        null
       );
 
-      Let arabicAyahs:
-        Any[] = [];
+      let arabicAyahs:
+        any[] = [];
 
-      Try {
-        Const resAr =
-          Await fetch(
+      try {
+        const resAr =
+          await fetch(
             `https://api.alquran.cloud/v1/page/${currentPage}/quran-uthmani`
           );
 
-        Const dataAr =
-          Await resAr.json();
+        const dataAr =
+          await resAr.json();
 
-        If (
-          DataAr.code ===
+        if (
+          dataAr.code ===
             200 &&
-          DataAr.data?.ayahs
+          dataAr.data?.ayahs
         ) {
-          ArabicAyahs =
-            DataAr.data.ayahs;
+          arabicAyahs =
+            dataAr.data.ayahs;
         } else {
-          SetAyahApiError(
+          setAyahApiError(
             `arabic code:${dataAr.code}`
           );
         }
       } catch (e: any) {
-        SetAyahApiError(
-          E?.message ||
+        setAyahApiError(
+          e?.message ||
             'arabic fetch failed'
         );
       }
 
-      Let tafsirAyahs:
-        Any[] = [];
+      let tafsirAyahs:
+        any[] = [];
 
-      Const selectedEdition =
-        GetTafsirApiEdition(
-          SelectedTafsir
+      const selectedEdition =
+        getTafsirApiEdition(
+          selectedTafsir
         );
 
-      If (
-        SelectedEdition
+      if (
+        selectedEdition
       ) {
-        Try {
-          Const resTf =
-            Await fetch(
+        try {
+          const resTf =
+            await fetch(
               `https://api.alquran.cloud/v1/page/${currentPage}/${selectedEdition}`
             );
 
-          Const dataTf =
-            Await resTf.json();
+          const dataTf =
+            await resTf.json();
 
-          If (
-            DataTf.code ===
+          if (
+            dataTf.code ===
               200 &&
-            DataTf.data?.ayahs
+            dataTf.data?.ayahs
           ) {
-            TafsirAyahs =
-              DataTf.data.ayahs;
+            tafsirAyahs =
+              dataTf.data.ayahs;
           } else {
-            SetTafsirApiError(
+            setTafsirApiError(
               `tafsir code:${dataTf.code}`
             );
           }
         } catch (e: any) {
-          SetTafsirApiError(
-            E?.message ||
+          setTafsirApiError(
+            e?.message ||
               'tafsir fetch failed'
           );
         }
       } else {
-        SetTafsirApiError(
+        setTafsirApiError(
           'ئەم تەفسیرە هێشتا سەرچاوەی API ـی ئەپەکە نییە.'
         );
       }
 
-      If (cancelled) {
-        Return;
+      if (cancelled) {
+        return;
       }
 
-      If (
-        ArabicAyahs.length >
+      if (
+        arabicAyahs.length >
         0
       ) {
-        Const combined =
-          ArabicAyahs.map(
+        const combined =
+          arabicAyahs.map(
             (a: any) => {
-              Const matchingTafsir =
-                TafsirAyahs.find(
+              const matchingTafsir =
+                tafsirAyahs.find(
                   (t: any) =>
-                    T.surah?.number ===
-                      A.surah.number &&
-                    T.numberInSurah ===
-                      A.numberInSurah
+                    t.surah?.number ===
+                      a.surah.number &&
+                    t.numberInSurah ===
+                      a.numberInSurah
                 );
 
-              Return {
-                SurahNumber:
-                  A.surah.number,
-                NumberInSurah:
-                  A.numberInSurah,
-                Arabic:
-                  A.text,
-                Tafsir:
-                  MatchingTafsir?.text ||
+              return {
+                surahNumber:
+                  a.surah.number,
+                numberInSurah:
+                  a.numberInSurah,
+                arabic:
+                  a.text,
+                tafsir:
+                  matchingTafsir?.text ||
                   (selectedEdition
                     ? 'دەقی ئەم تەفسیرە بۆ ئەم ئایەتە بەردەست نییە.'
                     : 'ئەم تەفسیرە هێشتا بە سەرچاوەی API ـی ئەپەکە نەبەستراوەتەوە.')
@@ -2876,207 +2876,207 @@ Export const MushafPageView: React.FC<
             }
           );
 
-        SetPageAyahsData(
-          Combined
+        setPageAyahsData(
+          combined
         );
       } else {
-        SetPageAyahsData(
+        setPageAyahsData(
           []
         );
       }
 
-      SetLoadingTafsir(
-        False
+      setLoadingTafsir(
+        false
       );
     }
 
-    LoadPageVerses();
+    loadPageVerses();
 
-    Return () => {
-      Cancelled = true;
+    return () => {
+      cancelled = true;
     };
   }, [
-    CurrentPage,
-    SelectedTafsir.id
+    currentPage,
+    selectedTafsir.id
   ]);
 
-  UseEffect(() => {
-    If (
+  useEffect(() => {
+    if (
       !highlightedAyah
     ) {
-      Return;
+      return;
     }
 
-    Const updatedAyah =
-      PageAyahsData.find(
-        A =>
-          A.surahNumber ===
-            HighlightedAyah.ayah
+    const updatedAyah =
+      pageAyahsData.find(
+        a =>
+          a.surahNumber ===
+            highlightedAyah.ayah
               .surahNumber &&
-          A.numberInSurah ===
-            HighlightedAyah.ayah
+          a.numberInSurah ===
+            highlightedAyah.ayah
               .numberInSurah
       );
 
-    If (
-      UpdatedAyah
+    if (
+      updatedAyah
     ) {
-      SetHighlightedAyah(
-        Previous =>
-          Previous
+      setHighlightedAyah(
+        previous =>
+          previous
             ? {
                 ...previous,
-                Ayah:
-                  UpdatedAyah
+                ayah:
+                  updatedAyah
               }
             : null
       );
     }
   }, [
-    PageAyahsData
+    pageAyahsData
   ]);
 
-  UseEffect(() => {
-    StopAudioCompletely();
+  useEffect(() => {
+    stopAudioCompletely();
 
-    CloseHighlight();
-    CancelLongPress();
+    closeHighlight();
+    cancelLongPress();
   }, [
-    CurrentPage
+    currentPage
   ]);
 
-  UseEffect(() => {
-    StopAudioCompletely();
+  useEffect(() => {
+    stopAudioCompletely();
   }, [
-    SelectedReciter.id
+    selectedReciter.id
   ]);
 
-  UseEffect(() => {
-    Return () => {
-      AudioRequestIdRef.current++;
+  useEffect(() => {
+    return () => {
+      audioRequestIdRef.current++;
 
-      ActiveSegmentRef.current =
-        Null;
+      activeSegmentRef.current =
+        null;
 
-      If (
-        AudioRef.current
+      if (
+        audioRef.current
       ) {
-        Try {
-          AudioRef.current.pause();
-          AudioRef.current.removeAttribute(
+        try {
+          audioRef.current.pause();
+          audioRef.current.removeAttribute(
             'src'
           );
-          AudioRef.current.load();
+          audioRef.current.load();
         } catch {
           // Ignore
         }
       }
 
-      ClearAudioObjectUrl();
+      clearAudioObjectUrl();
 
-      DownloadAbortControllerRef.current?.abort();
+      downloadAbortControllerRef.current?.abort();
 
-      If (
-        LongPressTimer.current
+      if (
+        longPressTimer.current
       ) {
-        ClearTimeout(
-          LongPressTimer.current
+        clearTimeout(
+          longPressTimer.current
         );
       }
     };
   }, []);
 
-  UseEffect(() => {
-    If (
-      ScrollInitiatedByUser.current
+  useEffect(() => {
+    if (
+      scrollInitiatedByUser.current
     ) {
-      ScrollInitiatedByUser.current =
-        False;
+      scrollInitiatedByUser.current =
+        false;
 
-      Return;
+      return;
     }
 
-    Const scrollToTarget =
+    const scrollToTarget =
       () => {
-        Const el =
-          PageRefs.current[
-            CurrentPage
+        const el =
+          pageRefs.current[
+            currentPage
           ];
 
-        If (el) {
-          IsUpdating.current =
-            True;
+        if (el) {
+          isUpdating.current =
+            true;
 
-          El.scrollIntoView({
-            Behavior:
-              IsFirstScroll.current
+          el.scrollIntoView({
+            behavior:
+              isFirstScroll.current
                 ? 'auto'
                 : 'smooth',
-            Inline: 'center',
-            Block: 'nearest'
+            inline: 'center',
+            block: 'nearest'
           });
 
-          IsFirstScroll.current =
-            False;
+          isFirstScroll.current =
+            false;
 
-          SetTimeout(
+          setTimeout(
             () => {
-              IsUpdating.current =
-                False;
+              isUpdating.current =
+                false;
             },
             400
           );
         }
       };
 
-    If (
-      IsFirstScroll.current
+    if (
+      isFirstScroll.current
     ) {
-      Const raf1 =
-        RequestAnimationFrame(
+      const raf1 =
+        requestAnimationFrame(
           () => {
-            RequestAnimationFrame(
+            requestAnimationFrame(
               () => {
-                ScrollToTarget();
+                scrollToTarget();
 
-                SetTimeout(
+                setTimeout(
                   () => {
-                    Const el =
-                      PageRefs.current[
-                        CurrentPage
+                    const el =
+                      pageRefs.current[
+                        currentPage
                       ];
 
-                    Const container =
-                      ScrollContainerRef.current;
+                    const container =
+                      scrollContainerRef.current;
 
-                    If (
-                      El &&
-                      Container
+                    if (
+                      el &&
+                      container
                     ) {
-                      Const elRect =
-                        El.getBoundingClientRect();
+                      const elRect =
+                        el.getBoundingClientRect();
 
-                      Const containerRect =
-                        Container.getBoundingClientRect();
+                      const containerRect =
+                        container.getBoundingClientRect();
 
-                      Const isVisible =
-                        ElRect.left >=
-                          ContainerRect.left -
+                      const isVisible =
+                        elRect.left >=
+                          containerRect.left -
                             5 &&
-                        ElRect.right <=
-                          ContainerRect.right +
+                        elRect.right <=
+                          containerRect.right +
                             5;
 
-                      If (
+                      if (
                         !isVisible
                       ) {
-                        El.scrollIntoView(
+                        el.scrollIntoView(
                           {
-                            Behavior:
+                            behavior:
                               'auto',
-                            Inline:
+                            inline:
                               'center',
-                            Block:
+                            block:
                               'nearest'
                           }
                         );
@@ -3090,178 +3090,178 @@ Export const MushafPageView: React.FC<
           }
         );
 
-      Return () =>
-        CancelAnimationFrame(
-          Raf1
+      return () =>
+        cancelAnimationFrame(
+          raf1
         );
     }
 
-    ScrollToTarget();
+    scrollToTarget();
   }, [
-    CurrentPage
+    currentPage
   ]);
 
-  Const togglePageAudio =
+  const togglePageAudio =
     () => {
-      If (
-        IsPlayingAudio
+      if (
+        isPlayingAudio
       ) {
-        AudioRef.current?.pause();
+        audioRef.current?.pause();
 
-        SetIsPlayingAudio(
-          False
+        setIsPlayingAudio(
+          false
         );
 
-        Return;
+        return;
       }
 
-      If (
-        PageAudioIndexRef.current >=
+      if (
+        pageAudioIndexRef.current >=
           0 &&
-        PageAudioIndexRef.current <
-          PageAyahsData.length
+        pageAudioIndexRef.current <
+          pageAyahsData.length
       ) {
-        Const index =
-          PageAudioIndexRef.current;
+        const index =
+          pageAudioIndexRef.current;
 
-        If (
-          AudioRef.current &&
-          AudioRef.current.src
+        if (
+          audioRef.current &&
+          audioRef.current.src
         ) {
-          AudioRef.current
+          audioRef.current
             .play()
             .then(() => {
-              SetIsPlayingAudio(
-                True
+              setIsPlayingAudio(
+                true
               );
             })
             .catch(() => {
-              SetIsPlayingAudio(
-                False
+              setIsPlayingAudio(
+                false
               );
             });
 
-          Return;
+          return;
         }
 
-        Void playPageAyahAtIndex(
-          Index
+        void playPageAyahAtIndex(
+          index
         );
 
-        Return;
+        return;
       }
 
-      If (
-        PageAyahsData.length >
+      if (
+        pageAyahsData.length >
         0
       ) {
-        Void playPageAyahAtIndex(
+        void playPageAyahAtIndex(
           0
         );
       }
     };
 
-  Const handleAudioTimeUpdate =
+  const handleAudioTimeUpdate =
     () => {
-      Const segment =
-        ActiveSegmentRef.current;
+      const segment =
+        activeSegmentRef.current;
 
-      Const audio =
-        AudioRef.current;
+      const audio =
+        audioRef.current;
 
-      If (!audio) {
-        Return;
+      if (!audio) {
+        return;
       }
 
-      If (
-        Segment &&
-        Segment.endTime !==
-          Null
+      if (
+        segment &&
+        segment.endTime !==
+          null
       ) {
-        If (
-          Audio.currentTime >=
-          Segment.endTime -
+        if (
+          audio.currentTime >=
+          segment.endTime -
             0.05
         ) {
-          Audio.pause();
+          audio.pause();
 
-          Try {
-            Audio.currentTime =
-              Segment.endTime;
+          try {
+            audio.currentTime =
+              segment.endTime;
           } catch {
             // Ignore
           }
 
-          ActiveSegmentRef.current =
-            Null;
+          activeSegmentRef.current =
+            null;
 
-          HandleAudioEnded();
+          handleAudioEnded();
         }
 
-        Return;
+        return;
       }
 
-      Const estimated =
-        EstimatedTimingRef.current;
+      const estimated =
+        estimatedTimingRef.current;
 
-      If (!estimated) {
-        Return;
+      if (!estimated) {
+        return;
       }
 
-      Const t =
-        Audio.currentTime;
+      const t =
+        audio.currentTime;
 
-      Const match =
-        Estimated.ranges.find(
-          R =>
-            T >= r.start &&
-            T < r.end
+      const match =
+        estimated.ranges.find(
+          r =>
+            t >= r.start &&
+            t < r.end
         ) ||
-        Estimated.ranges[
-          Estimated.ranges
+        estimated.ranges[
+          estimated.ranges
             .length - 1
         ];
 
-      If (!match) {
-        Return;
+      if (!match) {
+        return;
       }
 
-      Const ayahData =
-        PageAyahsData.find(
-          A =>
-            A.surahNumber ===
-              Estimated.surahNumber &&
-            A.numberInSurah ===
-              Match.ayah
+      const ayahData =
+        pageAyahsData.find(
+          a =>
+            a.surahNumber ===
+              estimated.surahNumber &&
+            a.numberInSurah ===
+              match.ayah
         );
 
-      If (!ayahData) {
-        Return;
+      if (!ayahData) {
+        return;
       }
 
-      Const key =
-        AyahKey(ayahData);
+      const key =
+        ayahKey(ayahData);
 
-      If (
-        PlayingAyahKey !== key
+      if (
+        playingAyahKey !== key
       ) {
-        SetPlayingAyahKey(
-          Key
+        setPlayingAyahKey(
+          key
         );
 
-        Const box =
-          AyahBoxes.find(
-            B =>
-              B.s ===
-                AyahData.surahNumber &&
-              B.a ===
-                AyahData.numberInSurah
+        const box =
+          ayahBoxes.find(
+            b =>
+              b.s ===
+                ayahData.surahNumber &&
+              b.a ===
+                ayahData.numberInSurah
           );
 
-        If (box) {
-          SetHighlightedAyah({
-            Ayah: ayahData,
-            TopPercent:
+        if (box) {
+          setHighlightedAyah({
+            ayah: ayahData,
+            topPercent:
               (box.y0 /
                 AYAH_CANVAS_HEIGHT) *
               100
@@ -3270,80 +3270,80 @@ Export const MushafPageView: React.FC<
       }
     };
 
-  Const handleAudioEnded =
+  const handleAudioEnded =
     () => {
-      ActiveSegmentRef.current =
-        Null;
+      activeSegmentRef.current =
+        null;
 
-      Const currentIndex =
-        PageAudioIndexRef.current;
+      const currentIndex =
+        pageAudioIndexRef.current;
 
-      If (
-        CurrentIndex < 0
+      if (
+        currentIndex < 0
       ) {
-        SetIsPlayingAudio(
-          False
+        setIsPlayingAudio(
+          false
         );
 
-        SetPlayingAyahKey(
-          Null
+        setPlayingAyahKey(
+          null
         );
 
-        Return;
+        return;
       }
 
-      Const nextIndex =
-        CurrentIndex + 1;
+      const nextIndex =
+        currentIndex + 1;
 
-      If (
-        NextIndex <
-        PageAyahsData.length
+      if (
+        nextIndex <
+        pageAyahsData.length
       ) {
-        Void playPageAyahAtIndex(
-          NextIndex
+        void playPageAyahAtIndex(
+          nextIndex
         );
 
-        Return;
+        return;
       }
 
-      PageAudioIndexRef.current =
+      pageAudioIndexRef.current =
         -1;
 
-      SetPageAudioIndex(
+      setPageAudioIndex(
         -1
       );
 
-      SetIsPlayingAudio(
-        False
+      setIsPlayingAudio(
+        false
       );
 
-      SetPlayingAyahKey(
-        Null
+      setPlayingAyahKey(
+        null
       );
 
-      If (
-        PageAyahsData.length >
+      if (
+        pageAyahsData.length >
         0
       ) {
-        Const lastAyah =
-          PageAyahsData[
-            PageAyahsData.length -
+        const lastAyah =
+          pageAyahsData[
+            pageAyahsData.length -
               1
           ];
 
-        Const lastBox =
-          AyahBoxes.find(
-            B =>
-              B.s ===
-                LastAyah.surahNumber &&
-              B.a ===
-                LastAyah.numberInSurah
+        const lastBox =
+          ayahBoxes.find(
+            b =>
+              b.s ===
+                lastAyah.surahNumber &&
+              b.a ===
+                lastAyah.numberInSurah
           );
 
-        If (lastBox) {
-          SetHighlightedAyah({
-            Ayah: lastAyah,
-            TopPercent:
+        if (lastBox) {
+          setHighlightedAyah({
+            ayah: lastAyah,
+            topPercent:
               (lastBox.y0 /
                 AYAH_CANVAS_HEIGHT) *
               100
@@ -3352,95 +3352,95 @@ Export const MushafPageView: React.FC<
       }
     };
 
-  Const handleAudioError =
+  const handleAudioError =
     () => {
-      Const audio =
-        AudioRef.current;
+      const audio =
+        audioRef.current;
 
-      If (!audio) {
-        Return;
+      if (!audio) {
+        return;
       }
 
-      Console.error(
+      console.error(
         'HTML Audio Error:',
         {
-          Src: audio.src,
-          Code:
-            Audio.error?.code,
-          Message:
-            Audio.error?.message
+          src: audio.src,
+          code:
+            audio.error?.code,
+          message:
+            audio.error?.message
         }
       );
 
-      SetIsPlayingAudio(
-        False
+      setIsPlayingAudio(
+        false
       );
     };
 
-  Const handleScroll = (
-    E: React.UIEvent<HTMLDivElement>
+  const handleScroll = (
+    e: React.UIEvent<HTMLDivElement>
   ) => {
-    If (
-      IsUpdating.current
+    if (
+      isUpdating.current
     ) {
-      Return;
+      return;
     }
 
-    Const target =
-      E.currentTarget;
+    const target =
+      e.currentTarget;
 
-    Const scrollLeft =
-      Target.scrollLeft;
+    const scrollLeft =
+      target.scrollLeft;
 
-    Const pageWidth =
-      Target.clientWidth;
+    const pageWidth =
+      target.clientWidth;
 
-    If (
-      PageWidth > 0
+    if (
+      pageWidth > 0
     ) {
-      Const pageIndex =
+      const pageIndex =
         Math.round(
-          ScrollLeft /
-            PageWidth
+          scrollLeft /
+            pageWidth
         );
 
-      Const targetPage =
+      const targetPage =
         604 -
-        PageIndex;
+        pageIndex;
 
-      If (
-        TargetPage >= 1 &&
-        TargetPage <= 604 &&
-        TargetPage !==
-          CurrentPage
+      if (
+        targetPage >= 1 &&
+        targetPage <= 604 &&
+        targetPage !==
+          currentPage
       ) {
-        IsUpdating.current =
-          True;
+        isUpdating.current =
+          true;
 
-        ScrollInitiatedByUser.current =
-          True;
+        scrollInitiatedByUser.current =
+          true;
 
-        StopAudioCompletely();
+        stopAudioCompletely();
 
-        If (
-          OnJumpToPage
+        if (
+          onJumpToPage
         ) {
-          OnJumpToPage(
-            TargetPage
+          onJumpToPage(
+            targetPage
           );
         } else if (
-          TargetPage >
-          CurrentPage
+          targetPage >
+          currentPage
         ) {
-          OnNextPage();
+          onNextPage();
         } else {
-          OnPrevPage();
+          onPrevPage();
         }
 
-        SetTimeout(
+        setTimeout(
           () => {
-            IsUpdating.current =
-              False;
+            isUpdating.current =
+              false;
           },
           300
         );
@@ -3448,90 +3448,90 @@ Export const MushafPageView: React.FC<
     }
   };
 
-  Const toggleBookmark =
+  const toggleBookmark =
     () => {
-      Let updated:
-        Number[];
+      let updated:
+        number[];
 
-      If (
-        IsBookmarked
+      if (
+        isBookmarked
       ) {
-        Updated =
-          Bookmarks.filter(
-            P =>
-              P !==
-              CurrentPage
+        updated =
+          bookmarks.filter(
+            p =>
+              p !==
+              currentPage
           );
       } else {
-        Updated = [
+        updated = [
           ...bookmarks,
-          CurrentPage
+          currentPage
         ];
       }
 
-      SetBookmarks(
-        Updated
+      setBookmarks(
+        updated
       );
 
-      LocalStorage.setItem(
+      localStorage.setItem(
         'quran_bookmarks',
         JSON.stringify(
-          Updated
+          updated
         )
       );
 
-      Navigator.vibrate?.(35);
+      navigator.vibrate?.(35);
     };
 
-  Const selectedTafsirName =
+  const selectedTafsirName =
     (selectedTafsir as any)
       .nameKu ||
-    SelectedTafsir.title ||
-    SelectedTafsir.id;
+    selectedTafsir.title ||
+    selectedTafsir.id;
 
-  Return (
+  return (
     <div
-      ClassName="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden"
-      Dir="rtl"
+      className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden"
+      dir="rtl"
     >
       <audio
-        Ref={audioRef}
-        Preload="none"
-        OnTimeUpdate={
-          HandleAudioTimeUpdate
+        ref={audioRef}
+        preload="none"
+        onTimeUpdate={
+          handleAudioTimeUpdate
         }
-        OnEnded={
-          HandleAudioEnded
+        onEnded={
+          handleAudioEnded
         }
-        OnError={
-          HandleAudioError
+        onError={
+          handleAudioError
         }
-        OnPause={() => {
-          SetIsPlayingAudio(
-            False
+        onPause={() => {
+          setIsPlayingAudio(
+            false
           );
         }}
-        OnPlay={() => {
-          SetIsPlayingAudio(
-            True
+        onPlay={() => {
+          setIsPlayingAudio(
+            true
           );
         }}
       />
 
       {/* HEADER */}
       <header
-        ClassName={`absolute top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
-          ShowControls
+        className={`absolute top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
+          showControls
             ? 'translate-y-0 opacity-100'
             : '-translate-y-full opacity-0 pointer-events-none'
         }`}
       >
         <button
-          OnClick={
-            OnBackToIndex
+          onClick={
+            onBackToIndex
           }
-          ClassName="p-1.5 rounded-xl hover:bg-slate-100 text-slate-700 transition-colors"
-          Title="گەڕانەوە"
+          className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-700 transition-colors"
+          title="گەڕانەوە"
         >
           <ArrowRight className="w-5 h-5" />
         </button>
@@ -3552,36 +3552,36 @@ Export const MushafPageView: React.FC<
 
         <div className="flex items-center gap-1 text-slate-700">
           <button
-            OnClick={() =>
-              SetViewMode(
-                Prev =>
-                  Prev ===
+            onClick={() =>
+              setViewMode(
+                prev =>
+                  prev ===
                   'mushaf'
                     ? 'tafsir'
                     : 'mushaf'
               )
             }
-            ClassName={`p-2 rounded-xl transition-colors ${
-              ViewMode ===
+            className={`p-2 rounded-xl transition-colors ${
+              viewMode ===
               'tafsir'
                 ? 'bg-amber-100 text-amber-900 border border-amber-300'
                 : 'hover:bg-slate-100'
             }`}
-            Title="تەفسیر"
+            title="تەفسیر"
           >
             <BookOpen className="w-4 h-4" />
           </button>
 
           <button
-            OnClick={
-              ToggleBookmark
+            onClick={
+              toggleBookmark
             }
-            ClassName={`p-2 rounded-xl transition-colors ${
-              IsBookmarked
+            className={`p-2 rounded-xl transition-colors ${
+              isBookmarked
                 ? 'text-amber-600'
                 : 'hover:bg-slate-100'
             }`}
-            Title="نیشانەکردن"
+            title="نیشانەکردن"
           >
             {isBookmarked ? (
               <BookmarkCheck className="w-4 h-4 fill-amber-500 text-amber-600" />
@@ -3591,13 +3591,13 @@ Export const MushafPageView: React.FC<
           </button>
 
           <button
-            OnClick={() =>
-              SetIsTafsirSelectorOpen(
-                True
+            onClick={() =>
+              setIsTafsirSelectorOpen(
+                true
               )
             }
-            ClassName="p-2 rounded-xl hover:bg-slate-100 text-slate-700"
-            Title="تەفسیرەکان"
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-700"
+            title="تەفسیرەکان"
           >
             <Globe className="w-4 h-4" />
           </button>
@@ -3607,41 +3607,41 @@ Export const MushafPageView: React.FC<
       {/* MUSHAF VIEW */}
       {viewMode === 'mushaf' && (
         <div
-          ClassName="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
-          OnClick={() => {
-            SetShowControls(prev => !prev);
-            CloseHighlight();
+          className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
+          onClick={() => {
+            setShowControls(prev => !prev);
+            closeHighlight();
           }}
         >
           <div
-            Ref={scrollContainerRef}
-            OnScroll={handleScroll}
-            ClassName="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center"
-            Style={{ direction: 'ltr' }}
+            ref={scrollContainerRef}
+            onScroll={handleScroll}
+            className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center"
+            style={{ direction: 'ltr' }}
           >
             {Array.from({ length: 604 }, (_, i) => {
-              Const pageNum = 604 - i;
-              Const isActivePage = pageNum === currentPage;
+              const pageNum = 604 - i;
+              const isActivePage = pageNum === currentPage;
 
-              Return (
+              return (
                 <div
-                  Key={pageNum}
-                  Ref={el => { pageRefs.current[pageNum] = el; }}
-                  ClassName="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0"
-                  Style={{ direction: 'rtl' }}
+                  key={pageNum}
+                  ref={el => { pageRefs.current[pageNum] = el; }}
+                  className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0"
+                  style={{ direction: 'rtl' }}
                 >
                   <div
-                    ClassName="relative max-h-[76vh]"
-                    Style={{ aspectRatio: `${AYAH_CANVAS_WIDTH} / ${AYAH_CANVAS_HEIGHT}` }}
+                    className="relative max-h-[76vh]"
+                    style={{ aspectRatio: `${AYAH_CANVAS_WIDTH} / ${AYAH_CANVAS_HEIGHT}` }}
                   >
                     <img
-                      Src={pageImgUrl(pageNum)}
-                      Alt={`Page ${pageNum}`}
-                      Loading="lazy"
-                      Draggable={false}
-                      OnContextMenu={e => e.preventDefault()}
-                      ClassName="w-full h-full max-h-[76vh] object-contain select-none shadow-xl rounded-lg bg-white border border-stone-300"
-                      Style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
+                      src={pageImgUrl(pageNum)}
+                      alt={`Page ${pageNum}`}
+                      loading="lazy"
+                      draggable={false}
+                      onContextMenu={e => e.preventDefault()}
+                      className="w-full h-full max-h-[76vh] object-contain select-none shadow-xl rounded-lg bg-white border border-stone-300"
+                      style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
                     />
 
                     {isActivePage && ayahApiError && (
@@ -3653,45 +3653,45 @@ Export const MushafPageView: React.FC<
                     {isActivePage && ayahBoxes.length > 0 && (
                       <div className="absolute inset-0">
                         {ayahBoxes.map((box, idx) => {
-                          Const matchedAyah = pageAyahsData.find(x => x.surahNumber === box.s && x.numberInSurah === box.a);
-                          If (!matchedAyah) return null;
+                          const matchedAyah = pageAyahsData.find(x => x.surahNumber === box.s && x.numberInSurah === box.a);
+                          if (!matchedAyah) return null;
 
-                          Const boxKey = `${box.s}-${box.a}-${box.l}-${idx}`;
-                          Const leftPct = (box.x0 / AYAH_CANVAS_WIDTH) * 100;
-                          Const widthPct = ((box.x1 - box.x0) / AYAH_CANVAS_WIDTH) * 100;
-                          Const topPct = (box.y0 / AYAH_CANVAS_HEIGHT) * 100;
-                          Const heightPct = ((box.y1 - box.y0) / AYAH_CANVAS_HEIGHT) * 100;
+                          const boxKey = `${box.s}-${box.a}-${box.l}-${idx}`;
+                          const leftPct = (box.x0 / AYAH_CANVAS_WIDTH) * 100;
+                          const widthPct = ((box.x1 - box.x0) / AYAH_CANVAS_WIDTH) * 100;
+                          const topPct = (box.y0 / AYAH_CANVAS_HEIGHT) * 100;
+                          const heightPct = ((box.y1 - box.y0) / AYAH_CANVAS_HEIGHT) * 100;
 
-                          Const isHighlighted = !!highlightedAyah &&
-                            HighlightedAyah.ayah.surahNumber === box.s &&
-                            HighlightedAyah.ayah.numberInSurah === box.a;
+                          const isHighlighted = !!highlightedAyah &&
+                            highlightedAyah.ayah.surahNumber === box.s &&
+                            highlightedAyah.ayah.numberInSurah === box.a;
 
-                          Return (
+                          return (
                             <div
-                              Key={boxKey}
-                              OnPointerDown={e => {
-                                E.stopPropagation();
-                                StartLongPress(boxKey, matchedAyah, topPct);
+                              key={boxKey}
+                              onPointerDown={e => {
+                                e.stopPropagation();
+                                startLongPress(boxKey, matchedAyah, topPct);
                               }}
-                              OnPointerUp={cancelLongPress}
-                              OnPointerLeave={cancelLongPress}
-                              OnPointerCancel={cancelLongPress}
-                              OnContextMenu={e => e.preventDefault()}
-                              Style={{
-                                Position: 'absolute',
-                                Left: `${leftPct}%`,
-                                Top: `${topPct}%`,
-                                Width: `${widthPct}%`,
-                                Height: `${heightPct}%`,
-                                Background: isHighlighted
+                              onPointerUp={cancelLongPress}
+                              onPointerLeave={cancelLongPress}
+                              onPointerCancel={cancelLongPress}
+                              onContextMenu={e => e.preventDefault()}
+                              style={{
+                                position: 'absolute',
+                                left: `${leftPct}%`,
+                                top: `${topPct}%`,
+                                width: `${widthPct}%`,
+                                height: `${heightPct}%`,
+                                background: isHighlighted
                                   ? 'rgba(56,189,248,0.35)'
                                   : pressingBox === boxKey
                                   ? 'rgba(56,189,248,0.15)'
                                   : 'transparent',
-                                BorderRadius: '3px',
-                                Transition: 'background 0.15s ease'
+                                borderRadius: '3px',
+                                transition: 'background 0.15s ease'
                               }}
-                              ClassName="cursor-pointer touch-none"
+                              className="cursor-pointer touch-none"
                             />
                           );
                         })}
@@ -3700,15 +3700,15 @@ Export const MushafPageView: React.FC<
 
                     {isActivePage && highlightedAyah && (
                       <div
-                        ClassName="absolute inset-x-0 flex justify-center z-40"
-                        Style={{ top: `${Math.min(Math.max(highlightedAyah.topPercent - 7, 2), 88)}%` }}
-                        OnClick={e => e.stopPropagation()}
+                        className="absolute inset-x-0 flex justify-center z-40"
+                        style={{ top: `${Math.min(Math.max(highlightedAyah.topPercent - 7, 2), 88)}%` }}
+                        onClick={e => e.stopPropagation()}
                       >
                         <div className="flex items-center gap-1 bg-emerald-800 text-white rounded-2xl shadow-xl px-1.5 py-1.5">
                           <button
-                            OnClick={() => void playAyahAudio(highlightedAyah.ayah)}
-                            ClassName="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            Title="گوێگرتن"
+                            onClick={() => void playAyahAudio(highlightedAyah.ayah)}
+                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                            title="گوێگرتن"
                           >
                             {playingAyahKey === ayahKey(highlightedAyah.ayah) ? (
                               <Pause className="w-4 h-4" />
@@ -3718,25 +3718,25 @@ Export const MushafPageView: React.FC<
                           </button>
 
                           <button
-                            OnClick={() => setTafsirSheetOpen(true)}
-                            ClassName="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            Title="تەفسیر"
+                            onClick={() => setTafsirSheetOpen(true)}
+                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                            title="تەفسیر"
                           >
                             <Globe className="w-4 h-4" />
                           </button>
 
                           <button
-                            OnClick={() => shareAyah(highlightedAyah.ayah)}
-                            ClassName="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            Title="ناردن"
+                            onClick={() => shareAyah(highlightedAyah.ayah)}
+                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                            title="ناردن"
                           >
                             <Share2 className="w-4 h-4" />
                           </button>
 
                           <button
-                            OnClick={() => toggleAyahBookmark(highlightedAyah.ayah)}
-                            ClassName="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            Title="خەزنکردن"
+                            onClick={() => toggleAyahBookmark(highlightedAyah.ayah)}
+                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                            title="خەزنکردن"
                           >
                             {isAyahBookmarked(highlightedAyah.ayah) ? (
                               <BookmarkCheck className="w-4 h-4 fill-white" />
@@ -3746,9 +3746,9 @@ Export const MushafPageView: React.FC<
                           </button>
 
                           <button
-                            OnClick={closeHighlight}
-                            ClassName="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            Title="داخستن"
+                            onClick={closeHighlight}
+                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                            title="داخستن"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -3768,9 +3768,9 @@ Export const MushafPageView: React.FC<
           {/* TAFSIR SHEET */}
           {highlightedAyah && tafsirSheetOpen && (
             <div
-              ClassName="absolute bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 rounded-t-3xl shadow-2xl p-5 max-h-[45vh] overflow-y-auto"
-              Dir="rtl"
-              OnClick={e => e.stopPropagation()}
+              className="absolute bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 rounded-t-3xl shadow-2xl p-5 max-h-[45vh] overflow-y-auto"
+              dir="rtl"
+              onClick={e => e.stopPropagation()}
             >
               <div className="flex items-center justify-between mb-3">
                 <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
@@ -3778,8 +3778,8 @@ Export const MushafPageView: React.FC<
                 </span>
 
                 <button
-                  OnClick={() => setTafsirSheetOpen(false)}
-                  ClassName="p-1.5 rounded-xl bg-slate-100 text-slate-600"
+                  onClick={() => setTafsirSheetOpen(false)}
+                  className="p-1.5 rounded-xl bg-slate-100 text-slate-600"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -3807,11 +3807,11 @@ Export const MushafPageView: React.FC<
               )}
 
               <button
-                OnClick={() => {
-                  SetTafsirSheetOpen(false);
-                  SetIsTafsirSelectorOpen(true);
+                onClick={() => {
+                  setTafsirSheetOpen(false);
+                  setIsTafsirSelectorOpen(true);
                 }}
-                ClassName="mt-3 text-xs font-bold text-amber-700 underline"
+                className="mt-3 text-xs font-bold text-amber-700 underline"
               >
                 گۆڕینی تەفسیر
               </button>
@@ -3822,7 +3822,7 @@ Export const MushafPageView: React.FC<
 
       {/* TAFSIR VIEW */}
       {viewMode === 'tafsir' && (
-        <div ClassName="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white" dir="rtl">
+        <div className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white" dir="rtl">
           {loadingTafsir ? (
             <div className="text-center py-20">
               <Loader2 className="w-8 h-8 mx-auto text-amber-600 animate-spin" />
@@ -3838,8 +3838,8 @@ Export const MushafPageView: React.FC<
 
               {pageAyahsData.map(ayah => (
                 <div
-                  Key={`${ayah.surahNumber}:${ayah.numberInSurah}`}
-                  ClassName="space-y-3 pb-6 border-b border-slate-200 text-right"
+                  key={`${ayah.surahNumber}:${ayah.numberInSurah}`}
+                  className="space-y-3 pb-6 border-b border-slate-200 text-right"
                 >
                   <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-mono font-bold">
                     {ayah.surahNumber}:{ayah.numberInSurah}
@@ -3869,17 +3869,17 @@ Export const MushafPageView: React.FC<
       {/* FOOTER CONTROLS */}
       {showControls && (
         <footer
-          ClassName={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 py-2.5 flex items-center justify-between transition-all duration-300 ${
-            ShowControls
+          className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 py-2.5 flex items-center justify-between transition-all duration-300 ${
+            showControls
               ? 'translate-y-0 opacity-100'
               : 'translate-y-full opacity-0 pointer-events-none'
           }`}
-          Dir="rtl"
-          OnClick={e => e.stopPropagation()}
+          dir="rtl"
+          onClick={e => e.stopPropagation()}
         >
           <button
-            OnClick={() => setIsRecitersModalOpen(true)}
-            ClassName="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors truncate text-right"
+            onClick={() => setIsRecitersModalOpen(true)}
+            className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors truncate text-right"
           >
             <span className="truncate">
               {selectedReciter?.name || 'قاری هەڵبژێرە'}
@@ -3888,8 +3888,8 @@ Export const MushafPageView: React.FC<
 
           <div className="flex items-center gap-2">
             <button
-              OnClick={togglePageAudio}
-              ClassName="h-9 px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
+              onClick={togglePageAudio}
+              className="h-9 px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
             >
               {isPlayingAudio ? (
                 <>
@@ -3912,24 +3912,24 @@ Export const MushafPageView: React.FC<
       {/* MODALS */}
       {isRecitersModalOpen && (
         <RecitersModal
-          IsOpen={isRecitersModalOpen}
-          OnClose={() => setIsRecitersModalOpen(false)}
-          SelectedReciter={selectedReciter}
-          OnSelectReciter={reciter => {
-            SetSelectedReciter(reciter);
-            SetIsRecitersModalOpen(false);
+          isOpen={isRecitersModalOpen}
+          onClose={() => setIsRecitersModalOpen(false)}
+          selectedReciter={selectedReciter}
+          onSelectReciter={reciter => {
+            setSelectedReciter(reciter);
+            setIsRecitersModalOpen(false);
           }}
         />
       )}
 
       {isTafsirSelectorOpen && (
         <TafsirSelectorModal
-          IsOpen={isTafsirSelectorOpen}
-          OnClose={() => setIsTafsirSelectorOpen(false)}
-          SelectedTafsir={selectedTafsir}
-          OnSelectTafsir={tafsir => {
-            SetSelectedTafsir(tafsir);
-            SetIsTafsirSelectorOpen(false);
+          isOpen={isTafsirSelectorOpen}
+          onClose={() => setIsTafsirSelectorOpen(false)}
+          selectedTafsir={selectedTafsir}
+          onSelectTafsir={tafsir => {
+            setSelectedTafsir(tafsir);
+            setIsTafsirSelectorOpen(false);
           }}
         />
       )}
@@ -3937,4 +3937,4 @@ Export const MushafPageView: React.FC<
   );
 };
 
-Export default MushafPageView;
+export default MushafPageView;
