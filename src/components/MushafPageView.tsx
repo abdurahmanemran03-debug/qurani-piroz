@@ -2215,7 +2215,7 @@ export const MushafPageView: React.FC<
           };
 
         /*
-         * MP3Quran segment.
+         * MP3Quran segment (real timing).
          */
         if (
           source.startTime !==
@@ -2298,6 +2298,144 @@ export const MushafPageView: React.FC<
 
           audio.currentTime =
             source.startTime;
+        } else if (
+          selectedReciter.audioSource ===
+          'mp3quran'
+        ) {
+          /*
+           * کاتی ڕاستەقینە نییە — هەوڵدەدەین
+           * بە هەندازەکردن (پێی ژمارەی وشەکان)
+           * ڕاستەوخۆ بگەینە دەستپێکی ئەم ئایەتە،
+           * وەک ئەو ئەپەی نموونە.
+           */
+          await new Promise<void>(
+            resolve => {
+              const waitAudio =
+                audioRef.current;
+
+              if (!waitAudio) {
+                resolve();
+                return;
+              }
+
+              if (
+                waitAudio.readyState >=
+                  1 &&
+                Number.isFinite(
+                  waitAudio.duration
+                )
+              ) {
+                resolve();
+                return;
+              }
+
+              const onLoaded =
+                () => {
+                  cleanup();
+                  resolve();
+                };
+
+              const onError =
+                () => {
+                  cleanup();
+                  resolve();
+                };
+
+              const cleanup =
+                () => {
+                  waitAudio.removeEventListener(
+                    'loadedmetadata',
+                    onLoaded
+                  );
+
+                  waitAudio.removeEventListener(
+                    'error',
+                    onError
+                  );
+                };
+
+              waitAudio.addEventListener(
+                'loadedmetadata',
+                onLoaded
+              );
+
+              waitAudio.addEventListener(
+                'error',
+                onError
+              );
+            }
+          );
+
+          if (
+            requestId !==
+            audioRequestIdRef.current
+          ) {
+            return;
+          }
+
+          const estAudio =
+            audioRef.current;
+
+          const duration =
+            estAudio?.duration;
+
+          if (
+            estAudio &&
+            Number.isFinite(
+              duration
+            ) &&
+            (duration as number) >
+              0
+          ) {
+            const counts =
+              await getSurahWordCounts(
+                a.surahNumber
+              );
+
+            if (
+              requestId ===
+                audioRequestIdRef.current &&
+              counts.length
+            ) {
+              const ranges =
+                buildEstimatedRanges(
+                  counts,
+                  duration as number
+                );
+
+              if (
+                ranges.length
+              ) {
+                estimatedTimingRef.current =
+                  {
+                    reciterId:
+                      selectedReciter.id,
+                    surahNumber:
+                      a.surahNumber,
+                    ranges
+                  };
+
+                const targetRange =
+                  ranges.find(
+                    r =>
+                      r.ayah ===
+                      a.numberInSurah
+                  );
+
+                if (
+                  targetRange &&
+                  audioRef.current
+                ) {
+                  try {
+                    audioRef.current.currentTime =
+                      targetRange.start;
+                  } catch {
+                    // Ignore
+                  }
+                }
+              }
+            }
+          }
         }
 
         setPlayingAyahKey(
@@ -4257,94 +4395,4 @@ export const MushafPageView: React.FC<
           }
           className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5 min-w-0"
         >
-          <span className="truncate">
-            {
-              selectedReciter.name
-            }
-          </span>
-        </button>
-
-        <div className="flex items-center gap-2">
-          {renderCurrentSurahDownload()}
-
-          <button
-            onClick={
-              togglePageAudio
-            }
-            className="p-2.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-transform active:scale-95 shadow-md shrink-0"
-            title="دەنگی پەڕە"
-          >
-            {isPlayingAudio ? (
-              <Pause className="w-4 h-4" />
-            ) : (
-              <Play className="w-4 h-4 fill-white" />
-            )}
-          </button>
-        </div>
-      </footer>
-
-      {/* RECITER MODAL */}
-
-      <RecitersModal
-        isOpen={
-          isRecitersModalOpen
-        }
-        onClose={() =>
-          setIsRecitersModalOpen(
-            false
-          )
-        }
-        selectedReciterId={
-          selectedReciter.id
-        }
-        onSelectReciter={r => {
-          stopAudioCompletely();
-
-          setSelectedReciter(
-            r
-          );
-
-          try {
-            localStorage.setItem(
-              'quran_selected_reciter',
-              r.id
-            );
-          } catch {
-            // Ignore
-          }
-
-          window.dispatchEvent(
-            new CustomEvent(
-              'quran-reciter-changed',
-              {
-                detail:
-                  r.id
-              }
-            )
-          );
-        }}
-      />
-
-      {/* TAFSIR SELECTOR */}
-
-      <TafsirSelectorModal
-        isOpen={
-          isTafsirSelectorOpen
-        }
-        onClose={() =>
-          setIsTafsirSelectorOpen(
-            false
-          )
-        }
-        selectedTafsirId={
-          selectedTafsir.id
-        }
-        onSelectTafsir={t => {
-          setSelectedTafsir(
-            t
-          );
-        }}
-      />
-    </div>
-  );
-};
+          <span className="truncate"
