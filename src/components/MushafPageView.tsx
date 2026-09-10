@@ -4374,32 +4374,31 @@ export const MushafPageView: React.FC<
         </div>
       )}
 
-      {/* FOOTER */}
-
-      <footer
-        className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-lg transition-all duration-300 ${
-          showControls
-            ? 'translate-y-0 opacity-100'
-            : 'translate-y-full opacity-0 pointer-events-none'
-        }`}
-        dir="rtl"
-        onClick={e =>
-          e.stopPropagation()
-        }
-      >
-                  <button
-            onClick={() => setIsRecitersModalOpen(true)}
-            className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors truncate"
+        {showControls && (
+          <footer
+            className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 py-2.5 flex items-center justify-between transition-all duration-300 ${
+              showControls
+                ? 'translate-y-0 opacity-100'
+                : 'translate-y-full opacity-0 pointer-events-none'
+            }`}
+            dir="rtl"
+            onClick={(e) => e.stopPropagation()}
           >
-            <span className="truncate">
-              {selectedReciterObj?.name || 'قاری هەڵبژێرە'}
-            </span>
-          </button>
-        </footer>
-      )}
+            <button
+              onClick={() => setIsRecitersModalOpen(true)}
+              className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors truncate"
+            >
+              <span className="truncate">
+                {selectedReciterObj?.name || 'قاری هەڵبژێرە'}
+              </span>
+            </button>
+          </footer>
+        )}
+      </div>
     </div>
   );
 };
 
 export default MushafPageView;
+
 
