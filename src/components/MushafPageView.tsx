@@ -4387,12 +4387,19 @@ export const MushafPageView: React.FC<
           e.stopPropagation()
         }
       >
-        <button
-          onClick={() =>
-            setIsRecitersModalOpen(
-              true
-            )
-          }
-          className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5 min-w-0"
-        >
-          <span className="truncate"
+                  <button
+            onClick={() => setIsRecitersModalOpen(true)}
+            className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors truncate"
+          >
+            <span className="truncate">
+              {selectedReciterObj?.name || 'قاری هەڵبژێرە'}
+            </span>
+          </button>
+        </footer>
+      )}
+    </div>
+  );
+};
+
+export default MushafPageView;
+
