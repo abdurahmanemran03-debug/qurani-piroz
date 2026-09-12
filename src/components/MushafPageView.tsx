@@ -119,6 +119,19 @@ type EstimatedTiming = {
   ranges: EstimatedAyahRange[];
 };
 
+/*
+ * =========================================================
+ * هەندازەکردنی کاتی ئایەت (ESTIMATED TIMING)
+ *
+ * بۆ قاریانێک کە کاتی وردیان لە mp3quran.net فەرمی
+ * بەردەست نییە (وەک قاریە کوردەکانی GitHub)، ناتوانین
+ * کاتی ڕاستەقینە بدۆزینەوە. لەبری ئەوە، ماوەی سورەتەکە
+ * (audio.duration) بەسەر ئایەتەکاندا دابەش دەکەین بەپێی
+ * ڕێژەی ژمارەی وشەکانی هەر ئایەتێک. ئەمە نزیکە نەک
+ * ڕاست، بەڵام زۆر باشترە لە هیچ هایلایتێک.
+ * =========================================================
+ */
+
 const surahWordCountsCache: Record<
   number,
   number[]
@@ -269,6 +282,10 @@ const TAFSIR_API_EDITION: Record<
   uz_yusuf: 'uz.sodik'
 };
 
+/* =========================================================
+   INITIAL RECITER
+========================================================= */
+
 const getInitialReciter =
   (): ReciterItem => {
     try {
@@ -297,6 +314,10 @@ const getInitialReciter =
     );
   };
 
+/* =========================================================
+   NORMALIZE
+========================================================= */
+
 const normalizeUrl = (
   value: string
 ) =>
@@ -304,6 +325,10 @@ const normalizeUrl = (
     .trim()
     .replace(/\/+$/, '')
     .toLowerCase();
+
+/* =========================================================
+   EVERYAYAH
+========================================================= */
 
 const makeEveryAyahUrl = (
   reciter: ReciterItem,
@@ -322,6 +347,10 @@ const makeEveryAyahUrl = (
     `${surah}${ayah}.mp3`
   );
 };
+
+/* =========================================================
+   MP3QURAN SURAH
+========================================================= */
 
 const makeMp3QuranSurahUrl = (
   reciter: ReciterItem,
@@ -343,6 +372,10 @@ const makeMp3QuranSurahUrl = (
   );
 };
 
+/* =========================================================
+   TIME NORMALIZER
+========================================================= */
+
 const normalizeTimingValue = (
   value: number
 ) => {
@@ -350,12 +383,23 @@ const normalizeTimingValue = (
     return 0;
   }
 
+  /*
+   * MP3Quran usually returns milliseconds.
+   * Some endpoints/versions may return seconds.
+   *
+   * Large values => milliseconds.
+   * Small values => seconds.
+   */
   if (value > 10000) {
     return value / 1000;
   }
 
   return value;
 };
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 
 export const MushafPageView: React.FC<
   MushafPageViewProps
@@ -469,6 +513,10 @@ export const MushafPageView: React.FC<
   const audioRequestIdRef =
     useRef(0);
 
+  /* =========================================================
+     MP3QURAN CACHE
+  ========================================================= */
+
   const mp3TimingCacheRef =
     useRef<
       Record<
@@ -496,6 +544,10 @@ export const MushafPageView: React.FC<
       null
     );
 
+  /* =========================================================
+     DOWNLOAD
+  ========================================================= */
+
   const [
     surahDownloadState,
     setSurahDownloadState
@@ -512,6 +564,10 @@ export const MushafPageView: React.FC<
 
   const downloadSessionRef =
     useRef(0);
+
+  /* =========================================================
+     AUDIO URL CLEANUP
+  ========================================================= */
 
   const clearAudioObjectUrl =
     () => {
@@ -530,6 +586,10 @@ export const MushafPageView: React.FC<
           null;
       }
     };
+
+  /* =========================================================
+     STOP AUDIO COMPLETELY
+  ========================================================= */
 
   const stopAudioCompletely =
     () => {
@@ -567,10 +627,24 @@ export const MushafPageView: React.FC<
       setPageAudioIndex(-1);
     };
 
+  /* =========================================================
+     GET MP3QURAN READ
+  ========================================================= */
+
   const getMp3QuranRead =
     async (
       reciter: ReciterItem
     ): Promise<Mp3QuranRead | null> => {
+      // Official MP3Quran timing read IDs used for the Kurdish reciters.
+      // The audio is still one full-surah MP3; the timing API splits it
+      // into exact ayah start/end segments.
+      const timingReadIdByReciter: Record<string, number> = {
+        peshawa_kurdi: 268,
+        raad_kurdi: 221,
+        sherzad_kurdi: 38,
+        ramazan_shukur: 227
+      };
+
       const cacheKey =
         reciter.id;
 
@@ -701,6 +775,25 @@ export const MushafPageView: React.FC<
           }
         }
 
+        const knownTimingId =
+          timingReadIdByReciter[reciter.id];
+
+        if (knownTimingId && found) {
+          found = {
+            ...found,
+            id: knownTimingId
+          };
+        }
+
+        if (!found && knownTimingId) {
+          found = {
+            id: knownTimingId,
+            server: reciter.audioBaseUrl,
+            surah_total: 114,
+            surah_list: ''
+          };
+        }
+
         mp3ReadCacheRef.current[
           cacheKey
         ] = found;
@@ -719,6 +812,10 @@ export const MushafPageView: React.FC<
         return null;
       }
     };
+
+  /* =========================================================
+     GET MP3QURAN TIMING
+  ========================================================= */
 
   const getMp3QuranTiming =
     async (
@@ -766,6 +863,10 @@ export const MushafPageView: React.FC<
         const data =
           await response.json();
 
+        /*
+         * Different API responses can expose
+         * the timing array under different names.
+         */
         let raw: any[] = [];
 
         if (
@@ -869,12 +970,22 @@ export const MushafPageView: React.FC<
       }
     };
 
+  /* =========================================================
+     GET AUDIO SOURCE
+  ========================================================= */
+
   const getAudioSource =
     async (
       reciter: ReciterItem,
       surahNumber: number,
       ayahNumber: number
     ): Promise<AudioSource> => {
+      /*
+       * ===============================================
+       * MP3QURAN
+       * ===============================================
+       */
+
       if (
         reciter.audioSource ===
         'mp3quran'
@@ -892,6 +1003,18 @@ export const MushafPageView: React.FC<
               ayahNumber
           );
 
+        /*
+         * تێبینی: ئەگەر کاتی وردی ئایەتەکە نەدۆزرایەوە
+         * (بۆ نموونە قارییەکە لە mp3quran.net فەرمی نییە،
+         * وەک قاریە کوردەکانی GitHub)، ئیتر هەڵە نادەین و
+         * لێدانی دەنگ ناوەستێنین — بەڵکو هەموو سورەتەکە
+         * لە سەرەتاوە دەخوێنینەوە بەبێ هایلایتکردنی
+         * ئایەت بە ئایەت. باشترە لە بێدەنگی تەواو.
+         */
+
+        /*
+         * First try offline audio.
+         */
         try {
           const localSurah =
             await getSurahAudio(
@@ -925,6 +1048,9 @@ export const MushafPageView: React.FC<
           );
         }
 
+        /*
+         * Online MP3Quran.
+         */
         const onlineUrl =
           makeMp3QuranSurahUrl(
             reciter,
@@ -945,6 +1071,12 @@ export const MushafPageView: React.FC<
             timing?.end_time
         };
       }
+
+      /*
+       * ===============================================
+       * EVERYAYAH
+       * ===============================================
+       */
 
       const localBlob =
         await getAyahAudio(
@@ -988,6 +1120,10 @@ export const MushafPageView: React.FC<
         url: onlineUrl
       };
     };
+
+  /* =========================================================
+     PAGE AUDIO
+  ========================================================= */
 
   const [
     pageAudioIndex,
@@ -1034,6 +1170,10 @@ export const MushafPageView: React.FC<
     >
   >({});
 
+  /* =========================================================
+     AYAH DATA
+  ========================================================= */
+
   useEffect(() => {
     fetch(
       `${import.meta.env.BASE_URL}ayahdata/ayahdata.json`
@@ -1059,6 +1199,10 @@ export const MushafPageView: React.FC<
     allAyahData[
       String(currentPage)
     ] || [];
+
+  /* =========================================================
+     AYAH BOOKMARKS
+  ========================================================= */
 
   const [
     ayahBookmarks,
@@ -1122,6 +1266,10 @@ export const MushafPageView: React.FC<
     navigator.vibrate?.(35);
   };
 
+  /* =========================================================
+     SAVE RECITER
+  ========================================================= */
+
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -1134,6 +1282,10 @@ export const MushafPageView: React.FC<
   }, [
     selectedReciter.id
   ]);
+
+  /* =========================================================
+     RECITER SYNC
+  ========================================================= */
 
   useEffect(() => {
     const handleReciterChanged =
@@ -1177,6 +1329,10 @@ export const MushafPageView: React.FC<
     };
   }, []);
 
+  /* =========================================================
+     TAFSIR
+  ========================================================= */
+
   const getTafsirApiEdition =
     (
       tafsir: TafsirItem
@@ -1184,6 +1340,10 @@ export const MushafPageView: React.FC<
       TAFSIR_API_EDITION[
         tafsir.id
       ] || null;
+
+  /* =========================================================
+     CURRENT SURAH
+  ========================================================= */
 
   const currentSurah =
     surahsList
@@ -1203,6 +1363,10 @@ export const MushafPageView: React.FC<
   const currentSurahAyahCount =
     currentSurah?.ayahs ||
     0;
+
+  /* =========================================================
+     REFRESH DOWNLOAD
+  ========================================================= */
 
   const refreshCurrentSurahDownload =
     async () => {
@@ -1285,6 +1449,10 @@ export const MushafPageView: React.FC<
       }
     };
 
+  /* =========================================================
+     SURAH / RECITER CHANGED
+  ========================================================= */
+
   useEffect(() => {
     downloadSessionRef.current++;
 
@@ -1308,6 +1476,10 @@ export const MushafPageView: React.FC<
     currentSurahAyahCount,
     selectedReciter.id
   ]);
+
+  /* =========================================================
+     DOWNLOAD CURRENT SURAH
+  ========================================================= */
 
   const downloadCurrentSurah =
     async () => {
@@ -1343,6 +1515,12 @@ export const MushafPageView: React.FC<
         controller;
 
       try {
+        /*
+         * ===============================================
+         * MP3QURAN
+         * ===============================================
+         */
+
         if (
           reciterAtStart.audioSource ===
           'mp3quran'
@@ -1462,6 +1640,12 @@ export const MushafPageView: React.FC<
 
           return;
         }
+
+        /*
+         * ===============================================
+         * EVERYAYAH
+         * ===============================================
+         */
 
         let currentCount =
           await getDownloadedAyahCount(
@@ -1734,10 +1918,18 @@ export const MushafPageView: React.FC<
       }
     };
 
+  /* =========================================================
+     PAUSE
+  ========================================================= */
+
   const pauseCurrentSurahDownload =
     () => {
       downloadAbortControllerRef.current?.abort();
     };
+
+  /* =========================================================
+     DELETE
+  ========================================================= */
 
   const removeCurrentSurahAudio =
     async () => {
@@ -1796,6 +1988,10 @@ export const MushafPageView: React.FC<
       }
     };
 
+  /* =========================================================
+     DOWNLOAD PROGRESS
+  ========================================================= */
+
   const downloadProgress =
     surahDownloadState.total >
     0
@@ -1811,6 +2007,10 @@ export const MushafPageView: React.FC<
       0 &&
     surahDownloadState.downloaded >=
       surahDownloadState.total;
+
+  /* =========================================================
+     DOWNLOAD UI
+  ========================================================= */
 
   const renderCurrentSurahDownload =
     () => {
@@ -1954,6 +2154,10 @@ export const MushafPageView: React.FC<
       );
     };
 
+  /* =========================================================
+     PLAY SINGLE AYAH
+  ========================================================= */
+
   const playAyahAudio =
     async (
       a: any
@@ -2039,6 +2243,9 @@ export const MushafPageView: React.FC<
             requestId
           };
 
+        /*
+         * MP3Quran segment (real timing).
+         */
         if (
           source.startTime !==
           undefined
@@ -2124,6 +2331,12 @@ export const MushafPageView: React.FC<
           selectedReciter.audioSource ===
           'mp3quran'
         ) {
+          /*
+           * کاتی ڕاستەقینە نییە — هەوڵدەدەین
+           * بە هەندازەکردن (پێی ژمارەی وشەکان)
+           * ڕاستەوخۆ بگەینە دەستپێکی ئەم ئایەتە،
+           * وەک ئەو ئەپەی نموونە.
+           */
           await new Promise<void>(
             resolve => {
               const waitAudio =
@@ -2298,6 +2511,10 @@ export const MushafPageView: React.FC<
       }
     };
 
+  /* =========================================================
+     PAGE AUDIO
+  ========================================================= */
+
   const playPageAyahAtIndex =
     async (
       index: number
@@ -2421,71 +2638,52 @@ export const MushafPageView: React.FC<
           source.startTime !==
           undefined
         ) {
+          // Android/mobile browsers can reset currentTime to 0 if we seek
+          // before the new MP3 metadata is ready. Wait first, then seek.
           await new Promise<void>(
-            (
-              resolve,
-              reject
-            ) => {
-              const audio =
-                audioRef.current;
+            (resolve, reject) => {
+              let settled = false;
+              let timeoutId: number | undefined;
 
-              if (!audio) {
-                reject(
-                  new Error(
-                    'Audio element نەدۆزرایەوە'
-                  )
-                );
+              const cleanup = () => {
+                audio.removeEventListener('loadedmetadata', onLoaded);
+                audio.removeEventListener('error', onError);
+                if (timeoutId !== undefined) {
+                  window.clearTimeout(timeoutId);
+                }
+              };
 
-                return;
-              }
+              const onLoaded = () => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                resolve();
+              };
+
+              const onError = () => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                reject(new Error('Audio metadata load failed'));
+              };
+
+              audio.addEventListener('loadedmetadata', onLoaded);
+              audio.addEventListener('error', onError);
 
               if (
-                audio.readyState >=
-                1
+                audio.readyState >= 1 &&
+                Number.isFinite(audio.duration)
               ) {
-                resolve();
+                onLoaded();
                 return;
               }
 
-              const onLoaded =
-                () => {
-                  cleanup();
-                  resolve();
-                };
-
-              const onError =
-                () => {
-                  cleanup();
-
-                  reject(
-                    new Error(
-                      'Audio metadata load failed'
-                    )
-                  );
-                };
-
-              const cleanup =
-                () => {
-                  audio.removeEventListener(
-                    'loadedmetadata',
-                    onLoaded
-                  );
-
-                  audio.removeEventListener(
-                    'error',
-                    onError
-                  );
-                };
-
-              audio.addEventListener(
-                'loadedmetadata',
-                onLoaded
-              );
-
-              audio.addEventListener(
-                'error',
-                onError
-              );
+              timeoutId = window.setTimeout(() => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                reject(new Error('Audio metadata timeout'));
+              }, 10000);
             }
           );
 
@@ -2496,8 +2694,33 @@ export const MushafPageView: React.FC<
             return;
           }
 
-          audio.currentTime =
-            source.startTime;
+          const safeStart = Math.max(
+            0,
+            source.startTime + 0.02
+          );
+
+          if (
+            Number.isFinite(audio.duration) &&
+            safeStart >= audio.duration
+          ) {
+            throw new Error(
+              'کاتی دەستپێکی ئەم ئایەتە لە دەنگەکەدا نەگونجێت.'
+            );
+          }
+
+          audio.currentTime = safeStart;
+
+          // Let the seek settle before play().
+          await new Promise<void>(resolve =>
+            requestAnimationFrame(() => resolve())
+          );
+
+          if (
+            requestId !==
+            audioRequestIdRef.current
+          ) {
+            return;
+          }
         }
 
         await audio.play();
@@ -2511,6 +2734,12 @@ export const MushafPageView: React.FC<
           setIsPlayingAudio(true);
         }
 
+        /*
+         * ئەگەر کاتی وردی ڕاستەقینە بەردەست نەبوو
+         * (source.startTime نادیارە) و قارییەکە لە
+         * جۆری mp3quran‌ە، هەوڵدەدەین هایلایتێکی
+         * نزیک دروست بکەین بەپێی ڕێژەی وشەکان.
+         */
         if (
           source.startTime ===
             undefined &&
@@ -2626,6 +2855,10 @@ export const MushafPageView: React.FC<
       }
     };
 
+  /* =========================================================
+     SHARE
+  ========================================================= */
+
   const shareAyah = async (
     a: any
   ) => {
@@ -2650,6 +2883,10 @@ export const MushafPageView: React.FC<
       // Cancelled
     }
   };
+
+  /* =========================================================
+     LONG PRESS
+  ========================================================= */
 
   const startLongPress = (
     boxKey: string,
@@ -2716,6 +2953,10 @@ export const MushafPageView: React.FC<
       );
     };
 
+  /* =========================================================
+     SCROLL
+  ========================================================= */
+
   const scrollContainerRef =
     useRef<HTMLDivElement | null>(
       null
@@ -2747,6 +2988,10 @@ export const MushafPageView: React.FC<
     Math.ceil(
       currentPage / 20
     );
+
+  /* =========================================================
+     PAGE DATA
+  ========================================================= */
 
   useEffect(() => {
     let cancelled =
@@ -2900,6 +3145,10 @@ export const MushafPageView: React.FC<
     selectedTafsir.id
   ]);
 
+  /* =========================================================
+     UPDATE HIGHLIGHT
+  ========================================================= */
+
   useEffect(() => {
     if (
       !highlightedAyah
@@ -2936,6 +3185,10 @@ export const MushafPageView: React.FC<
     pageAyahsData
   ]);
 
+  /* =========================================================
+     PAGE AUDIO RESET
+  ========================================================= */
+
   useEffect(() => {
     stopAudioCompletely();
 
@@ -2945,11 +3198,25 @@ export const MushafPageView: React.FC<
     currentPage
   ]);
 
+  /* =========================================================
+     RECITER RESET
+  ========================================================= */
+
   useEffect(() => {
     stopAudioCompletely();
+
+    /*
+     * Timing cache stays available,
+     * but the currently playing source
+     * must always stop.
+     */
   }, [
     selectedReciter.id
   ]);
+
+  /* =========================================================
+     CLEANUP
+  ========================================================= */
 
   useEffect(() => {
     return () => {
@@ -2985,6 +3252,10 @@ export const MushafPageView: React.FC<
       }
     };
   }, []);
+
+  /* =========================================================
+     SCROLL TO CURRENT PAGE
+  ========================================================= */
 
   useEffect(() => {
     if (
@@ -3101,6 +3372,10 @@ export const MushafPageView: React.FC<
     currentPage
   ]);
 
+  /* =========================================================
+     TOGGLE PAGE AUDIO
+  ========================================================= */
+
   const togglePageAudio =
     () => {
       if (
@@ -3161,6 +3436,10 @@ export const MushafPageView: React.FC<
       }
     };
 
+  /* =========================================================
+     TIME UPDATE
+  ========================================================= */
+
   const handleAudioTimeUpdate =
     () => {
       const segment =
@@ -3173,6 +3452,9 @@ export const MushafPageView: React.FC<
         return;
       }
 
+      /*
+       * کاتی ڕاستەقینە (mp3quran فەرمی).
+       */
       if (
         segment &&
         segment.endTime !==
@@ -3201,6 +3483,10 @@ export const MushafPageView: React.FC<
         return;
       }
 
+      /*
+       * هایلایتی نزیک/هەندازەکراو
+       * (بۆ قاریانێک کە کاتی ڕاستەقینەیان نییە).
+       */
       const estimated =
         estimatedTimingRef.current;
 
@@ -3270,6 +3556,10 @@ export const MushafPageView: React.FC<
       }
     };
 
+  /* =========================================================
+     ENDED
+  ========================================================= */
+
   const handleAudioEnded =
     () => {
       activeSegmentRef.current =
@@ -3278,6 +3568,10 @@ export const MushafPageView: React.FC<
       const currentIndex =
         pageAudioIndexRef.current;
 
+      /*
+       * Single ayah playback:
+       * stop after the ayah.
+       */
       if (
         currentIndex < 0
       ) {
@@ -3352,6 +3646,10 @@ export const MushafPageView: React.FC<
       }
     };
 
+  /* =========================================================
+     AUDIO ERROR
+  ========================================================= */
+
   const handleAudioError =
     () => {
       const audio =
@@ -3376,6 +3674,10 @@ export const MushafPageView: React.FC<
         false
       );
     };
+
+  /* =========================================================
+     SCROLL HANDLER
+  ========================================================= */
 
   const handleScroll = (
     e: React.UIEvent<HTMLDivElement>
@@ -3448,6 +3750,10 @@ export const MushafPageView: React.FC<
     }
   };
 
+  /* =========================================================
+     BOOKMARK
+  ========================================================= */
+
   const toggleBookmark =
     () => {
       let updated:
@@ -3489,6 +3795,10 @@ export const MushafPageView: React.FC<
     selectedTafsir.title ||
     selectedTafsir.id;
 
+  /* =========================================================
+     UI
+  ========================================================= */
+
   return (
     <div
       className="relative h-screen max-w-lg mx-auto flex flex-col justify-between select-none bg-stone-100 text-slate-900 overflow-hidden"
@@ -3519,6 +3829,7 @@ export const MushafPageView: React.FC<
       />
 
       {/* HEADER */}
+
       <header
         className={`absolute top-0 left-0 right-0 z-30 bg-white/95 backdrop-blur-md border-b border-slate-200 px-4 py-2.5 flex items-center justify-between shadow-xs transition-all duration-300 ${
           showControls
@@ -3604,337 +3915,519 @@ export const MushafPageView: React.FC<
         </div>
       </header>
 
-      {/* MUSHAF VIEW */}
-      {viewMode === 'mushaf' && (
+      {/* MUSHAF */}
+
+      {viewMode ===
+        'mushaf' && (
         <div
           className="relative flex-1 flex items-center justify-center bg-stone-200/60 overflow-hidden"
           onClick={() => {
-            setShowControls(prev => !prev);
+            setShowControls(
+              prev =>
+                !prev
+            );
+
             closeHighlight();
           }}
         >
           <div
-            ref={scrollContainerRef}
-            onScroll={handleScroll}
+            ref={
+              scrollContainerRef
+            }
+            onScroll={
+              handleScroll
+            }
             className="flex w-full h-full overflow-x-auto snap-x snap-mandatory scrollbar-none items-center"
-            style={{ direction: 'ltr' }}
+            style={{
+              direction:
+                'ltr'
+            }}
           >
-            {Array.from({ length: 604 }, (_, i) => {
-              const pageNum = 604 - i;
-              const isActivePage = pageNum === currentPage;
+            {Array.from(
+              {
+                length: 604
+              },
+              (_, i) => {
+                const pageNum =
+                  604 - i;
 
-              return (
-                <div
-                  key={pageNum}
-                  ref={el => { pageRefs.current[pageNum] = el; }}
-                  className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0"
-                  style={{ direction: 'rtl' }}
-                >
+                const isActivePage =
+                  pageNum ===
+                  currentPage;
+
+                return (
                   <div
-                    className="relative max-h-[76vh]"
-                    style={{ aspectRatio: `${AYAH_CANVAS_WIDTH} / ${AYAH_CANVAS_HEIGHT}` }}
+                    key={pageNum}
+                    ref={el => {
+                      pageRefs.current[
+                        pageNum
+                      ] = el;
+                    }}
+                    className="min-w-full h-full flex flex-col items-center justify-center snap-center snap-always p-2 shrink-0"
+                    style={{
+                      direction:
+                        'rtl'
+                    }}
                   >
-                    <img
-                      src={pageImgUrl(pageNum)}
-                      alt={`Page ${pageNum}`}
-                      loading="lazy"
-                      draggable={false}
-                      onContextMenu={e => e.preventDefault()}
-                      className="w-full h-full max-h-[76vh] object-contain select-none shadow-xl rounded-lg bg-white border border-stone-300"
-                      style={{ WebkitTouchCallout: 'none', WebkitUserSelect: 'none', userSelect: 'none' }}
-                    />
+                    <div
+                      className="relative max-h-[76vh]"
+                      style={{
+                        aspectRatio:
+                          `${AYAH_CANVAS_WIDTH} / ${AYAH_CANVAS_HEIGHT}`
+                      }}
+                    >
+                      <img
+                        src={pageImgUrl(
+                          pageNum
+                        )}
+                        alt={`Page ${pageNum}`}
+                        loading="lazy"
+                        draggable={
+                          false
+                        }
+                        onContextMenu={e =>
+                          e.preventDefault()
+                        }
+                        className="w-full h-full max-h-[76vh] object-contain select-none shadow-xl rounded-lg bg-white border border-stone-300"
+                        style={{
+                          WebkitTouchCallout:
+                            'none',
+                          WebkitUserSelect:
+                            'none',
+                          userSelect:
+                            'none'
+                        }}
+                      />
 
-                    {isActivePage && ayahApiError && (
-                      <div className="absolute top-1 inset-x-0 text-center text-[10px] font-bold bg-red-700/80 text-white py-1 z-50 pointer-events-none">
-                        هەڵە: {ayahApiError}
-                      </div>
-                    )}
+                      {isActivePage &&
+                        ayahApiError && (
+                          <div className="absolute top-1 inset-x-0 text-center text-[10px] font-bold bg-red-700/80 text-white py-1 z-50 pointer-events-none">
+                            هەڵە:{' '}
+                            {
+                              ayahApiError
+                            }
+                          </div>
+                        )}
 
-                    {isActivePage && ayahBoxes.length > 0 && (
-                      <div className="absolute inset-0">
-                        {ayahBoxes.map((box, idx) => {
-                          const matchedAyah = pageAyahsData.find(x => x.surahNumber === box.s && x.numberInSurah === box.a);
-                          if (!matchedAyah) return null;
+                      {isActivePage &&
+                        ayahBoxes.length >
+                          0 && (
+                          <div className="absolute inset-0">
+                            {ayahBoxes.map(
+                              (
+                                box,
+                                idx
+                              ) => {
+                                const matchedAyah =
+                                  pageAyahsData.find(
+                                    x =>
+                                      x.surahNumber ===
+                                        box.s &&
+                                      x.numberInSurah ===
+                                        box.a
+                                  );
 
-                          const boxKey = `${box.s}-${box.a}-${box.l}-${idx}`;
-                          const leftPct = (box.x0 / AYAH_CANVAS_WIDTH) * 100;
-                          const widthPct = ((box.x1 - box.x0) / AYAH_CANVAS_WIDTH) * 100;
-                          const topPct = (box.y0 / AYAH_CANVAS_HEIGHT) * 100;
-                          const heightPct = ((box.y1 - box.y0) / AYAH_CANVAS_HEIGHT) * 100;
+                                if (
+                                  !matchedAyah
+                                ) {
+                                  return null;
+                                }
 
-                          const isHighlighted = !!highlightedAyah &&
-                            highlightedAyah.ayah.surahNumber === box.s &&
-                            highlightedAyah.ayah.numberInSurah === box.a;
+                                const boxKey =
+                                  `${box.s}-${box.a}-${box.l}-${idx}`;
 
-                          return (
-                            <div
-                              key={boxKey}
-                              onPointerDown={e => {
-                                e.stopPropagation();
-                                startLongPress(boxKey, matchedAyah, topPct);
-                              }}
-                              onPointerUp={cancelLongPress}
-                              onPointerLeave={cancelLongPress}
-                              onPointerCancel={cancelLongPress}
-                              onContextMenu={e => e.preventDefault()}
-                              style={{
-                                position: 'absolute',
-                                left: `${leftPct}%`,
-                                top: `${topPct}%`,
-                                width: `${widthPct}%`,
-                                height: `${heightPct}%`,
-                                background: isHighlighted
-                                  ? 'rgba(56,189,248,0.35)'
-                                  : pressingBox === boxKey
-                                  ? 'rgba(56,189,248,0.15)'
-                                  : 'transparent',
-                                borderRadius: '3px',
-                                transition: 'background 0.15s ease'
-                              }}
-                              className="cursor-pointer touch-none"
-                            />
-                          );
-                        })}
-                      </div>
-                    )}
+                                const leftPct =
+                                  (box.x0 /
+                                    AYAH_CANVAS_WIDTH) *
+                                  100;
 
-                    {isActivePage && highlightedAyah && (
-                      <div
-                        className="absolute inset-x-0 flex justify-center z-40"
-                        style={{ top: `${Math.min(Math.max(highlightedAyah.topPercent - 7, 2), 88)}%` }}
-                        onClick={e => e.stopPropagation()}
-                      >
-                        <div className="flex items-center gap-1 bg-emerald-800 text-white rounded-2xl shadow-xl px-1.5 py-1.5">
-                          <button
-                            onClick={() => void playAyahAudio(highlightedAyah.ayah)}
-                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            title="گوێگرتن"
-                          >
-                            {playingAyahKey === ayahKey(highlightedAyah.ayah) ? (
-                              <Pause className="w-4 h-4" />
-                            ) : (
-                              <Play className="w-4 h-4 fill-white" />
+                                const widthPct =
+                                  ((box.x1 -
+                                    box.x0) /
+                                    AYAH_CANVAS_WIDTH) *
+                                  100;
+
+                                const topPct =
+                                  (box.y0 /
+                                    AYAH_CANVAS_HEIGHT) *
+                                  100;
+
+                                const heightPct =
+                                  ((box.y1 -
+                                    box.y0) /
+                                    AYAH_CANVAS_HEIGHT) *
+                                  100;
+
+                                const isHighlighted =
+                                  !!highlightedAyah &&
+                                  highlightedAyah.ayah.surahNumber ===
+                                    box.s &&
+                                  highlightedAyah.ayah.numberInSurah ===
+                                    box.a;
+
+                                return (
+                                  <div
+                                    key={
+                                      boxKey
+                                    }
+                                    onPointerDown={e => {
+                                      e.stopPropagation();
+
+                                      startLongPress(
+                                        boxKey,
+                                        matchedAyah,
+                                        topPct
+                                      );
+                                    }}
+                                    onPointerUp={
+                                      cancelLongPress
+                                    }
+                                    onPointerLeave={
+                                      cancelLongPress
+                                    }
+                                    onPointerCancel={
+                                      cancelLongPress
+                                    }
+                                    onContextMenu={e =>
+                                      e.preventDefault()
+                                    }
+                                    style={{
+                                      position:
+                                        'absolute',
+                                      left: `${leftPct}%`,
+                                      top: `${topPct}%`,
+                                      width: `${widthPct}%`,
+                                      height: `${heightPct}%`,
+                                      background:
+                                        isHighlighted
+                                          ? 'rgba(56,189,248,0.35)'
+                                          : pressingBox ===
+                                            boxKey
+                                          ? 'rgba(56,189,248,0.15)'
+                                          : 'transparent',
+                                      borderRadius:
+                                        '3px',
+                                      transition:
+                                        'background 0.15s ease'
+                                    }}
+                                    className="cursor-pointer touch-none"
+                                  />
+                                );
+                              }
                             )}
-                          </button>
+                          </div>
+                        )}
 
-                          <button
-                            onClick={() => setTafsirSheetOpen(true)}
-                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            title="تەفسیر"
+                      {isActivePage &&
+                        highlightedAyah && (
+                          <div
+                            className="absolute inset-x-0 flex justify-center z-40"
+                            style={{
+                              top: `${Math.min(
+                                Math.max(
+                                  highlightedAyah.topPercent -
+                                    7,
+                                  2
+                                ),
+                                88
+                              )}%`
+                            }}
+                            onClick={e =>
+                              e.stopPropagation()
+                            }
                           >
-                            <Globe className="w-4 h-4" />
-                          </button>
+                            <div className="flex items-center gap-1 bg-emerald-800 text-white rounded-2xl shadow-xl px-1.5 py-1.5">
+                              <button
+                                onClick={() =>
+                                  void playAyahAudio(
+                                    highlightedAyah.ayah
+                                  )
+                                }
+                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                                title="گوێگرتن"
+                              >
+                                {playingAyahKey ===
+                                ayahKey(
+                                  highlightedAyah.ayah
+                                ) ? (
+                                  <Pause className="w-4 h-4" />
+                                ) : (
+                                  <Play className="w-4 h-4 fill-white" />
+                                )}
+                              </button>
 
-                          <button
-                            onClick={() => shareAyah(highlightedAyah.ayah)}
-                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            title="ناردن"
-                          >
-                            <Share2 className="w-4 h-4" />
-                          </button>
+                              <button
+                                onClick={() =>
+                                  setTafsirSheetOpen(
+                                    true
+                                  )
+                                }
+                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                                title="تەفسیر"
+                              >
+                                <Globe className="w-4 h-4" />
+                              </button>
 
-                          <button
-                            onClick={() => toggleAyahBookmark(highlightedAyah.ayah)}
-                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            title="خەزنکردن"
-                          >
-                            {isAyahBookmarked(highlightedAyah.ayah) ? (
-                              <BookmarkCheck className="w-4 h-4 fill-white" />
-                            ) : (
-                              <Bookmark className="w-4 h-4" />
-                            )}
-                          </button>
+                              <button
+                                onClick={() =>
+                                  shareAyah(
+                                    highlightedAyah.ayah
+                                  )
+                                }
+                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                                title="ناردن"
+                              >
+                                <Share2 className="w-4 h-4" />
+                              </button>
 
-                          <button
-                            onClick={closeHighlight}
-                            className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                            title="داخستن"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                              <button
+                                onClick={() =>
+                                  toggleAyahBookmark(
+                                    highlightedAyah.ayah
+                                  )
+                                }
+                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                                title="خەزنکردن"
+                              >
+                                {isAyahBookmarked(
+                                  highlightedAyah.ayah
+                                ) ? (
+                                  <BookmarkCheck className="w-4 h-4 fill-white" />
+                                ) : (
+                                  <Bookmark className="w-4 h-4" />
+                                )}
+                              </button>
+
+                              <button
+                                onClick={
+                                  closeHighlight
+                                }
+                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                                title="داخستن"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                    </div>
+
+                    <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
+                      {pageNum}
+                    </span>
                   </div>
-
-                  <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
-                    {pageNum}
-                  </span>
-                </div>
-              );
-            })}
+                );
+              }
+            )}
           </div>
 
           {/* TAFSIR SHEET */}
-          {highlightedAyah && tafsirSheetOpen && (
-            <div
-              className="absolute bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 rounded-t-3xl shadow-2xl p-5 max-h-[45vh] overflow-y-auto"
-              dir="rtl"
-              onClick={e => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
-                  {highlightedAyah.ayah.surahNumber}:{highlightedAyah.ayah.numberInSurah} {' — '} {selectedTafsirName}
-                </span>
+
+          {highlightedAyah &&
+            tafsirSheetOpen && (
+              <div
+                className="absolute bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 rounded-t-3xl shadow-2xl p-5 max-h-[45vh] overflow-y-auto"
+                dir="rtl"
+                onClick={e =>
+                  e.stopPropagation()
+                }
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
+                    {
+                      highlightedAyah
+                        .ayah
+                        .surahNumber
+                    }
+                    :
+                    {
+                      highlightedAyah
+                        .ayah
+                        .numberInSurah
+                    }
+
+                    {' — '}
+
+                    {
+                      selectedTafsirName
+                    }
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setTafsirSheetOpen(
+                        false
+                      )
+                    }
+                    className="p-1.5 rounded-xl bg-slate-100 text-slate-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <p className="font-quran text-lg text-slate-900 leading-relaxed mb-3">
+                  {
+                    highlightedAyah
+                      .ayah
+                      .arabic
+                  }
+                </p>
+
+                {loadingTafsir ? (
+                  <div className="flex items-center justify-center gap-2 py-4 text-slate-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+
+                    <span className="text-xs">
+                      تەفسیر باردەکرێت...
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    {
+                      highlightedAyah
+                        .ayah
+                        .tafsir
+                    }
+                  </p>
+                )}
+
+                {tafsirApiError &&
+                  !loadingTafsir && (
+                    <p className="mt-3 text-[11px] text-red-600 leading-relaxed">
+                      {
+                        tafsirApiError
+                      }
+                    </p>
+                  )}
 
                 <button
-                  onClick={() => setTafsirSheetOpen(false)}
-                  className="p-1.5 rounded-xl bg-slate-100 text-slate-600"
+                  onClick={() => {
+                    setTafsirSheetOpen(
+                      false
+                    );
+
+                    setIsTafsirSelectorOpen(
+                      true
+                    );
+                  }}
+                  className="mt-3 text-xs font-bold text-amber-700 underline"
                 >
-                  <X className="w-4 h-4" />
+                  گۆڕینی تەفسیر
                 </button>
               </div>
-
-              <p className="font-quran text-lg text-slate-900 leading-relaxed mb-3">
-                {highlightedAyah.ayah.arabic}
-              </p>
-
-              {loadingTafsir ? (
-                <div className="flex items-center justify-center gap-2 py-4 text-slate-500">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span className="text-xs">تەفسیر باردەکرێت...</span>
-                </div>
-              ) : (
-                <p className="text-sm text-slate-700 leading-relaxed">
-                  {highlightedAyah.ayah.tafsir}
-                </p>
-              )}
-
-              {tafsirApiError && !loadingTafsir && (
-                <p className="mt-3 text-[11px] text-red-600 leading-relaxed">
-                  {tafsirApiError}
-                </p>
-              )}
-
-              <button
-                onClick={() => {
-                  setTafsirSheetOpen(false);
-                  setIsTafsirSelectorOpen(true);
-                }}
-                className="mt-3 text-xs font-bold text-amber-700 underline"
-              >
-                گۆڕینی تەفسیر
-              </button>
-            </div>
-          )}
+            )}
         </div>
       )}
 
       {/* TAFSIR VIEW */}
-      {viewMode === 'tafsir' && (
-        <div className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white" dir="rtl">
+
+      {viewMode ===
+        'tafsir' && (
+        <div
+          className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white"
+          dir="rtl"
+        >
           {loadingTafsir ? (
             <div className="text-center py-20">
               <Loader2 className="w-8 h-8 mx-auto text-amber-600 animate-spin" />
-              <p className="text-xs text-slate-500 pt-2">{selectedTafsirName} باردەکرێت...</p>
+
+              <p className="text-xs text-slate-500 pt-2">
+                {
+                  selectedTafsirName
+                }{' '}
+                باردەکرێت...
+              </p>
             </div>
           ) : (
             <>
               <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-right">
-                <p className="text-[11px] text-amber-800 font-bold">تەفسیری هەڵبژێردراو:</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">{selectedTafsirName}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">{selectedTafsir.author}</p>
+                <p className="text-[11px] text-amber-800 font-bold">
+                  تەفسیری هەڵبژێردراو:
+                </p>
+
+                <p className="text-sm font-bold text-slate-900 mt-0.5">
+                  {
+                    selectedTafsirName
+                  }
+                </p>
+
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {
+                    selectedTafsir.author
+                  }
+                </p>
               </div>
 
-              {pageAyahsData.map(ayah => (
-                <div
-                  key={`${ayah.surahNumber}:${ayah.numberInSurah}`}
-                  className="space-y-3 pb-6 border-b border-slate-200 text-right"
-                >
-                  <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-mono font-bold">
-                    {ayah.surahNumber}:{ayah.numberInSurah}
-                  </span>
+              {pageAyahsData.map(
+                ayah => (
+                  <div
+                    key={`${ayah.surahNumber}:${ayah.numberInSurah}`}
+                    className="space-y-3 pb-6 border-b border-slate-200 text-right"
+                  >
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-mono font-bold">
+                      {
+                        ayah.surahNumber
+                      }
+                      :
+                      {
+                        ayah.numberInSurah
+                      }
+                    </span>
 
-                  <p className="font-quran text-slate-900 text-xl sm:text-2xl leading-loose">
-                    {ayah.arabic}
-                  </p>
+                    <p className="font-quran text-slate-900 text-xl sm:text-2xl leading-loose">
+                      {
+                        ayah.arabic
+                      }
+                    </p>
 
-                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed">
-                    <strong className="text-amber-800 block mb-1">{selectedTafsirName}:</strong>
-                    {ayah.tafsir}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                      <strong className="text-amber-800 block mb-1">
+                        {
+                          selectedTafsirName
+                        }
+                        :
+                      </strong>
+
+                      {
+                        ayah.tafsir
+                      }
+                    </div>
                   </div>
-                </div>
-              ))}
+                )
+              )}
             </>
           )}
 
-          {tafsirApiError && !loadingTafsir && (
-            <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs leading-relaxed text-right">
-              {tafsirApiError}
-            </div>
-          )}
+          {tafsirApiError &&
+            !loadingTafsir && (
+              <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs leading-relaxed text-right">
+                {
+                  tafsirApiError
+                }
+              </div>
+            )}
         </div>
       )}
 
-      {/* FOOTER CONTROLS */}
-      {showControls && (
-        <footer
-          className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 py-2.5 flex items-center justify-between transition-all duration-300 ${
-            showControls
-              ? 'translate-y-0 opacity-100'
-              : 'translate-y-full opacity-0 pointer-events-none'
-          }`}
-          dir="rtl"
-          onClick={e => e.stopPropagation()}
+      {/* FOOTER */}
+
+      <footer
+        className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-lg transition-all duration-300 ${
+          showControls
+            ? 'translate-y-0 opacity-100'
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+        dir="rtl"
+        onClick={e =>
+          e.stopPropagation()
+        }
+      >
+        <button
+          onClick={() =>
+            setIsRecitersModalOpen(
+              true
+            )
+          }
+          className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5 min-w-0"
         >
-          <button
-            onClick={() => setIsRecitersModalOpen(true)}
-            className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors truncate text-right"
-          >
-            <span className="truncate">
-              {selectedReciter?.name || 'قاری هەڵبژێرە'}
-            </span>
-          </button>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={togglePageAudio}
-              className="h-9 px-3.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center gap-1.5 shadow-sm active:scale-95 transition-all"
-            >
-              {isPlayingAudio ? (
-                <>
-                  <Pause className="w-4 h-4 fill-white" />
-                  <span className="text-xs font-bold">وەستاندن</span>
-                </>
-              ) : (
-                <>
-                  <Play className="w-4 h-4 fill-white" />
-                  <span className="text-xs font-bold">خوێندنەوە</span>
-                </>
-              )}
-            </button>
-
-            {renderCurrentSurahDownload()}
-          </div>
-        </footer>
-      )}
-
-      {/* MODALS */}
-      {isRecitersModalOpen && (
-        <RecitersModal
-          isOpen={isRecitersModalOpen}
-          onClose={() => setIsRecitersModalOpen(false)}
-          selectedReciter={selectedReciter}
-          onSelectReciter={reciter => {
-            setSelectedReciter(reciter);
-            setIsRecitersModalOpen(false);
-          }}
-        />
-      )}
-
-      {isTafsirSelectorOpen && (
-        <TafsirSelectorModal
-          isOpen={isTafsirSelectorOpen}
-          onClose={() => setIsTafsirSelectorOpen(false)}
-          selectedTafsir={selectedTafsir}
-          onSelectTafsir={tafsir => {
-            setSelectedTafsir(tafsir);
-            setIsTafsirSelectorOpen(false);
-          }}
-        />
-      )}
-    </div>
-  );
-};
-
-export default MushafPageView;
+          <span className="truncate"
