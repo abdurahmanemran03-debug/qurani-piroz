@@ -4665,4 +4665,4 @@ export const MushafPageView: React.FC<
                               >
                                 {playingAyahKey ===
                                 ayahKey(
-                                  highlightedAyah.a
+                                  highlightedAyah.ayah)}
