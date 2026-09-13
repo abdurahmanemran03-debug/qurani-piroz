@@ -4434,3 +4434,5 @@ export const MushafPageView: React.FC<
         </button>
     </footer>
 </div>
+  );
+}
