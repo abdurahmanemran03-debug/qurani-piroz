@@ -4430,4 +4430,4 @@ export const MushafPageView: React.FC<
           }
           className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5 min-w-0"
         >
-          <span className="truncate"
+          <span className="truncate"></span>
