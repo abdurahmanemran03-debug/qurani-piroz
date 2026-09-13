@@ -1,37 +1,37 @@
 [
   {
     "ayah": 1,
-    "start": 3.02,
-    "end": 8.6
+    "start": 0.0,
+    "end": 5.62
   },
   {
     "ayah": 2,
-    "start": 8.6,
-    "end": 13.96
+    "start": 5.62,
+    "end": 8.42
   },
   {
     "ayah": 3,
-    "start": 13.96,
-    "end": 17.24
+    "start": 10.94,
+    "end": 14.26
   },
   {
     "ayah": 4,
-    "start": 17.24,
-    "end": 20.68
+    "start": 15.2,
+    "end": 17.58
   },
   {
     "ayah": 5,
-    "start": 20.68,
-    "end": 25.76
+    "start": 17.58,
+    "end": 22.78
   },
   {
     "ayah": 6,
-    "start": 25.76,
-    "end": 29.78
+    "start": 22.78,
+    "end": 26.8
   },
   {
     "ayah": 7,
-    "start": 29.78,
-    "end": 43.34
+    "start": 27.94,
+    "end": 40.32
   }
 ]
