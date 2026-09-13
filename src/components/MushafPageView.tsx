@@ -218,7 +218,7 @@ const loadManualTiming = async (
      * کۆتایی زۆرجار کەمێک زوویە). هەرگیز ناچێتە ناو
      * دەستپێکی ئایەتی دواتر.
      */
-    const END_PADDING_SECONDS = 0.35;
+    const END_PADDING_SECONDS = 0.15;
 
     const sortedTimings = timings
       .slice()
@@ -1102,6 +1102,9 @@ export const MushafPageView: React.FC<
   const audioObjectUrlRef =
     useRef<string | null>(null);
 
+  const loadedLocalBlobKeyRef =
+    useRef<string | null>(null);
+
   const audioRequestIdRef =
     useRef(0);
 
@@ -1209,6 +1212,9 @@ export const MushafPageView: React.FC<
       }
 
       clearAudioObjectUrl();
+
+      loadedLocalBlobKeyRef.current =
+        null;
 
       setIsPlayingAudio(false);
       setPlayingAyahKey(null);
@@ -1586,6 +1592,22 @@ export const MushafPageView: React.FC<
          * First try offline audio.
          */
         try {
+          const blobKey = `${reciter.id}_${surahNumber}`;
+
+          if (
+            audioObjectUrlRef.current &&
+            loadedLocalBlobKeyRef.current ===
+              blobKey
+          ) {
+            return {
+              url: audioObjectUrlRef.current,
+              startTime:
+                timing?.start_time,
+              endTime:
+                timing?.end_time
+            };
+          }
+
           const localSurah =
             await getSurahAudio(
               reciter.id,
@@ -1602,6 +1624,9 @@ export const MushafPageView: React.FC<
 
             audioObjectUrlRef.current =
               localUrl;
+
+            loadedLocalBlobKeyRef.current =
+              blobKey;
 
             return {
               url: localUrl,
@@ -2782,7 +2807,6 @@ export const MushafPageView: React.FC<
       }
 
       audioRef.current.pause();
-      clearAudioObjectUrl();
 
       try {
         const source =
@@ -2802,8 +2826,18 @@ export const MushafPageView: React.FC<
         const audio =
           audioRef.current;
 
-        audio.src =
-          source.url;
+        const isSameSrc =
+          !!audio.src &&
+          audio.src ===
+            new URL(
+              source.url,
+              window.location.href
+            ).href;
+
+        if (!isSameSrc) {
+          audio.src =
+            source.url;
+        }
 
         activeSegmentRef.current =
           {
@@ -3173,7 +3207,6 @@ export const MushafPageView: React.FC<
       }
 
       audioRef.current.pause();
-      clearAudioObjectUrl();
 
       try {
         const source =
@@ -3193,8 +3226,18 @@ export const MushafPageView: React.FC<
         const audio =
           audioRef.current;
 
-        audio.src =
-          source.url;
+        const isSameSrc =
+          !!audio.src &&
+          audio.src ===
+            new URL(
+              source.url,
+              window.location.href
+            ).href;
+
+        if (!isSameSrc) {
+          audio.src =
+            source.url;
+        }
 
         activeSegmentRef.current =
           {
