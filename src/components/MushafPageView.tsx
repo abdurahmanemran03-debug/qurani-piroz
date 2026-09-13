@@ -3239,13 +3239,15 @@ export const MushafPageView: React.FC<
             source.url;
         }
 
+                const nextAyah = pageAyahsData[index + 1];
+        const dynamicEndTime = nextAyah?.start ?? source.endTime ?? null;
+
         activeSegmentRef.current =
           {
-            endTime:
-              source.endTime ??
-              null,
+            endTime: dynamicEndTime,
             requestId
           };
+
 
         if (
           source.startTime !==
