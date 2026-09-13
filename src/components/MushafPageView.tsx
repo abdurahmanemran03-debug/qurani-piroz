@@ -4665,4 +4665,376 @@ export const MushafPageView: React.FC<
                               >
                                 {playingAyahKey ===
                                 ayahKey(
-                                  highlightedAyah.ayah)}
+                                  highlightedAyah.ayah
+                                ) ? (
+                                  <Pause className="w-4 h-4" />
+                                ) : (
+                                  <Play className="w-4 h-4 fill-white" />
+                                )}
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  setTafsirSheetOpen(
+                                    true
+                                  )
+                                }
+                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                                title="تەفسیر"
+                              >
+                                <Globe className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  shareAyah(
+                                    highlightedAyah.ayah
+                                  )
+                                }
+                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                                title="ناردن"
+                              >
+                                <Share2 className="w-4 h-4" />
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  toggleAyahBookmark(
+                                    highlightedAyah.ayah
+                                  )
+                                }
+                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                                title="خەزنکردن"
+                              >
+                                {isAyahBookmarked(
+                                  highlightedAyah.ayah
+                                ) ? (
+                                  <BookmarkCheck className="w-4 h-4 fill-white" />
+                                ) : (
+                                  <Bookmark className="w-4 h-4" />
+                                )}
+                              </button>
+
+                              <button
+                                onClick={
+                                  closeHighlight
+                                }
+                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
+                                title="داخستن"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                    </div>
+
+                    <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
+                      {pageNum}
+                    </span>
+                  </div>
+                );
+              }
+            )}
+          </div>
+
+          {/* TAFSIR SHEET */}
+
+          {highlightedAyah &&
+            tafsirSheetOpen && (
+              <div
+                className="absolute bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 rounded-t-3xl shadow-2xl p-5 max-h-[45vh] overflow-y-auto"
+                dir="rtl"
+                onClick={e =>
+                  e.stopPropagation()
+                }
+              >
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
+                    {
+                      highlightedAyah
+                        .ayah
+                        .surahNumber
+                    }
+                    :
+                    {
+                      highlightedAyah
+                        .ayah
+                        .numberInSurah
+                    }
+
+                    {' — '}
+
+                    {
+                      selectedTafsirName
+                    }
+                  </span>
+
+                  <button
+                    onClick={() =>
+                      setTafsirSheetOpen(
+                        false
+                      )
+                    }
+                    className="p-1.5 rounded-xl bg-slate-100 text-slate-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <p className="font-quran text-lg text-slate-900 leading-relaxed mb-3">
+                  {
+                    highlightedAyah
+                      .ayah
+                      .arabic
+                  }
+                </p>
+
+                {loadingTafsir ? (
+                  <div className="flex items-center justify-center gap-2 py-4 text-slate-500">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+
+                    <span className="text-xs">
+                      تەفسیر باردەکرێت...
+                    </span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    {
+                      highlightedAyah
+                        .ayah
+                        .tafsir
+                    }
+                  </p>
+                )}
+
+                {tafsirApiError &&
+                  !loadingTafsir && (
+                    <p className="mt-3 text-[11px] text-red-600 leading-relaxed">
+                      {
+                        tafsirApiError
+                      }
+                    </p>
+                  )}
+
+                <button
+                  onClick={() => {
+                    setTafsirSheetOpen(
+                      false
+                    );
+
+                    setIsTafsirSelectorOpen(
+                      true
+                    );
+                  }}
+                  className="mt-3 text-xs font-bold text-amber-700 underline"
+                >
+                  گۆڕینی تەفسیر
+                </button>
+              </div>
+            )}
+        </div>
+      )}
+
+      {/* TAFSIR VIEW */}
+
+      {viewMode ===
+        'tafsir' && (
+        <div
+          className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white"
+          dir="rtl"
+        >
+          {loadingTafsir ? (
+            <div className="text-center py-20">
+              <Loader2 className="w-8 h-8 mx-auto text-amber-600 animate-spin" />
+
+              <p className="text-xs text-slate-500 pt-2">
+                {
+                  selectedTafsirName
+                }{' '}
+                باردەکرێت...
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-right">
+                <p className="text-[11px] text-amber-800 font-bold">
+                  تەفسیری هەڵبژێردراو:
+                </p>
+
+                <p className="text-sm font-bold text-slate-900 mt-0.5">
+                  {
+                    selectedTafsirName
+                  }
+                </p>
+
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  {
+                    selectedTafsir.author
+                  }
+                </p>
+              </div>
+
+              {pageAyahsData.map(
+                ayah => (
+                  <div
+                    key={`${ayah.surahNumber}:${ayah.numberInSurah}`}
+                    className="space-y-3 pb-6 border-b border-slate-200 text-right"
+                  >
+                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-mono font-bold">
+                      {
+                        ayah.surahNumber
+                      }
+                      :
+                      {
+                        ayah.numberInSurah
+                      }
+                    </span>
+
+                    <p className="font-quran text-slate-900 text-xl sm:text-2xl leading-loose">
+                      {
+                        ayah.arabic
+                      }
+                    </p>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed">
+                      <strong className="text-amber-800 block mb-1">
+                        {
+                          selectedTafsirName
+                        }
+                        :
+                      </strong>
+
+                      {
+                        ayah.tafsir
+                      }
+                    </div>
+                  </div>
+                )
+              )}
+            </>
+          )}
+
+          {tafsirApiError &&
+            !loadingTafsir && (
+              <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs leading-relaxed text-right">
+                {
+                  tafsirApiError
+                }
+              </div>
+            )}
+        </div>
+      )}
+
+      {/* FOOTER */}
+
+      <footer
+        className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-lg transition-all duration-300 ${
+          showControls
+            ? 'translate-y-0 opacity-100'
+            : 'translate-y-full opacity-0 pointer-events-none'
+        }`}
+        dir="rtl"
+        onClick={e =>
+          e.stopPropagation()
+        }
+      >
+        <button
+          onClick={() =>
+            setIsRecitersModalOpen(
+              true
+            )
+          }
+          className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5 min-w-0"
+        >
+          <span className="truncate">
+            {
+              selectedReciter.name
+            }
+          </span>
+        </button>
+
+        <div className="flex items-center gap-2">
+          {renderCurrentSurahDownload()}
+
+          <button
+            onClick={
+              togglePageAudio
+            }
+            className="p-2.5 rounded-full bg-slate-900 text-white hover:bg-slate-800 transition-transform active:scale-95 shadow-md shrink-0"
+            title="دەنگی پەڕە"
+          >
+            {isPlayingAudio ? (
+              <Pause className="w-4 h-4" />
+            ) : (
+              <Play className="w-4 h-4 fill-white" />
+            )}
+          </button>
+        </div>
+      </footer>
+
+      {/* RECITER MODAL */}
+
+      <RecitersModal
+        isOpen={
+          isRecitersModalOpen
+        }
+        onClose={() =>
+          setIsRecitersModalOpen(
+            false
+          )
+        }
+        selectedReciterId={
+          selectedReciter.id
+        }
+        onSelectReciter={r => {
+          stopAudioCompletely();
+
+          setSelectedReciter(
+            r
+          );
+
+          try {
+            localStorage.setItem(
+              'quran_selected_reciter',
+              r.id
+            );
+          } catch {
+            // Ignore
+          }
+
+          window.dispatchEvent(
+            new CustomEvent(
+              'quran-reciter-changed',
+              {
+                detail:
+                  r.id
+              }
+            )
+          );
+        }}
+      />
+
+      {/* TAFSIR SELECTOR */}
+
+      <TafsirSelectorModal
+        isOpen={
+          isTafsirSelectorOpen
+        }
+        onClose={() =>
+          setIsTafsirSelectorOpen(
+            false
+          )
+        }
+        selectedTafsirId={
+          selectedTafsir.id
+        }
+        onSelectTafsir={t => {
+          setSelectedTafsir(
+            t
+          );
+        }}
+      />
+    </div>
+  );
+};
