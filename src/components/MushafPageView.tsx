@@ -4432,6 +4432,5 @@ export const MushafPageView: React.FC<
         >
                     <span className="truncate"></span>
         </button>
-      
     </footer>
-
+</div>
