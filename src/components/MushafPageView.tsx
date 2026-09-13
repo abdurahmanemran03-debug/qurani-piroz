@@ -107,6 +107,128 @@ type Mp3QuranRead = {
   surah_list?: string;
 };
 
+/*
+ * =========================================================
+ * کاتی وردی دەستکاریکراو (MANUAL TIMING FILES)
+ *
+ * بۆ قاریانێک کە کاتی وردیان بەدەستی خۆمان دروستکردووە
+ * (بە گوێگرتن و نیشانەکردنی چرکەکان)، فایلێکی JSON
+ * دادەنرێت لە:
+ *   public/ayah-timings/{reciterId}/{surahNumber}.json
+ * بە شێوەی: [{ "ayah": 1, "start": 0.54, "end": 4.98 }, ...]
+ *
+ * ئەم جۆرە کاتیە پێشینەیەکی سەرەکی هەیە بەسەر هەموو
+ * جۆرەکانی تردا (فەرمی، بۆشایی، هەندازەکراو).
+ * =========================================================
+ */
+
+const manualTimingCache: Record<
+  string,
+  Mp3QuranTiming[] | null
+> = {};
+
+const loadManualTiming = async (
+  reciterId: string,
+  surahNumber: number
+): Promise<Mp3QuranTiming[] | null> => {
+  const cacheKey = `${reciterId}_${surahNumber}`;
+
+  if (
+    Object.prototype.hasOwnProperty.call(
+      manualTimingCache,
+      cacheKey
+    )
+  ) {
+    return manualTimingCache[
+      cacheKey
+    ];
+  }
+
+  try {
+    const base = String(
+      (import.meta as any).env
+        ?.BASE_URL || '/'
+    );
+
+    const url =
+      `${base}ayah-timings/${reciterId}/${surahNumber}.json`;
+
+    const response = await fetch(
+      url,
+      { cache: 'force-cache' }
+    );
+
+    if (!response.ok) {
+      manualTimingCache[
+        cacheKey
+      ] = null;
+
+      return null;
+    }
+
+    const data =
+      await response.json();
+
+    if (
+      !Array.isArray(data)
+    ) {
+      manualTimingCache[
+        cacheKey
+      ] = null;
+
+      return null;
+    }
+
+    const timings: Mp3QuranTiming[] =
+      data
+        .map((item: any) => ({
+          ayah: Number(
+            item?.ayah
+          ),
+          start_time: Number(
+            item?.start ??
+              item?.start_time
+          ),
+          end_time: Number(
+            item?.end ??
+              item?.end_time
+          )
+        }))
+        .filter(
+          (
+            item: Mp3QuranTiming
+          ) =>
+            Number.isFinite(
+              item.ayah
+            ) &&
+            Number.isFinite(
+              item.start_time
+            ) &&
+            Number.isFinite(
+              item.end_time
+            ) &&
+            item.end_time >
+              item.start_time
+        );
+
+    manualTimingCache[
+      cacheKey
+    ] = timings.length
+      ? timings
+      : null;
+
+    return manualTimingCache[
+      cacheKey
+    ];
+  } catch (error) {
+    manualTimingCache[
+      cacheKey
+    ] = null;
+
+    return null;
+  }
+};
+
 type EstimatedAyahRange = {
   ayah: number;
   start: number;
@@ -230,6 +352,429 @@ const buildEstimatedRanges = (
       };
     }
   );
+};
+
+/*
+ * =========================================================
+ * دۆزینەوەی بۆشایی (SILENCE DETECTION)
+ *
+ * لەبری هەندازەکردنی کوێر بەپێی وشە، خودی فایلی دەنگ شی
+ * دەکەینەوە بۆ دۆزینەوەی بۆشاییەکانی ڕاستەقینەی نێوان
+ * ئایەتەکان. ئەنجامەکە هەمیشە پاشەکەوت دەکرێت
+ * (localStorage) بۆ ئەوەی تەنها یەک جار بۆ هەر
+ * قاری/سورەت ئەنجام بدرێت.
+ * =========================================================
+ */
+
+const SILENCE_CACHE_PREFIX =
+  'quran_silence_timing_v1_';
+
+const silenceRangesMemoryCache: Record<
+  string,
+  EstimatedAyahRange[] | null
+> = {};
+
+const readSilenceCache = (
+  key: string
+): EstimatedAyahRange[] | null => {
+  if (
+    Object.prototype.hasOwnProperty.call(
+      silenceRangesMemoryCache,
+      key
+    )
+  ) {
+    return silenceRangesMemoryCache[
+      key
+    ];
+  }
+
+  try {
+    const raw =
+      localStorage.getItem(
+        SILENCE_CACHE_PREFIX + key
+      );
+
+    if (!raw) {
+      return undefined as any;
+    }
+
+    const parsed = JSON.parse(raw);
+
+    if (
+      Array.isArray(parsed)
+    ) {
+      silenceRangesMemoryCache[
+        key
+      ] = parsed;
+
+      return parsed;
+    }
+  } catch {
+    // Ignore
+  }
+
+  return undefined as any;
+};
+
+const writeSilenceCache = (
+  key: string,
+  ranges: EstimatedAyahRange[] | null
+) => {
+  silenceRangesMemoryCache[key] =
+    ranges;
+
+  try {
+    if (ranges) {
+      localStorage.setItem(
+        SILENCE_CACHE_PREFIX + key,
+        JSON.stringify(ranges)
+      );
+    }
+  } catch {
+    // Storage full or unavailable — ignore.
+  }
+};
+
+const boundariesToRanges = (
+  boundaries: number[],
+  duration: number
+): EstimatedAyahRange[] => {
+  const points = [
+    0,
+    ...boundaries,
+    duration
+  ];
+
+  const ranges: EstimatedAyahRange[] =
+    [];
+
+  for (
+    let i = 0;
+    i < points.length - 1;
+    i++
+  ) {
+    ranges.push({
+      ayah: i + 1,
+      start: points[i],
+      end: points[i + 1]
+    });
+  }
+
+  return ranges;
+};
+
+/*
+ * شیکردنەوەی دەنگ بۆ دۆزینەوەی بۆشاییەکان.
+ * ئارایەیەک لە کاتی چرکە (چرکە) دەگەڕێنێتەوە کە
+ * پێدەچێت سنووری نێوان ئایەتەکان بن، یان null
+ * ئەگەر نەیتوانی بە دڵنیاییەوە بیاندۆزێتەوە.
+ */
+const detectSilenceBoundaries = async (
+  audioBuffer: AudioBuffer,
+  ayahCount: number
+): Promise<number[] | null> => {
+  try {
+    const sampleRate =
+      audioBuffer.sampleRate;
+
+    const channelData =
+      audioBuffer.getChannelData(
+        0
+      );
+
+    const windowSeconds = 0.05;
+
+    const windowSize = Math.max(
+      1,
+      Math.floor(
+        sampleRate * windowSeconds
+      )
+    );
+
+    const numWindows = Math.floor(
+      channelData.length /
+        windowSize
+    );
+
+    if (numWindows < 4) {
+      return null;
+    }
+
+    const energies = new Float32Array(
+      numWindows
+    );
+
+    for (
+      let w = 0;
+      w < numWindows;
+      w++
+    ) {
+      let sum = 0;
+
+      const start = w * windowSize;
+      const end =
+        start + windowSize;
+
+      for (
+        let i = start;
+        i < end;
+        i++
+      ) {
+        const s = channelData[i];
+
+        sum += s * s;
+      }
+
+      energies[w] = Math.sqrt(
+        sum / windowSize
+      );
+    }
+
+    const sorted = Array.from(
+      energies
+    ).sort((a, b) => a - b);
+
+    const noiseFloor =
+      sorted[
+        Math.floor(
+          sorted.length * 0.05
+        )
+      ] || 0;
+
+    const peak =
+      sorted[
+        sorted.length - 1
+      ] || 0.0001;
+
+    const threshold =
+      noiseFloor +
+      (peak - noiseFloor) * 0.1;
+
+    const minSilenceWindows =
+      Math.max(
+        2,
+        Math.ceil(
+          0.12 / windowSeconds
+        )
+      );
+
+    type Run = {
+      startWindow: number;
+      endWindow: number;
+    };
+
+    const runs: Run[] = [];
+
+    let runStart = -1;
+
+    for (
+      let w = 0;
+      w < numWindows;
+      w++
+    ) {
+      if (
+        energies[w] < threshold
+      ) {
+        if (runStart === -1) {
+          runStart = w;
+        }
+      } else if (
+        runStart !== -1
+      ) {
+        if (
+          w - runStart >=
+          minSilenceWindows
+        ) {
+          runs.push({
+            startWindow: runStart,
+            endWindow: w
+          });
+        }
+
+        runStart = -1;
+      }
+    }
+
+    if (
+      runStart !== -1 &&
+      numWindows - runStart >=
+        minSilenceWindows
+    ) {
+      runs.push({
+        startWindow: runStart,
+        endWindow: numWindows
+      });
+    }
+
+    const edgeGuardWindows =
+      minSilenceWindows;
+
+    const candidates = runs
+      .filter(
+        r =>
+          r.startWindow >
+            edgeGuardWindows &&
+          r.endWindow <
+            numWindows -
+              edgeGuardWindows
+      )
+      .map(r => ({
+        time:
+          ((r.startWindow +
+            r.endWindow) /
+            2) *
+          windowSize /
+          sampleRate,
+        strength:
+          r.endWindow -
+          r.startWindow
+      }));
+
+    const needed = ayahCount - 1;
+
+    if (needed <= 0) {
+      return [];
+    }
+
+    if (
+      candidates.length < needed
+    ) {
+      return null;
+    }
+
+    const chosen = candidates
+      .sort(
+        (a, b) =>
+          b.strength - a.strength
+      )
+      .slice(0, needed)
+      .sort(
+        (a, b) => a.time - b.time
+      )
+      .map(c => c.time);
+
+    return chosen;
+  } catch (error) {
+    console.warn(
+      'Silence detection failed:',
+      error
+    );
+
+    return null;
+  }
+};
+
+/*
+ * وەرگرتنی ڕەنجی هاندازەکراوی سنووری ئایەتەکان بەپێی
+ * شیکردنەوەی بۆشایی، لەگەڵ پاشەکەوتکردنی هەمیشەیی.
+ * ئەگەر پێشتر پاشەکەوتکراوە، ڕاستەوخۆ لەوێ دەیهێنێتەوە
+ * بەبێ دووبارە شیکردنەوە.
+ */
+const getSilenceBasedRanges = async (
+  reciterId: string,
+  surahNumber: number,
+  audioUrl: string,
+  ayahCount: number
+): Promise<
+  EstimatedAyahRange[] | null
+> => {
+  const cacheKey = `${reciterId}_${surahNumber}`;
+
+  const cached =
+    readSilenceCache(cacheKey);
+
+  if (cached !== undefined) {
+    return cached;
+  }
+
+  const AudioContextClass =
+    (window as any).AudioContext ||
+    (window as any)
+      .webkitAudioContext;
+
+  if (!AudioContextClass) {
+    writeSilenceCache(
+      cacheKey,
+      null
+    );
+
+    return null;
+  }
+
+  let audioCtx:
+    AudioContext | null = null;
+
+  try {
+    const response = await fetch(
+      audioUrl
+    );
+
+    if (!response.ok) {
+      writeSilenceCache(
+        cacheKey,
+        null
+      );
+
+      return null;
+    }
+
+    const arrayBuffer =
+      await response.arrayBuffer();
+
+    audioCtx =
+      new AudioContextClass();
+
+    const audioBuffer =
+      await audioCtx.decodeAudioData(
+        arrayBuffer
+      );
+
+    const boundaries =
+      await detectSilenceBoundaries(
+        audioBuffer,
+        ayahCount
+      );
+
+    if (!boundaries) {
+      writeSilenceCache(
+        cacheKey,
+        null
+      );
+
+      return null;
+    }
+
+    const ranges =
+      boundariesToRanges(
+        boundaries,
+        audioBuffer.duration
+      );
+
+    writeSilenceCache(
+      cacheKey,
+      ranges
+    );
+
+    return ranges;
+  } catch (error) {
+    console.warn(
+      'Silence-based timing generation failed:',
+      error
+    );
+
+    writeSilenceCache(
+      cacheKey,
+      null
+    );
+
+    return null;
+  } finally {
+    try {
+      void audioCtx?.close();
+    } catch {
+      // Ignore
+    }
+  }
 };
 
 const LONG_PRESS_MS = 550;
@@ -635,16 +1180,6 @@ export const MushafPageView: React.FC<
     async (
       reciter: ReciterItem
     ): Promise<Mp3QuranRead | null> => {
-      // Official MP3Quran timing read IDs used for the Kurdish reciters.
-      // The audio is still one full-surah MP3; the timing API splits it
-      // into exact ayah start/end segments.
-      const timingReadIdByReciter: Record<string, number> = {
-        peshawa_kurdi: 268,
-        raad_kurdi: 221,
-        sherzad_kurdi: 38,
-        ramazan_shukur: 227
-      };
-
       const cacheKey =
         reciter.id;
 
@@ -773,25 +1308,6 @@ export const MushafPageView: React.FC<
           if (found) {
             break;
           }
-        }
-
-        const knownTimingId =
-          timingReadIdByReciter[reciter.id];
-
-        if (knownTimingId && found) {
-          found = {
-            ...found,
-            id: knownTimingId
-          };
-        }
-
-        if (!found && knownTimingId) {
-          found = {
-            id: knownTimingId,
-            server: reciter.audioBaseUrl,
-            surah_total: 114,
-            surah_list: ''
-          };
         }
 
         mp3ReadCacheRef.current[
@@ -990,11 +1506,18 @@ export const MushafPageView: React.FC<
         reciter.audioSource ===
         'mp3quran'
       ) {
-        const timings =
-          await getMp3QuranTiming(
-            reciter,
+        const manualTimings =
+          await loadManualTiming(
+            reciter.id,
             surahNumber
           );
+
+        const timings =
+          manualTimings ??
+          (await getMp3QuranTiming(
+            reciter,
+            surahNumber
+          ));
 
         const timing =
           timings.find(
@@ -2638,52 +3161,71 @@ export const MushafPageView: React.FC<
           source.startTime !==
           undefined
         ) {
-          // Android/mobile browsers can reset currentTime to 0 if we seek
-          // before the new MP3 metadata is ready. Wait first, then seek.
           await new Promise<void>(
-            (resolve, reject) => {
-              let settled = false;
-              let timeoutId: number | undefined;
+            (
+              resolve,
+              reject
+            ) => {
+              const audio =
+                audioRef.current;
 
-              const cleanup = () => {
-                audio.removeEventListener('loadedmetadata', onLoaded);
-                audio.removeEventListener('error', onError);
-                if (timeoutId !== undefined) {
-                  window.clearTimeout(timeoutId);
-                }
-              };
+              if (!audio) {
+                reject(
+                  new Error(
+                    'Audio element نەدۆزرایەوە'
+                  )
+                );
 
-              const onLoaded = () => {
-                if (settled) return;
-                settled = true;
-                cleanup();
-                resolve();
-              };
-
-              const onError = () => {
-                if (settled) return;
-                settled = true;
-                cleanup();
-                reject(new Error('Audio metadata load failed'));
-              };
-
-              audio.addEventListener('loadedmetadata', onLoaded);
-              audio.addEventListener('error', onError);
-
-              if (
-                audio.readyState >= 1 &&
-                Number.isFinite(audio.duration)
-              ) {
-                onLoaded();
                 return;
               }
 
-              timeoutId = window.setTimeout(() => {
-                if (settled) return;
-                settled = true;
-                cleanup();
-                reject(new Error('Audio metadata timeout'));
-              }, 10000);
+              if (
+                audio.readyState >=
+                1
+              ) {
+                resolve();
+                return;
+              }
+
+              const onLoaded =
+                () => {
+                  cleanup();
+                  resolve();
+                };
+
+              const onError =
+                () => {
+                  cleanup();
+
+                  reject(
+                    new Error(
+                      'Audio metadata load failed'
+                    )
+                  );
+                };
+
+              const cleanup =
+                () => {
+                  audio.removeEventListener(
+                    'loadedmetadata',
+                    onLoaded
+                  );
+
+                  audio.removeEventListener(
+                    'error',
+                    onError
+                  );
+                };
+
+              audio.addEventListener(
+                'loadedmetadata',
+                onLoaded
+              );
+
+              audio.addEventListener(
+                'error',
+                onError
+              );
             }
           );
 
@@ -2694,33 +3236,8 @@ export const MushafPageView: React.FC<
             return;
           }
 
-          const safeStart = Math.max(
-            0,
-            source.startTime + 0.02
-          );
-
-          if (
-            Number.isFinite(audio.duration) &&
-            safeStart >= audio.duration
-          ) {
-            throw new Error(
-              'کاتی دەستپێکی ئەم ئایەتە لە دەنگەکەدا نەگونجێت.'
-            );
-          }
-
-          audio.currentTime = safeStart;
-
-          // Let the seek settle before play().
-          await new Promise<void>(resolve =>
-            requestAnimationFrame(() => resolve())
-          );
-
-          if (
-            requestId !==
-            audioRequestIdRef.current
-          ) {
-            return;
-          }
+          audio.currentTime =
+            source.startTime;
         }
 
         await audio.play();
@@ -4148,291 +4665,4 @@ export const MushafPageView: React.FC<
                               >
                                 {playingAyahKey ===
                                 ayahKey(
-                                  highlightedAyah.ayah
-                                ) ? (
-                                  <Pause className="w-4 h-4" />
-                                ) : (
-                                  <Play className="w-4 h-4 fill-white" />
-                                )}
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  setTafsirSheetOpen(
-                                    true
-                                  )
-                                }
-                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                                title="تەفسیر"
-                              >
-                                <Globe className="w-4 h-4" />
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  shareAyah(
-                                    highlightedAyah.ayah
-                                  )
-                                }
-                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                                title="ناردن"
-                              >
-                                <Share2 className="w-4 h-4" />
-                              </button>
-
-                              <button
-                                onClick={() =>
-                                  toggleAyahBookmark(
-                                    highlightedAyah.ayah
-                                  )
-                                }
-                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                                title="خەزنکردن"
-                              >
-                                {isAyahBookmarked(
-                                  highlightedAyah.ayah
-                                ) ? (
-                                  <BookmarkCheck className="w-4 h-4 fill-white" />
-                                ) : (
-                                  <Bookmark className="w-4 h-4" />
-                                )}
-                              </button>
-
-                              <button
-                                onClick={
-                                  closeHighlight
-                                }
-                                className="p-2 rounded-xl hover:bg-emerald-700 transition-colors"
-                                title="داخستن"
-                              >
-                                <X className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                    </div>
-
-                    <span className="text-xs font-bold text-slate-700 mt-2 font-mono bg-white/90 px-3 py-1 rounded-full shadow-xs">
-                      {pageNum}
-                    </span>
-                  </div>
-                );
-              }
-            )}
-          </div>
-
-          {/* TAFSIR SHEET */}
-
-          {highlightedAyah &&
-            tafsirSheetOpen && (
-              <div
-                className="absolute bottom-0 inset-x-0 z-50 bg-white border-t border-slate-200 rounded-t-3xl shadow-2xl p-5 max-h-[45vh] overflow-y-auto"
-                dir="rtl"
-                onClick={e =>
-                  e.stopPropagation()
-                }
-              >
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-bold px-2.5 py-1 rounded-lg bg-amber-50 border border-amber-200 text-amber-800">
-                    {
-                      highlightedAyah
-                        .ayah
-                        .surahNumber
-                    }
-                    :
-                    {
-                      highlightedAyah
-                        .ayah
-                        .numberInSurah
-                    }
-
-                    {' — '}
-
-                    {
-                      selectedTafsirName
-                    }
-                  </span>
-
-                  <button
-                    onClick={() =>
-                      setTafsirSheetOpen(
-                        false
-                      )
-                    }
-                    className="p-1.5 rounded-xl bg-slate-100 text-slate-600"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                <p className="font-quran text-lg text-slate-900 leading-relaxed mb-3">
-                  {
-                    highlightedAyah
-                      .ayah
-                      .arabic
-                  }
-                </p>
-
-                {loadingTafsir ? (
-                  <div className="flex items-center justify-center gap-2 py-4 text-slate-500">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-
-                    <span className="text-xs">
-                      تەفسیر باردەکرێت...
-                    </span>
-                  </div>
-                ) : (
-                  <p className="text-sm text-slate-700 leading-relaxed">
-                    {
-                      highlightedAyah
-                        .ayah
-                        .tafsir
-                    }
-                  </p>
-                )}
-
-                {tafsirApiError &&
-                  !loadingTafsir && (
-                    <p className="mt-3 text-[11px] text-red-600 leading-relaxed">
-                      {
-                        tafsirApiError
-                      }
-                    </p>
-                  )}
-
-                <button
-                  onClick={() => {
-                    setTafsirSheetOpen(
-                      false
-                    );
-
-                    setIsTafsirSelectorOpen(
-                      true
-                    );
-                  }}
-                  className="mt-3 text-xs font-bold text-amber-700 underline"
-                >
-                  گۆڕینی تەفسیر
-                </button>
-              </div>
-            )}
-        </div>
-      )}
-
-      {/* TAFSIR VIEW */}
-
-      {viewMode ===
-        'tafsir' && (
-        <div
-          className="flex-1 overflow-y-auto p-4 pt-16 space-y-6 bg-white"
-          dir="rtl"
-        >
-          {loadingTafsir ? (
-            <div className="text-center py-20">
-              <Loader2 className="w-8 h-8 mx-auto text-amber-600 animate-spin" />
-
-              <p className="text-xs text-slate-500 pt-2">
-                {
-                  selectedTafsirName
-                }{' '}
-                باردەکرێت...
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-right">
-                <p className="text-[11px] text-amber-800 font-bold">
-                  تەفسیری هەڵبژێردراو:
-                </p>
-
-                <p className="text-sm font-bold text-slate-900 mt-0.5">
-                  {
-                    selectedTafsirName
-                  }
-                </p>
-
-                <p className="text-[10px] text-slate-500 mt-0.5">
-                  {
-                    selectedTafsir.author
-                  }
-                </p>
-              </div>
-
-              {pageAyahsData.map(
-                ayah => (
-                  <div
-                    key={`${ayah.surahNumber}:${ayah.numberInSurah}`}
-                    className="space-y-3 pb-6 border-b border-slate-200 text-right"
-                  >
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-600 text-xs font-mono font-bold">
-                      {
-                        ayah.surahNumber
-                      }
-                      :
-                      {
-                        ayah.numberInSurah
-                      }
-                    </span>
-
-                    <p className="font-quran text-slate-900 text-xl sm:text-2xl leading-loose">
-                      {
-                        ayah.arabic
-                      }
-                    </p>
-
-                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-xs sm:text-sm text-slate-700 leading-relaxed">
-                      <strong className="text-amber-800 block mb-1">
-                        {
-                          selectedTafsirName
-                        }
-                        :
-                      </strong>
-
-                      {
-                        ayah.tafsir
-                      }
-                    </div>
-                  </div>
-                )
-              )}
-            </>
-          )}
-
-          {tafsirApiError &&
-            !loadingTafsir && (
-              <div className="p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs leading-relaxed text-right">
-                {
-                  tafsirApiError
-                }
-              </div>
-            )}
-        </div>
-      )}
-
-      {/* FOOTER */}
-
-      <footer
-        className={`absolute bottom-0 left-0 right-0 z-30 bg-white border-t border-slate-200 px-3 py-2.5 flex items-center justify-between shadow-lg transition-all duration-300 ${
-          showControls
-            ? 'translate-y-0 opacity-100'
-            : 'translate-y-full opacity-0 pointer-events-none'
-        }`}
-        dir="rtl"
-        onClick={e =>
-          e.stopPropagation()
-        }
-      >
-        <button
-          onClick={() =>
-            setIsRecitersModalOpen(
-              true
-            )
-          }
-          className="max-w-[35%] text-xs sm:text-sm font-bold text-slate-800 hover:text-amber-700 transition-colors flex items-center gap-1.5 min-w-0"
-        >
-                    <span className="truncate"></span>
-        </button>
-    </footer>
-</div>
-  );
-}
+                                  highlightedAyah.a
