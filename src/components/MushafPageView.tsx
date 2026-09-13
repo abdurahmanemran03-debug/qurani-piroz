@@ -4069,8 +4069,7 @@ export const MushafPageView: React.FC<
       ) {
         if (
           audio.currentTime >=
-          segment.endTime -
-            0.05
+          segment.endTime 
         ) {
           audio.pause();
 
