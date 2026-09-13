@@ -211,10 +211,57 @@ const loadManualTiming = async (
               item.start_time
         );
 
+    /*
+     * زیادکردنی کەمێک کاتی زیادە (padding) بۆ کۆتایی
+     * هەر ئایەتێک، بۆ ئەوەی دەنگی ڕاستەقینە پێش کاتی
+     * نیشانەکراو نەبڕدرێت (چونکە بە دەست نیشانەکردنی
+     * کۆتایی زۆرجار کەمێک زوویە). هەرگیز ناچێتە ناو
+     * دەستپێکی ئایەتی دواتر.
+     */
+    const END_PADDING_SECONDS = 0.35;
+
+    const sortedTimings = timings
+      .slice()
+      .sort(
+        (a, b) => a.ayah - b.ayah
+      );
+
+    const paddedTimings =
+      sortedTimings.map(
+        (item, idx) => {
+          const next =
+            sortedTimings[idx + 1];
+
+          const maxEnd = next
+            ? next.start_time -
+              0.05
+            : item.end_time +
+              END_PADDING_SECONDS;
+
+          const desiredEnd =
+            item.end_time +
+            END_PADDING_SECONDS;
+
+          const paddedEnd =
+            Math.min(
+              desiredEnd,
+              maxEnd
+            );
+
+          return {
+            ...item,
+            end_time: Math.max(
+              paddedEnd,
+              item.end_time
+            )
+          };
+        }
+      );
+
     manualTimingCache[
       cacheKey
-    ] = timings.length
-      ? timings
+    ] = paddedTimings.length
+      ? paddedTimings
       : null;
 
     return manualTimingCache[
